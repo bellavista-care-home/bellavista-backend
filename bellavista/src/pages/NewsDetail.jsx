@@ -187,6 +187,7 @@ const NewsDetail = () => {
 
             {/* Sidebar */}
             <aside className="news-detail-sidebar">
+
               <div className="sidebar-widget">
                 <h3 className="widget-title">Related Articles</h3>
                 <div className="related-articles">

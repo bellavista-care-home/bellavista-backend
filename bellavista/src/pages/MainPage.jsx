@@ -55,21 +55,6 @@ const Home = () => {
     });
   };
 
-  const toggleLike = (e) => {
-    const likeCount = e.target.parentElement.querySelector('.like-count');
-    const currentCount = parseInt(likeCount.textContent);
-    const isLiked = e.target.classList.contains('liked');
-
-    if (isLiked) {
-      e.target.classList.remove('liked');
-      likeCount.textContent = currentCount - 1;
-      e.target.style.color = '#666';
-    } else {
-      e.target.classList.add('liked');
-      likeCount.textContent = currentCount + 1;
-      e.target.style.color = '#e74c3c';
-    }
-  };
 
   const openModal = (serviceType) => {
     const serviceDetails = {
@@ -213,11 +198,6 @@ const Home = () => {
                 </div>
                 <h3>{featuredNews.title}</h3>
                 <p>{featuredNews.excerpt}</p>
-                <div className="news-stats">
-                  <span><i className="fas fa-eye"></i> {(featuredNews.views / 1000).toFixed(1)}K views</span>
-                  <span><i className="fas fa-heart" onClick={toggleLike}></i> <span className="like-count">{featuredNews.likes}</span> likes</span>
-                  <span><i className="fas fa-share"></i> <span className="share-count">{featuredNews.shares}</span> shares</span>
-                </div>
                 <Link to={`/news/${featuredNews.id}`} className="btn btn-primary">Read Full Update</Link>
               </div>
             </div>
