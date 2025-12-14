@@ -1,0 +1,109 @@
+.testimonials-page {
+  padding-bottom: 80px;
+}
+
+.testimonials-header {
+  background: linear-gradient(135deg, rgba(0, 102, 204, 0.85), rgba(0, 180, 216, 0.85)), url('/NewsImages/bollywood-night.jpg');
+  background-size: cover;
+  background-position: center;
+  color: white;
+  padding: 120px 0;
+  text-align: center;
+  margin-bottom: 50px;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  box-shadow: 0 10px 30px rgba(0, 102, 204, 0.15);
+  border-bottom-left-radius: 30px;
+  border-bottom-right-radius: 30px;
+}
+
+.testimonials-header h1 {
+  font-size: 3rem;
+  margin-bottom: 20px;
+}
+
+.testimonials-header p {
+  font-size: 1.2rem;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.testimonials-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 40px;
+  margin-bottom: 60px;
+}
+
+.testimonial-card {
+  background: white;
+  padding: 40px;
+  border-radius: 15px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+  position: relative;
+  transition: transform 0.3s ease;
+  border: 1px solid #eee;
+}
+
+.testimonial-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+}
+
+.quote-icon {
+  color: var(--primary-blue);
+  font-size: 2rem;
+  margin-bottom: 20px;
+  opacity: 0.2;
+}
+
+.review-text {
+  font-size: 1.1rem;
+  line-height: 1.8;
+  color: #555;
+  margin-bottom: 30px;
+  font-style: italic;
+}
+
+.review-author h4 {
+  color: var(--primary-blue);
+  font-size: 1.1rem;
+  margin-bottom: 5px;
+}
+
+.review-author span {
+  color: #888;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.carehome-review-badge {
+  text-align: center;
+  background: #f9f9f9;
+  padding: 40px;
+  border-radius: 10px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.carehome-review-badge h3 {
+  color: var(--primary-blue);
+  margin-bottom: 15px;
+}
+
+.carehome-review-badge .stars {
+  color: #ffc107;
+  font-size: 1.5rem;
+  margin-top: 15px;
+}
+
+@media (max-width: 768px) {
+  .testimonials-header h1 {
+    font-size: 2rem;
+  }
+  
+  .testimonials-grid {
+    grid-template-columns: 1fr;
+  }
+}

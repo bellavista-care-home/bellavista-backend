@@ -1,0 +1,138 @@
+.tour-page {
+  padding-bottom: 80px;
+}
+
+.tour-header {
+  background: linear-gradient(135deg, rgba(0, 102, 204, 0.85), rgba(0, 180, 216, 0.85)), url('/NewsImages/bollywood-night.jpg');
+  background-size: cover;
+  background-position: center;
+  color: white;
+  padding: 120px 0;
+  text-align: center;
+  margin-bottom: 50px;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  box-shadow: 0 10px 30px rgba(0, 102, 204, 0.15);
+  border-bottom-left-radius: 30px;
+  border-bottom-right-radius: 30px;
+}
+
+.tour-header h1 {
+  font-size: 3rem;
+  margin-bottom: 20px;
+}
+
+.tour-header p {
+  font-size: 1.2rem;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.tour-content-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  gap: 50px;
+}
+
+.tour-info h2, .tour-form-container h2 {
+  color: var(--primary-blue);
+  margin-bottom: 30px;
+  font-size: 1.8rem;
+}
+
+.info-card {
+  background: #f9f9f9;
+  padding: 25px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  border-left: 4px solid var(--primary-green);
+}
+
+.info-card h3 {
+  color: #333;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.info-card i {
+  color: var(--primary-green);
+}
+
+.info-card p {
+  color: #666;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.tour-form-container {
+  background: white;
+  padding: 40px;
+  border-radius: 10px;
+  box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+  border: 1px solid #eee;
+}
+
+.tour-form .form-group {
+  margin-bottom: 20px;
+}
+
+.tour-form .form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.tour-form label {
+  display: block;
+  margin-bottom: 8px;
+  color: #444;
+  font-weight: 500;
+}
+
+.tour-form input,
+.tour-form select,
+.tour-form textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 1rem;
+  font-family: inherit;
+  transition: border-color 0.3s;
+}
+
+.tour-form input:focus,
+.tour-form select:focus,
+.tour-form textarea:focus {
+  border-color: var(--primary-blue);
+  outline: none;
+}
+
+.submit-btn {
+  background: var(--primary-blue);
+  color: white;
+  border: none;
+  padding: 15px 30px;
+  border-radius: 5px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.3s;
+  margin-top: 10px;
+}
+
+.submit-btn:hover {
+  background: var(--primary-green);
+}
+
+@media (max-width: 768px) {
+  .tour-content-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .tour-form .form-row {
+    grid-template-columns: 1fr;
+  }
+}

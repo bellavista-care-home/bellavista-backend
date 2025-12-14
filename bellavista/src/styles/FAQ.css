@@ -1,0 +1,133 @@
+.faq-page {
+  padding-bottom: 80px;
+}
+
+.faq-header {
+  background: linear-gradient(135deg, rgba(0, 102, 204, 0.85), rgba(0, 180, 216, 0.85)), url('/NewsImages/bollywood-night.jpg');
+  background-size: cover;
+  background-position: center;
+  color: white;
+  padding: 120px 0;
+  text-align: center;
+  margin-bottom: 50px;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  box-shadow: 0 10px 30px rgba(0, 102, 204, 0.15);
+  border-bottom-left-radius: 30px;
+  border-bottom-right-radius: 30px;
+}
+
+.faq-header h1 {
+  font-size: 3rem;
+  margin-bottom: 20px;
+}
+
+.faq-header p {
+  font-size: 1.2rem;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.faq-list {
+  max-width: 800px;
+  margin: 0 auto 60px;
+}
+
+.faq-item {
+  background: white;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+  border: 1px solid #eee;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.faq-item.active {
+  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+  border-color: var(--primary-blue);
+}
+
+.faq-question {
+  padding: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: white;
+}
+
+.faq-question h3 {
+  font-size: 1.1rem;
+  color: #333;
+  margin: 0;
+  font-weight: 600;
+}
+
+.faq-item.active .faq-question h3 {
+  color: var(--primary-blue);
+}
+
+.toggle-icon {
+  color: var(--primary-blue);
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s ease;
+}
+
+.faq-item.active .toggle-icon {
+  transform: rotate(180deg);
+}
+
+.faq-answer {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease, padding 0.3s ease;
+  background: #fcfcfc;
+}
+
+.faq-item.active .faq-answer {
+  max-height: 200px; /* Adjust as needed */
+  padding: 0 20px 20px;
+  border-top: 1px solid #eee;
+}
+
+.faq-answer p {
+  color: #555;
+  line-height: 1.6;
+  margin: 0;
+  padding-top: 15px;
+}
+
+.faq-contact {
+  text-align: center;
+  padding: 40px;
+  background: #f0f4f8;
+  border-radius: 10px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.faq-contact h3 {
+  color: var(--primary-blue);
+  margin-bottom: 15px;
+}
+
+.contact-btn {
+  background: var(--primary-blue);
+  color: white;
+  border: none;
+  padding: 12px 30px;
+  border-radius: 25px;
+  font-size: 1rem;
+  cursor: pointer;
+  margin-top: 20px;
+  transition: background 0.3s ease;
+}
+
+.contact-btn:hover {
+  background: var(--primary-green);
+}

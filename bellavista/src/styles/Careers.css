@@ -1,0 +1,232 @@
+.careers-page {
+  padding-bottom: 60px;
+}
+
+.careers-header {
+  background: linear-gradient(135deg, rgba(0, 102, 204, 0.85), rgba(0, 180, 216, 0.85)), url('/NewsImages/bollywood-night.jpg'); /* Fallback image */
+  background-size: cover;
+  background-position: center;
+  color: white;
+  padding: 120px 0;
+  text-align: center;
+  margin-bottom: 50px;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  box-shadow: 0 10px 30px rgba(0, 102, 204, 0.15);
+  border-bottom-left-radius: 30px;
+  border-bottom-right-radius: 30px;
+}
+
+.careers-header h1 {
+  font-size: 3rem;
+  margin-bottom: 20px;
+}
+
+.careers-header p {
+  font-size: 1.2rem;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.careers-intro {
+  text-align: center;
+  max-width: 900px;
+  margin: 0 auto 60px;
+}
+
+.careers-intro h2 {
+  color: var(--primary-blue);
+  font-size: 2.5rem;
+  margin-bottom: 30px;
+}
+
+.careers-intro p {
+  font-size: 1.1rem;
+  line-height: 1.8;
+  color: #555;
+  margin-bottom: 20px;
+}
+
+.jobs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 30px;
+  margin-bottom: 60px;
+}
+
+.job-card {
+  background: white;
+  border-radius: 10px;
+  padding: 30px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+  transition: transform 0.3s ease;
+  border: 1px solid #eee;
+}
+
+.job-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+}
+
+.job-card h3 {
+  color: var(--primary-blue);
+  margin-bottom: 15px;
+  font-size: 1.5rem;
+}
+
+.job-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+  color: #666;
+  font-size: 0.95rem;
+}
+
+.job-meta span {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.job-meta i {
+  color: var(--primary-green);
+  width: 20px;
+}
+
+.job-description {
+  color: #555;
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+.job-requirements h4 {
+  color: #333;
+  margin-bottom: 10px;
+  font-size: 1.1rem;
+}
+
+.job-requirements ul {
+  list-style: none;
+  padding: 0;
+  margin-bottom: 25px;
+}
+
+.job-requirements li {
+  position: relative;
+  padding-left: 20px;
+  margin-bottom: 8px;
+  color: #555;
+}
+
+.job-requirements li::before {
+  content: "•";
+  color: var(--primary-blue);
+  position: absolute;
+  left: 0;
+  font-weight: bold;
+}
+
+.apply-btn {
+  background: var(--primary-blue);
+  color: white;
+  border: none;
+  padding: 12px 25px;
+  border-radius: 5px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.3s ease;
+  width: 100%;
+}
+
+.apply-btn:hover {
+  background: var(--primary-green);
+}
+
+.recruitment-contact {
+  background: #f9f9f9;
+  padding: 40px;
+  border-radius: 10px;
+  text-align: left; /* Changed from center */
+  border-left: 5px solid var(--primary-blue);
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.recruitment-contact h3 {
+  color: var(--primary-blue);
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.recruitment-contact > p {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.application-form .form-group {
+    margin-bottom: 20px;
+}
+
+.application-form label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #333;
+}
+
+.application-form input,
+.application-form textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 1rem;
+    font-family: inherit;
+}
+
+.application-form input:focus,
+.application-form textarea:focus {
+    outline: none;
+    border-color: var(--primary-blue);
+}
+
+.form-note {
+    background: #e9f5ff;
+    padding: 15px;
+    border-radius: 5px;
+    margin-bottom: 25px;
+    color: #0056b3;
+    font-size: 0.95rem;
+}
+
+.form-note i {
+    margin-right: 8px;
+}
+
+.submit-application-btn {
+    background: var(--primary-green);
+    color: white;
+    border: none;
+    padding: 15px 30px;
+    border-radius: 30px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    cursor: pointer;
+    width: 100%;
+    transition: background 0.3s;
+}
+
+.submit-application-btn:hover {
+    background: #218838;
+}
+
+@media (max-width: 768px) {
+  .careers-header h1 {
+    font-size: 2rem;
+  }
+  
+  .jobs-grid {
+    grid-template-columns: 1fr;
+  }
+}
