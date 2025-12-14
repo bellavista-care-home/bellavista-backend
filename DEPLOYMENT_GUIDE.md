@@ -1,160 +1,149 @@
-# Deployment Guide for Bellavista App
+# Bellavista Care Home App - AWS Deployment Guide
 
-This guide covers how to deploy the full stack application to AWS. The architecture consists of:
-- **Frontend**: React (Vite) hosted on S3 + CloudFront (or Amplify)
-- **Backend**: Python Flask API hosted on EC2 (or Elastic Beanstalk / App Runner)
-- **Database**: PostgreSQL hosted on RDS
-- **Storage**: S3 Bucket for images/videos
+This guide covers how to deploy the Bellavista application to AWS. The architecture consists of:
+- **Frontend**: React (hosted on S3 + CloudFront)
+- **Backend**: Flask (hosted on Elastic Beanstalk or EC2)
+- **Database**: PostgreSQL (hosted on RDS)
+- **Media Storage**: S3 (for news images/videos)
 
 ## Prerequisites
-- AWS Account
-- Domain name (optional but recommended)
-- Docker (optional, for containerized deployment)
+1.  **AWS Account**: Create one at [aws.amazon.com](https://aws.amazon.com/).
+2.  **AWS CLI**: Install and configure (`aws configure`).
+3.  **Domain Name** (Optional but recommended): Managed via Route 53 or another registrar.
 
 ---
 
-## 1. Database Setup (AWS RDS)
-1. Go to AWS Console > **RDS** > **Create database**.
-2. Select **PostgreSQL**.
-3. Choose **Free Tier** template.
-4. Settings:
-   - DB Instance ID: `bellavista-db`
-   - Master username: `postgres`
-   - Master password: (Create a strong password)
-5. Connectivity:
-   - Public access: **No** (for security, backend will connect internally) or **Yes** (if you need to connect from your local machine for initial setup, restrict IP to your own).
-   - VPC Security Group: Create new, allow port 5432.
-6. Create Database.
-7. Note down the **Endpoint** (host) once created.
+## Step 1: Database (RDS)
 
-## 2. Storage Setup (AWS S3)
-1. Go to **S3** > **Create bucket**.
-2. Name: `bellavista-media-assets` (or unique name).
-3. Uncheck "Block all public access" (if serving directly) OR keep blocked and use CloudFront (recommended).
-   - For simplicity: Uncheck block public access, add Bucket Policy to allow `s3:GetObject` for public.
-   ```json
-   {
-       "Version": "2012-10-17",
-       "Statement": [
-           {
-               "Sid": "PublicReadGetObject",
-               "Effect": "Allow",
-               "Principal": "*",
-               "Action": "s3:GetObject",
-               "Resource": "arn:aws:s3:::YOUR_BUCKET_NAME/*"
-           }
-       ]
-   }
-   ```
-4. Update `newsService.js` or backend logic to point to this S3 bucket URL for images if not proxying through backend.
-   - *Current App Logic*: The app uploads images to the backend `uploads/` folder.
-   - *Production Change*: You should update the backend to upload to S3 instead of local disk.
-   - **Alternative**: Use EC2 with a persistent EBS volume for `uploads/` folder if you want to keep current code structure without S3 SDK.
+1.  Go to the **RDS Console**.
+2.  Click **Create database**.
+3.  Select **PostgreSQL**.
+4.  Choose **Free Tier** (if eligible) or **Dev/Test**.
+5.  **Settings**:
+    -   Master username: `postgres`
+    -   Master password: (create a strong password)
+6.  **Connectivity**:
+    -   Public access: **No** (for security; backend will connect from within AWS).
+    -   VPC Security Group: Create new (e.g., `bellavista-db-sg`).
+7.  Create the database.
+8.  **Note the Endpoint** once created (e.g., `bellavista-db.xxxx.eu-west-2.rds.amazonaws.com`).
 
-## 3. Backend Deployment (EC2 Method)
-This is the most direct way to run your Flask app.
+---
 
-1. **Launch EC2 Instance**:
-   - OS: Ubuntu 22.04 LTS
-   - Type: t2.micro (Free Tier)
-   - Security Group: Allow SSH (22), HTTP (80), HTTPS (443), and Custom TCP (8000).
+## Step 2: Media Storage (S3)
 
-2. **SSH into Instance**:
-   ```bash
-   ssh -i your-key.pem ubuntu@your-ec2-ip
-   ```
+1.  Go to the **S3 Console**.
+2.  Click **Create bucket**.
+3.  Name: e.g., `bellavista-media-assets`.
+4.  Region: `eu-west-2` (London) or your preferred region.
+5.  **Block Public Access settings**:
+    -   Uncheck "Block all public access" (we need images to be readable by the public).
+    -   Acknowledge the warning.
+6.  Create bucket.
+7.  **Bucket Policy**: Go to Permissions > Bucket Policy and add:
+    ```json
+    {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Sid": "PublicReadGetObject",
+                "Effect": "Allow",
+                "Principal": "*",
+                "Action": "s3:GetObject",
+                "Resource": "arn:aws:s3:::bellavista-media-assets/*"
+            }
+        ]
+    }
+    ```
+8.  **CORS Configuration**: Go to Permissions > CORS and add:
+    ```json
+    [
+        {
+            "AllowedHeaders": ["*"],
+            "AllowedMethods": ["GET", "PUT", "POST", "HEAD"],
+            "AllowedOrigins": ["*"],
+            "ExposeHeaders": []
+        }
+    ]
+    ```
 
-3. **Setup Environment**:
-   ```bash
-   sudo apt update
-   sudo apt install python3-pip python3-venv nginx git
-   ```
+---
 
-4. **Clone Repository**:
-   ```bash
-   git clone <your-repo-url>
-   cd production_bellavista_app/backend
-   ```
+## Step 3: Backend (Elastic Beanstalk)
 
-5. **Install Dependencies**:
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate
-   pip install -r requirements.txt
-   pip install gunicorn psycopg2-binary
-   ```
+1.  **Prepare the Backend Code**:
+    -   Ensure `requirements.txt` includes `boto3`, `gunicorn`, `psycopg2-binary` (Already done).
+    -   Ensure `wsgi.py` exists (Flask entry point).
+    
+2.  **Create Application**:
+    -   Go to **Elastic Beanstalk**.
+    -   Create Application > Name: `bellavista-backend`.
+    -   Platform: **Python 3.11** (or matching your local version).
 
-6. **Configure Environment Variables**:
-   Create `.env` file in `backend/`:
-   ```bash
-   FLASK_CONFIG=production
-   DATABASE_URL=postgresql://postgres:PASSWORD@RDS_ENDPOINT:5432/bellavista
-   SECRET_KEY=your_secure_secret_key
-   ALLOWED_ORIGINS=http://your-frontend-domain.com
-   ```
+3.  **Configure Environment**:
+    -   Select "Upload your code" -> Upload a zip of the `backend` folder.
+    -   Click **Configure more options**.
+    -   **Software** (Environment Properties):
+        Add the following variables:
+        -   `FLASK_APP`: `wsgi.py`
+        -   `FLASK_ENV`: `production`
+        -   `DATABASE_URL`: `postgresql://postgres:PASSWORD@RDS_ENDPOINT:5432/postgres`
+        -   `S3_BUCKET`: `bellavista-media-assets`
+        -   `AWS_ACCESS_KEY_ID`: (Your IAM User Access Key)
+        -   `AWS_SECRET_ACCESS_KEY`: (Your IAM User Secret Key)
+        -   `AWS_REGION`: `eu-west-2`
+    
+4.  **Create Environment**.
+5.  Once deployed, note the **URL** (e.g., `http://bellavista-backend.env.elasticbeanstalk.com`).
 
-7. **Run with Gunicorn**:
-   Test it:
-   ```bash
-   gunicorn -w 4 -b 0.0.0.0:8000 wsgi:app
-   ```
+---
 
-8. **Setup Nginx (Reverse Proxy)**:
-   Create config `/etc/nginx/sites-available/bellavista`:
-   ```nginx
-   server {
-       listen 80;
-       server_name api.yourdomain.com;
+## Step 4: Frontend (S3 + CloudFront)
 
-       location / {
-           proxy_pass http://127.0.0.1:8000;
-           proxy_set_header Host $host;
-           proxy_set_header X-Real-IP $remote_addr;
-       }
-       
-       # Serve uploaded files if using local disk
-       location /uploads/ {
-           alias /home/ubuntu/production_bellavista_app/backend/uploads/;
-       }
-   }
-   ```
-   Enable it:
-   ```bash
-   sudo ln -s /etc/nginx/sites-available/bellavista /etc/nginx/sites-enabled
-   sudo systemctl restart nginx
-   ```
+1.  **Configure API URL**:
+    -   Create a file named `.env.production` in the `bellavista` folder.
+    -   Add the following line:
+        ```
+        VITE_API_BASE_URL=https://bellavista-backend.env.elasticbeanstalk.com/api
+        ```
+        (Replace with your actual Backend URL from Step 3, ensuring `/api` is appended if your backend routes are prefixed with it. Based on the code, routes are under `/api`, so append `/api`).
+    
+2.  **Build React App**:
+    ```bash
+    cd bellavista
+    npm run build
+    ```
+    This creates a `build` (or `dist`) folder.
 
-9. **Setup Systemd Service**:
-   Create `/etc/systemd/system/bellavista.service` to keep app running.
+3.  **Create Frontend Bucket**:
+    -   Create a NEW S3 bucket (e.g., `bellavista-frontend`).
+    -   Enable **Static Website Hosting** in Properties.
+    -   Upload the contents of the `dist` (or `build`) folder to this bucket.
 
-## 4. Frontend Deployment (AWS Amplify or S3+CloudFront)
-**Easiest Method: AWS Amplify**
+4.  **CloudFront (CDN)**:
+    -   Go to **CloudFront**.
+    -   Create Distribution.
+    -   Origin Domain: Select your S3 bucket website endpoint.
+    -   Viewer Protocol Policy: **Redirect HTTP to HTTPS**.
+    -   Create Distribution.
 
-1. Go to **AWS Amplify**.
-2. Connect your Git repository.
-3. Select the branch (main).
-4. Build Settings:
-   - Base directory: `bellavista` (since your react app is in this subfolder)
-   - Build command: `npm install && npm run build`
-   - Output directory: `dist`
-5. **Environment Variables**:
-   - Add `VITE_API_BASE_URL`: `http://your-ec2-ip/api` (or `https://api.yourdomain.com/api`)
-6. Deploy.
+5.  **Final URL**: Your CloudFront domain (e.g., `d12345.cloudfront.net`) is your live site URL.
 
-**Manual Method (S3 + CloudFront)**:
-1. Local Build:
-   ```bash
-   cd bellavista
-   npm run build
-   ```
-2. Upload `dist` folder contents to an S3 bucket (configured for static website hosting).
-3. Create CloudFront Distribution pointing to S3 bucket (for HTTPS and caching).
+---
 
-## 5. Final Checklist
-- [ ] **CORS**: Ensure backend `ALLOWED_ORIGINS` includes your frontend URL.
-- [ ] **Database**: Run `flask shell` -> `db.create_all()` on the server to initialize tables.
-- [ ] **Media**: If using local uploads, ensure `uploads/` folder has write permissions (`chmod 755`).
-- [ ] **HTTPS**: Use Certbot on EC2 for backend SSL. Amplify handles frontend SSL automatically.
+## Step 5: IAM User for Backend
 
-## 6. CI/CD (Optional)
-Use GitHub Actions to auto-deploy when you push to main.
+To allow the backend to upload to S3:
+1.  Go to **IAM Console**.
+2.  Users > Create User (e.g., `bellavista-backend-user`).
+3.  Permissions: Attach policies directly > **AmazonS3FullAccess**.
+4.  Create Access Keys (for CLI/SDK) > Save the Access Key ID and Secret Access Key.
+5.  Use these keys in Step 3 (Environment Variables).
+
+---
+
+## Troubleshooting
+
+-   **Database Connection**: Ensure the Security Group for RDS allows inbound traffic on port 5432 from the Elastic Beanstalk Security Group.
+-   **CORS Errors**: Ensure `backend/app/__init__.py` allows the CloudFront domain in CORS settings.
+    -   Set `ALLOWED_ORIGINS` env var in Elastic Beanstalk to your CloudFront URL.

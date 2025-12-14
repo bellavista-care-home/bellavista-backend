@@ -1,11 +1,39 @@
 import os
 import json
 import uuid
+import boto3
 from flask import Blueprint, request, jsonify, current_app
 from . import db
 from .models import ScheduledTour, CareEnquiry, NewsItem
 
 api_bp = Blueprint('api', __name__)
+
+def upload_file_helper(file, filename):
+    s3_bucket = os.environ.get('S3_BUCKET')
+    
+    if s3_bucket:
+        try:
+            s3 = boto3.client('s3',
+                aws_access_key_id=os.environ.get('AWS_ACCESS_KEY_ID'),
+                aws_secret_access_key=os.environ.get('AWS_SECRET_ACCESS_KEY'),
+                region_name=os.environ.get('AWS_REGION', 'eu-west-2')
+            )
+            s3.upload_fileobj(
+                file,
+                s3_bucket,
+                filename,
+                ExtraArgs={
+                    "ContentType": file.content_type
+                }
+            )
+            return f"https://{s3_bucket}.s3.amazonaws.com/{filename}"
+        except Exception as e:
+            print(f"S3 Upload Error: {e}")
+            return None
+    else:
+        path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+        file.save(path)
+        return f"/uploads/{filename}"
 
 def to_dict_news(n):
     gallery = []
@@ -108,17 +136,18 @@ def create_news():
     if 'image' in files:
         f = files['image']
         filename = f"{nid}-main-{uuid.uuid4().hex}.jpg"
-        path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
-        f.save(path)
-        main_image_url = f"/uploads/{filename}"
+        uploaded_url = upload_file_helper(f, filename)
+        if uploaded_url:
+            main_image_url = uploaded_url
+
     gallery_urls = []
     for key in files:
         if key.startswith('gallery'):
             f = files[key]
             filename = f"{nid}-g-{uuid.uuid4().hex}.jpg"
-            path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
-            f.save(path)
-            gallery_urls.append(f"/uploads/{filename}")
+            uploaded_url = upload_file_helper(f, filename)
+            if uploaded_url:
+                gallery_urls.append(uploaded_url)
     if data.get('gallery'):
         try:
             gallery_urls.extend(json.loads(data.get('gallery')))
@@ -165,9 +194,9 @@ def update_news(id):
     if 'image' in files:
         f = files['image']
         filename = f"{id}-main-{uuid.uuid4().hex}.jpg"
-        path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
-        f.save(path)
-        item.image = f"/uploads/{filename}"
+        uploaded_url = upload_file_helper(f, filename)
+        if uploaded_url:
+            item.image = uploaded_url
     elif 'image' in data:
         item.image = data['image']
 
@@ -198,16 +227,18 @@ def update_news(id):
         if key.startswith('gallery'):
             f = files[key]
             filename = f"{id}-g-{uuid.uuid4().hex}.jpg"
-            path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
-            f.save(path)
-            new_gallery_urls.append(f"/uploads/{filename}")
-            
-    if 'gallery' in data or new_gallery_urls:
-         item.galleryJson = json.dumps(current_gallery + new_gallery_urls)
+            uploaded_url = upload_file_helper(f, filename)
+            if uploaded_url:
+                new_gallery_urls.append(uploaded_url)
     
-    item.videoUrl = data.get('videoUrl', item.videoUrl)
+    # Merge old and new gallery
+    item.galleryJson = json.dumps(current_gallery + new_gallery_urls)
+
+    if 'videoUrl' in data:
+        item.videoUrl = data['videoUrl']
+
     db.session.commit()
-    return jsonify({"ok": True})
+    return jsonify(to_dict_news(item))
 
 @api_bp.get('/news')
 def list_news():

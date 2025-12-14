@@ -34,8 +34,11 @@ class TestingConfig(Config):
 
 class ProductionConfig(Config):
     DEBUG = False
-    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL')
-    ALLOWED_ORIGINS = os.getenv('ALLOWED_ORIGINS')
+    uri = os.getenv('DATABASE_URL')
+    if uri and uri.startswith('postgres://'):
+        uri = uri.replace('postgres://', 'postgresql://', 1)
+    SQLALCHEMY_DATABASE_URI = uri
+    ALLOWED_ORIGINS = os.getenv('ALLOWED_ORIGINS', '*')
 
 config = {
     'development': DevelopmentConfig,
