@@ -31,7 +31,7 @@ const ScheduleTour = lazy(() => import('./pages/ScheduleTour'));
 const OurHomesPage = lazy(() => import('./pages/OurHomes'));
 const Barry = lazy(() => import('./locations/BellavistaBarry'));
 const Cardiff = lazy(() => import('./locations/BellavistaCardiff'));
-const CollegeFields = lazy(() => import('./locations/CollageFiledsNursingHome'));
+const CollegeFields = lazy(() => import('./locations/CollegeFieldsNursingHome'));
 const Waverley = lazy(() => import('./locations/WaverleyCareCentre'));
 const Baltimore = lazy(() => import('./locations/BellavistaBaltimore'));
 const MeadowVale = lazy(() => import('./locations/MeadowValeCwtch'));

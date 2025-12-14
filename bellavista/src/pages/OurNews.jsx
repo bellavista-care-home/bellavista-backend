@@ -1,6 +1,7 @@
+import { fetchNewsItems } from '../services/newsService';
+
 import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { fetchNewsItems } from '../services/newsService';
 import '../styles/MainPage.css';
 
 const OurNews = () => {
@@ -14,13 +15,13 @@ const OurNews = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadData = async () => {
+    const loadNews = async () => {
       setLoading(true);
-      const data = await fetchNewsItems();
-      setNewsDataState(data);
+      const items = await fetchNewsItems();
+      setNewsDataState(items);
       setLoading(false);
     };
-    loadData();
+    loadNews();
   }, []);
 
   // Filter news based on category and search
@@ -28,7 +29,7 @@ const OurNews = () => {
     const matchesCategory = activeFilter === 'all' || news.category === activeFilter;
     const matchesSearch = news.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          news.excerpt.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesCategory && matchesSearch; // Show all news, date check is implicit if date exists
+    return matchesCategory && matchesSearch;
   });
 
   const filterNews = (category) => {

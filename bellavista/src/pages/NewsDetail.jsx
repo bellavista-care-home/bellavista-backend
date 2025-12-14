@@ -19,10 +19,13 @@ const NewsDetail = () => {
       const item = await fetchNewsItemById(id);
       setNews(item);
       
+      // Load all news for related items
+      const allNews = await fetchNewsItems();
       if (item) {
-        // Fetch all news to find related
-        const allNews = await fetchNewsItems();
-        setRelatedNews(allNews.filter(n => n.id !== item.id && n.category === item.category));
+        const related = allNews
+          .filter(n => n.category === item.category && n.id !== item.id)
+          .slice(0, 3);
+        setRelatedNews(related);
       }
       setLoading(false);
     };
@@ -30,7 +33,7 @@ const NewsDetail = () => {
   }, [id]);
 
   if (loading) {
-    return <div className="container" style={{padding: '100px 20px', textAlign: 'center'}}>Loading...</div>;
+     return <div className="news-page"><div className="container" style={{padding: '100px 20px', textAlign: 'center'}}>Loading...</div></div>;
   }
 
   if (!news) {

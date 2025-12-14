@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination, Autoplay } from 'swiper/modules';
@@ -8,19 +8,26 @@ import 'swiper/css/pagination';
 
 import '../styles/CareHome.css';
 import ReviewForm from '../components/ReviewForm';
-import { newsData } from '../data/newsData';
+import { fetchNewsItems } from '../services/newsService';
 
 const BellavistaBarry = () => {
   const [heroExpanded, setHeroExpanded] = useState(false);
   const [showActivitiesModal, setShowActivitiesModal] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [facilitiesExpanded, setFacilitiesExpanded] = useState(false);
+  const [barryNews, setBarryNews] = useState([]);
 
-  // Filter news for Barry location
-  const barryNews = newsData.filter(news => 
-    news.location.toLowerCase().includes('barry') || 
-    news.location === 'All Locations'
-  );
+  useEffect(() => {
+    const loadNews = async () => {
+      const allNews = await fetchNewsItems();
+      const filtered = allNews.filter(news => 
+        news.location.toLowerCase().includes('barry') || 
+        news.location === 'All Locations'
+      );
+      setBarryNews(filtered);
+    };
+    loadNews();
+  }, []);
 
   const activitiesGalleryImages = [
     "Bingo-Activity-150x150.jpg",

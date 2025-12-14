@@ -9,7 +9,7 @@ import 'swiper/css/effect-fade';
 
 import '../styles/CareHome.css';
 import ReviewForm from '../components/ReviewForm';
-import { newsData } from '../data/newsData';
+import { fetchNewsItems } from '../services/newsService';
 
 const BellavistaCardiff = () => {
   const [heroExpanded, setHeroExpanded] = useState(false);
@@ -17,12 +17,19 @@ const BellavistaCardiff = () => {
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [facilitiesExpanded, setFacilitiesExpanded] = useState(false);
   const [selectedFacility, setSelectedFacility] = useState(null);
+  const [cardiffNews, setCardiffNews] = useState([]);
 
-  // Filter news for Cardiff location
-  const cardiffNews = newsData.filter(news => 
-    news.location.toLowerCase().includes('cardiff') || 
-    news.location === 'All Locations'
-  );
+  useEffect(() => {
+    const loadNews = async () => {
+      const allNews = await fetchNewsItems();
+      const filtered = allNews.filter(news => 
+        news.location.toLowerCase().includes('cardiff') || 
+        news.location === 'All Locations'
+      );
+      setCardiffNews(filtered);
+    };
+    loadNews();
+  }, []);
 
   // Using Barry's images as placeholders as requested
   const activitiesGalleryImages = [

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination, Autoplay } from 'swiper/modules';
@@ -8,19 +8,26 @@ import 'swiper/css/pagination';
 
 import '../styles/CareHome.css';
 import ReviewForm from '../components/ReviewForm';
-import { newsData } from '../data/newsData';
+import { fetchNewsItems } from '../services/newsService';
 
 const MeadowValeCwtch = () => {
   const [heroExpanded, setHeroExpanded] = useState(false);
   const [showActivitiesModal, setShowActivitiesModal] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [facilitiesExpanded, setFacilitiesExpanded] = useState(false);
+  const [meadowNews, setMeadowNews] = useState([]);
 
-  // Filter news for Meadow Vale location
-  const locationNews = newsData.filter(news => 
-    news.location.toLowerCase().includes('meadow') || 
-    news.location === 'All Locations'
-  );
+  useEffect(() => {
+    const loadNews = async () => {
+      const allNews = await fetchNewsItems();
+      const filtered = allNews.filter(news => 
+        news.location.toLowerCase().includes('meadow') || 
+        news.location === 'All Locations'
+      );
+      setMeadowNews(filtered);
+    };
+    loadNews();
+  }, []);
 
   // Using Barry's images as placeholders
   const activitiesGalleryImages = [
@@ -342,7 +349,7 @@ const MeadowValeCwtch = () => {
       </section>
 
       {/* 5. NEWS SECTION */}
-      {locationNews.length > 0 && (
+      {meadowNews.length > 0 && (
         <section className="loc-section loc-section--light">
           <div className="container">
             <div className="section-header section-header--center">
@@ -350,7 +357,7 @@ const MeadowValeCwtch = () => {
               <h2 className="section-header__title">Latest News</h2>
             </div>
             <div className="news-grid modern">
-              {locationNews.map((news) => (
+              {meadowNews.map((news) => (
                 <div key={news.id} className="news-card modern">
                   <div className="news-card__image">
                     <img src={news.image} alt={news.title} />

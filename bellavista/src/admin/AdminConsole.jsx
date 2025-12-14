@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ImageUploader from '../components/ImageUploader';
-import { newsData as initialNewsData } from '../data/newsData';
 import { fetchNewsItems, createNewsItem, updateNewsItem } from '../services/newsService';
 import { fetchScheduledTours } from '../services/tourService';
 import { fetchCareEnquiries } from '../services/enquiryService';

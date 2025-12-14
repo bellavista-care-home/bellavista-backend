@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination, Autoplay } from 'swiper/modules';
@@ -8,7 +8,7 @@ import 'swiper/css/pagination';
 
 import '../styles/CareHome.css';
 import ReviewForm from '../components/ReviewForm';
-import { newsData } from '../data/newsData';
+import { fetchNewsItems } from '../services/newsService';
 
 const WaverleyCareCentre = () => {
   const [heroExpanded, setHeroExpanded] = useState(false);
@@ -16,12 +16,19 @@ const WaverleyCareCentre = () => {
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [facilitiesExpanded, setFacilitiesExpanded] = useState(false);
   const [teamExpanded, setTeamExpanded] = useState(false);
+  const [waverleyNews, setWaverleyNews] = useState([]);
 
-  // Filter news for Waverley location
-  const waverleyNews = newsData.filter(news => 
-    news.location.toLowerCase().includes('waverley') || 
-    news.location === 'All Locations'
-  );
+  useEffect(() => {
+    const loadNews = async () => {
+      const allNews = await fetchNewsItems();
+      const filtered = allNews.filter(news => 
+        news.location.toLowerCase().includes('waverley') || 
+        news.location === 'All Locations'
+      );
+      setWaverleyNews(filtered);
+    };
+    loadNews();
+  }, []);
 
   // Using Barry's images as placeholders as requested
   const activitiesGalleryImages = [

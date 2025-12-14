@@ -1,5 +1,13 @@
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
+const SERVER_URL = API_BASE ? API_BASE.replace('/api', '') : '';
+
+function resolveImageUrl(path) {
+  if (!path) return '';
+  if (path.startsWith('http') || path.startsWith('data:')) return path;
+  if (path.startsWith('/')) return `${SERVER_URL}${path}`;
+  return path;
+}
 
 function dataURItoBlob(dataURI) {
   if (!dataURI || typeof dataURI !== 'string' || !dataURI.startsWith('data:')) return null;
@@ -23,7 +31,12 @@ export async function fetchNewsItems() {
   try {
     const res = await fetch(`${API_BASE}/news`);
     if (!res.ok) throw new Error('Failed to fetch news');
-    return await res.json();
+    const items = await res.json();
+    return items.map(item => ({
+      ...item,
+      image: resolveImageUrl(item.image),
+      gallery: item.gallery ? item.gallery.map(resolveImageUrl) : []
+    }));
   } catch (err) {
     console.error(err);
     return [];
@@ -80,7 +93,12 @@ export async function fetchNewsItemById(id) {
   try {
     const res = await fetch(`${API_BASE}/news/${id}`);
     if (!res.ok) return null;
-    return await res.json();
+    const item = await res.json();
+    return {
+      ...item,
+      image: resolveImageUrl(item.image),
+      gallery: item.gallery ? item.gallery.map(resolveImageUrl) : []
+    };
   } catch (err) {
     console.error(err);
     return null;

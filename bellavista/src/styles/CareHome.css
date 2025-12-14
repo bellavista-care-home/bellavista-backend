@@ -778,37 +778,62 @@
   }
 }
 
+/* Add support for .news-grid.modern from MainPage to ensure consistency */
+.news-grid.modern {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 30px;
+}
+
+/* Horizontal Scroll for News on Mobile */
 @media (max-width: 768px) {
   .loc-hero {
     min-height: auto;
     padding: 120px var(--space-sm) 60px;
     background-attachment: scroll;
   }
-  .news-grid {
+  
+  .news-grid,
+  .news-grid.modern {
     display: flex;
     overflow-x: auto;
     gap: var(--space-sm);
     padding-bottom: var(--space-sm);
     scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    scrollbar-width: thin;
+    grid-template-columns: none; /* Override grid */
   }
-  .news-grid::-webkit-scrollbar {
+  
+  .news-grid::-webkit-scrollbar,
+  .news-grid.modern::-webkit-scrollbar {
     height: 8px;
   }
-  .news-grid::-webkit-scrollbar-track {
+  
+  .news-grid::-webkit-scrollbar-track,
+  .news-grid.modern::-webkit-scrollbar-track {
     background: var(--color-bg-light);
     border-radius: 4px;
   }
-  .news-grid::-webkit-scrollbar-thumb {
+  
+  .news-grid::-webkit-scrollbar-thumb,
+  .news-grid.modern::-webkit-scrollbar-thumb {
     background: var(--color-primary);
     border-radius: 4px;
   }
-  .news-card {
+  
+  .news-card,
+  .news-card.modern {
     flex: 0 0 280px;
     scroll-snap-align: start;
+    width: 280px; /* Explicit width */
+    max-width: 280px;
   }
+  
   .news-card__image {
-    height: 140px;
+    height: 160px;
   }
+  
   .news-card__content {
     padding: var(--space-sm);
   }
