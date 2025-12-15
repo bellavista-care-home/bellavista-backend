@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination, Autoplay } from 'swiper/modules';
 import 'swiper/css';
@@ -11,6 +11,7 @@ import ReviewForm from '../components/ReviewForm';
 import { fetchNewsItems } from '../services/newsService';
 
 const CollegeFieldsNursingHome = () => {
+  const navigate = useNavigate();
   const [heroExpanded, setHeroExpanded] = useState(false);
   const [showActivitiesModal, setShowActivitiesModal] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
@@ -164,7 +165,11 @@ const CollegeFieldsNursingHome = () => {
             <i className="fas fa-home"></i>
             <span>Home-from-Home</span>
           </div>
-          <div className="loc-stats__item">
+          <div 
+            className="loc-stats__item"
+            onClick={() => window.open('https://www.google.com/maps/search/?api=1&query=College+Fields+Nursing+Home+Barry', '_blank')}
+            style={{ cursor: 'pointer' }}
+          >
             <i className="fas fa-map-marker-alt"></i>
             <span>Barry</span>
           </div>

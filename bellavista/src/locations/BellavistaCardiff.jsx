@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination, Autoplay, EffectFade } from 'swiper/modules';
 import 'swiper/css';
@@ -12,6 +12,7 @@ import ReviewForm from '../components/ReviewForm';
 import { fetchNewsItems } from '../services/newsService';
 
 const BellavistaCardiff = () => {
+  const navigate = useNavigate();
   const [heroExpanded, setHeroExpanded] = useState(false);
   const [showActivitiesModal, setShowActivitiesModal] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
@@ -245,15 +246,27 @@ We Regularly take advantage of our big garden space and often hold garden partie
             <i className="fas fa-bed"></i>
             <span>62 Bedrooms</span>
           </div>
-          <div className="loc-stats__item">
+          <div 
+            className="loc-stats__item" 
+            onClick={() => window.open('https://www.google.com/maps/search/?api=1&query=Bellavista+Nursing+Home+Cardiff+Bay', '_blank')}
+            style={{ cursor: 'pointer' }}
+          >
             <i className="fas fa-map-marker-alt"></i>
             <span>Cardiff Bay</span>
           </div>
-          <div className="loc-stats__item">
+          <div 
+            className="loc-stats__item"
+            onClick={() => navigate('/our-care')}
+            style={{ cursor: 'pointer' }}
+          >
             <i className="fas fa-star"></i>
             <span>Quality Care</span>
           </div>
-          <div className="loc-stats__item">
+          <div 
+            className="loc-stats__item"
+            onClick={() => document.getElementById('team-section')?.scrollIntoView({ behavior: 'smooth' })}
+            style={{ cursor: 'pointer' }}
+          >
             <i className="fas fa-users"></i>
             <span>Expert Team</span>
           </div>
@@ -450,7 +463,7 @@ We Regularly take advantage of our big garden space and often hold garden partie
       )}
 
       {/* 4. TEAM & CARE */}
-      <section className="loc-section loc-section--white">
+      <section className="loc-section loc-section--white" id="team-section">
         <div className="container">
           <div className="loc-grid">
             <div className="loc-grid__content">

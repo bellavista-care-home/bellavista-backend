@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination, Autoplay } from 'swiper/modules';
 import 'swiper/css';
@@ -11,6 +11,7 @@ import ReviewForm from '../components/ReviewForm';
 import { fetchNewsItems } from '../services/newsService';
 
 const MeadowValeCwtch = () => {
+  const navigate = useNavigate();
   const [heroExpanded, setHeroExpanded] = useState(false);
   const [showActivitiesModal, setShowActivitiesModal] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
@@ -185,15 +186,27 @@ const MeadowValeCwtch = () => {
             <i className="fas fa-bed"></i>
             <span>9 Bed Capacity</span>
           </div>
-          <div className="loc-stats__item">
+          <div 
+            className="loc-stats__item"
+            onClick={() => window.open('https://www.google.com/maps/search/?api=1&query=Meadow+Vale+Cwtch+Barry', '_blank')}
+            style={{ cursor: 'pointer' }}
+          >
             <i className="fas fa-map-marker-alt"></i>
             <span>Vale of Glamorgan</span>
           </div>
-          <div className="loc-stats__item">
+          <div 
+            className="loc-stats__item"
+            onClick={() => document.getElementById('team-section')?.scrollIntoView({ behavior: 'smooth' })}
+            style={{ cursor: 'pointer' }}
+          >
             <i className="fas fa-user-nurse"></i>
             <span>Nurse-Led Service</span>
           </div>
-          <div className="loc-stats__item">
+          <div 
+            className="loc-stats__item"
+            onClick={() => navigate('/our-care')}
+            style={{ cursor: 'pointer' }}
+          >
             <i className="fas fa-brain"></i>
             <span>Dementia Care</span>
           </div>
@@ -319,7 +332,7 @@ const MeadowValeCwtch = () => {
       </section>
 
       {/* 4. TEAM & CARE */}
-      <section className="loc-section loc-section--white">
+      <section className="loc-section loc-section--white" id="team-section">
         <div className="container">
           <div className="loc-grid">
             <div className="loc-grid__content">

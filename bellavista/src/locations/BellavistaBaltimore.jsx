@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination, Autoplay } from 'swiper/modules';
 import 'swiper/css';
@@ -11,6 +11,7 @@ import ReviewForm from '../components/ReviewForm';
 import { fetchNewsItems } from '../services/newsService';
 
 const BellavistaBaltimore = () => {
+  const navigate = useNavigate();
   const [heroExpanded, setHeroExpanded] = useState(false);
   const [showActivitiesModal, setShowActivitiesModal] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
@@ -163,7 +164,11 @@ const BellavistaBaltimore = () => {
             <i className="fas fa-bed"></i>
             <span>26 Residents</span>
           </div>
-          <div className="loc-stats__item">
+          <div 
+            className="loc-stats__item"
+            onClick={() => window.open('https://www.google.com/maps/search/?api=1&query=Baltimore+House+Care+Home+Barry', '_blank')}
+            style={{ cursor: 'pointer' }}
+          >
             <i className="fas fa-map-marker-alt"></i>
             <span>Barry</span>
           </div>
@@ -171,7 +176,11 @@ const BellavistaBaltimore = () => {
             <i className="fas fa-paw"></i>
             <span>Pet Friendly</span>
           </div>
-          <div className="loc-stats__item">
+          <div 
+            className="loc-stats__item"
+            onClick={() => document.getElementById('team-section')?.scrollIntoView({ behavior: 'smooth' })}
+            style={{ cursor: 'pointer' }}
+          >
             <i className="fas fa-users"></i>
             <span>Family Owned</span>
           </div>
@@ -305,7 +314,7 @@ const BellavistaBaltimore = () => {
       </section>
 
       {/* 4. TEAM & CARE */}
-      <section className="loc-section loc-section--white">
+      <section className="loc-section loc-section--white" id="team-section">
         <div className="container">
           <div className="loc-grid">
             <div className="loc-grid__content">

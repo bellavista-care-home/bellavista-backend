@@ -121,6 +121,70 @@ const Home = () => {
             </ul>
           </div>
         `
+      },
+      physical: {
+        title: 'Physical Wellness - Movement & Vitality',
+        content: `
+          <div class="service-detail">
+            <h4><i class="fas fa-running"></i> Active Living for All Abilities</h4>
+            <p>Our dedicated activities team ensures every resident can participate in meaningful physical activity tailored to their capabilities.</p>
+            <h4><i class="fas fa-heartbeat"></i> Activities Include:</h4>
+            <ul>
+              <li><strong>Wheelchair Zumba:</strong> Fun, rhythmic movement sessions accessible to everyone.</li>
+              <li><strong>Armchair Exercises:</strong> Gentle fitness to maintain mobility and strength.</li>
+              <li><strong>Garden Activities:</strong> Enjoying our accessible outdoor spaces and gardening clubs.</li>
+              <li><strong>Physiotherapy Support:</strong> Personalized programs to aid recovery and mobility.</li>
+            </ul>
+          </div>
+        `
+      },
+      creative: {
+        title: 'Creative Arts - Expression & Joy',
+        content: `
+          <div class="service-detail">
+            <h4><i class="fas fa-palette"></i> Unleashing Creativity</h4>
+            <p>We encourage self-expression through various artistic mediums, providing a sense of accomplishment and joy.</p>
+            <h4><i class="fas fa-paint-brush"></i> Creative Workshops:</h4>
+            <ul>
+              <li><strong>Arts & Crafts:</strong> Painting, pottery, and seasonal decoration making.</li>
+              <li><strong>Textile Arts:</strong> Knitting, sewing, and embroidery groups.</li>
+              <li><strong>Themed Projects:</strong> Creating calendars, cards, and decorations for holidays.</li>
+              <li><strong>Flower Arranging:</strong> Engaging with nature's beauty indoors.</li>
+            </ul>
+          </div>
+        `
+      },
+      social: {
+        title: 'Social & Games - Fun & Friendship',
+        content: `
+          <div class="service-detail">
+            <h4><i class="fas fa-users"></i> Building Community Connections</h4>
+            <p>Social interaction is at the heart of Bellavista, with a vibrant calendar of events to foster friendships.</p>
+            <h4><i class="fas fa-glass-cheers"></i> Social Highlights:</h4>
+            <ul>
+              <li><strong>Games & Entertainment:</strong> Bingo, quizzes, board games, and playing cards.</li>
+              <li><strong>Music & Parties:</strong> Sing-alongs, karaoke, and fancy dress parties.</li>
+              <li><strong>Community Outings:</strong> Trips to Cardiff Bay, Millennium Centre, and local cafes.</li>
+              <li><strong>Intergenerational Events:</strong> Visits from local schools and community groups.</li>
+            </ul>
+          </div>
+        `
+      },
+      therapeutic: {
+        title: 'Therapeutic Care - Sensory & Soul',
+        content: `
+          <div class="service-detail">
+            <h4><i class="fas fa-spa"></i> Specialized Therapeutic Support</h4>
+            <p>Our therapeutic activities are designed to stimulate the senses, evoke memories, and provide comfort, especially for residents with dementia.</p>
+            <h4><i class="fas fa-brain"></i> Therapeutic Programs:</h4>
+            <ul>
+              <li><strong>Animal Therapy:</strong> Visits from pets and exotic animals (Zoolab) for sensory stimulation.</li>
+              <li><strong>Cinema Experience:</strong> Film days in our cinema room with popcorn and ice cream.</li>
+              <li><strong>Reminiscing:</strong> 1-to-1 sessions and "memory lane" activities to connect with the past.</li>
+              <li><strong>Sensory Activities:</strong> Themed areas like our "Beach" or "Victorian" corners for visual and tactile engagement.</li>
+            </ul>
+          </div>
+        `
       }
     };
 
@@ -273,28 +337,28 @@ const Home = () => {
             </div>
           </div>
           <div className="activity-grid">
-            <div className="activity-card">
+            <div className="activity-card" onClick={() => openModal('physical')}>
               <div className="activity-icon physical">
                 <i className="fas fa-dumbbell" style={{fontSize: '30px'}}></i>
               </div>
               <h4>Physical Wellness</h4>
               <p>Chair exercises, physiotherapy, gentle yoga</p>
             </div>
-            <div className="activity-card">
+            <div className="activity-card" onClick={() => openModal('creative')}>
               <div className="activity-icon creative">
                 <i className="fas fa-brush" style={{fontSize: '30px'}}></i>
               </div>
               <h4>Creative Arts</h4>
               <p>Painting, crafts, pottery, creative writing</p>
             </div>
-            <div className="activity-card">
+            <div className="activity-card" onClick={() => openModal('social')}>
               <div className="activity-icon social">
                 <i className="fas fa-gamepad" style={{fontSize: '30px'}}></i>
               </div>
               <h4>Social & Games</h4>
               <p>Bingo, quiz nights, social hours, outings</p>
             </div>
-            <div className="activity-card">
+            <div className="activity-card" onClick={() => openModal('therapeutic')}>
               <div className="activity-icon therapeutic">
                 <i className="fas fa-spa" style={{fontSize: '30px'}}></i>
               </div>
