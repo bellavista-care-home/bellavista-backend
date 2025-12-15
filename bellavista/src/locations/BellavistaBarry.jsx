@@ -449,11 +449,23 @@ const BellavistaBarry = () => {
                 </div>
                 <div className="fact-row">
                   <span className="fact-label">Location:</span>
-                  <span className="fact-value">Cardiff Bay</span>
+                  <span 
+                    className="fact-value" 
+                    style={{ color: 'blue', textDecoration: 'underline', cursor: 'pointer' }}
+                    onClick={() => window.open('https://www.google.com/maps/search/?api=1&query=Bellavista+Nursing+Home+Barry', '_blank')}
+                  >
+                    Barry
+                  </span>
                 </div>
                 <div className="fact-row">
-                  <span className="fact-label">Specialty:</span>
-                  <span className="fact-value">Dementia Care</span>
+                  <span className="fact-label">Our Care:</span>
+                  <Link 
+                    to="/our-care" 
+                    className="fact-value" 
+                    style={{ color: 'blue', textDecoration: 'underline', cursor: 'pointer' }}
+                  >
+                    Dementia Care
+                  </Link>
                 </div>
                 <div className="fact-row">
                   <span className="fact-label">Parking:</span>

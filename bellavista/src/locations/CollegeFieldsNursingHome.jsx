@@ -500,7 +500,23 @@ const CollegeFieldsNursingHome = () => {
                 </div>
                 <div className="fact-row">
                   <span className="fact-label">Location:</span>
-                  <span className="fact-value">Barry</span>
+                  <span 
+                    className="fact-value" 
+                    style={{ color: 'blue', textDecoration: 'underline', cursor: 'pointer' }}
+                    onClick={() => window.open('https://www.google.com/maps/search/?api=1&query=College+Fields+Nursing+Home+Barry', '_blank')}
+                  >
+                    Barry
+                  </span>
+                </div>
+                <div className="fact-row">
+                  <span className="fact-label">Our Care:</span>
+                  <Link 
+                    to="/our-care" 
+                    className="fact-value" 
+                    style={{ color: 'blue', textDecoration: 'underline', cursor: 'pointer' }}
+                  >
+                    Nursing Care
+                  </Link>
                 </div>
                 <div className="fact-row">
                   <span className="fact-label">Dining:</span>

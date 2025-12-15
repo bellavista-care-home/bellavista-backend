@@ -461,11 +461,23 @@ const WaverleyCareCentre = () => {
                 </div>
                 <div className="fact-row">
                   <span className="fact-label">Location:</span>
-                  <span className="fact-value">Penarth</span>
+                  <span 
+                    className="fact-value" 
+                    style={{ color: 'blue', textDecoration: 'underline', cursor: 'pointer' }}
+                    onClick={() => window.open('https://www.google.com/maps/search/?api=1&query=Waverley+Care+Centre+Penarth', '_blank')}
+                  >
+                    Penarth
+                  </span>
                 </div>
                 <div className="fact-row">
-                  <span className="fact-label">Specialty:</span>
-                  <span className="fact-value">EMI & FMI</span>
+                  <span className="fact-label">Our Care:</span>
+                  <Link 
+                    to="/our-care" 
+                    className="fact-value" 
+                    style={{ color: 'blue', textDecoration: 'underline', cursor: 'pointer' }}
+                  >
+                    EMI & FMI
+                  </Link>
                 </div>
                 <div className="fact-row">
                   <span className="fact-label">Setting:</span>

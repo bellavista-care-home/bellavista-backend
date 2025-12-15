@@ -416,6 +416,26 @@ const BellavistaBaltimore = () => {
                   <span className="fact-value">26 Residents</span>
                 </div>
                 <div className="fact-row">
+                  <span className="fact-label">Location:</span>
+                  <span 
+                    className="fact-value" 
+                    style={{ color: 'blue', textDecoration: 'underline', cursor: 'pointer' }}
+                    onClick={() => window.open('https://www.google.com/maps/search/?api=1&query=Baltimore+House+Care+Home+Barry', '_blank')}
+                  >
+                    Barry
+                  </span>
+                </div>
+                <div className="fact-row">
+                  <span className="fact-label">Our Care:</span>
+                  <Link 
+                    to="/our-care" 
+                    className="fact-value" 
+                    style={{ color: 'blue', textDecoration: 'underline', cursor: 'pointer' }}
+                  >
+                    Nursing Care
+                  </Link>
+                </div>
+                <div className="fact-row">
                   <span className="fact-label">Setting:</span>
                   <span className="fact-value">Pastoral</span>
                 </div>

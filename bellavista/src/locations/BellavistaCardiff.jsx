@@ -639,11 +639,23 @@ We Regularly take advantage of our big garden space and often hold garden partie
                 </div>
                 <div className="fact-row">
                   <span className="fact-label">Location:</span>
-                  <span className="fact-value">Cardiff Bay</span>
+                  <span 
+                    className="fact-value" 
+                    style={{ color: 'blue', textDecoration: 'underline', cursor: 'pointer' }}
+                    onClick={() => window.open('https://www.google.com/maps/search/?api=1&query=Bellavista+Nursing+Home+Cardiff', '_blank')}
+                  >
+                    Cardiff Bay
+                  </span>
                 </div>
                 <div className="fact-row">
-                  <span className="fact-label">Specialty:</span>
-                  <span className="fact-value">Dementia Care</span>
+                  <span className="fact-label">Our Care:</span>
+                  <Link 
+                    to="/our-care" 
+                    className="fact-value" 
+                    style={{ color: 'blue', textDecoration: 'underline', cursor: 'pointer' }}
+                  >
+                    Dementia Care
+                  </Link>
                 </div>
                 <div className="fact-row">
                   <span className="fact-label">Parking:</span>

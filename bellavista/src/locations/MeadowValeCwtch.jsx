@@ -430,8 +430,24 @@ const MeadowValeCwtch = () => {
               </div>
               <div className="bottom-card__content">
                 <div className="fact-row">
-                  <span className="fact-label">Specialty:</span>
-                  <span className="fact-value">Young Onset Dementia</span>
+                  <span className="fact-label">Location:</span>
+                  <span 
+                    className="fact-value" 
+                    style={{ color: 'blue', textDecoration: 'underline', cursor: 'pointer' }}
+                    onClick={() => window.open('https://www.google.com/maps/search/?api=1&query=Meadow+Vale+Cwtch+Barry', '_blank')}
+                  >
+                    Vale of Glamorgan
+                  </span>
+                </div>
+                <div className="fact-row">
+                  <span className="fact-label">Our Care:</span>
+                  <Link 
+                    to="/our-care" 
+                    className="fact-value" 
+                    style={{ color: 'blue', textDecoration: 'underline', cursor: 'pointer' }}
+                  >
+                    Young Onset Dementia
+                  </Link>
                 </div>
                 <div className="fact-row">
                   <span className="fact-label">Capacity:</span>
