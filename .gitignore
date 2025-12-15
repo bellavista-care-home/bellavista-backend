@@ -17,3 +17,5 @@ uploads/
 
 # Node (if any)
 node_modules/
+.vite/
+backend/instance/

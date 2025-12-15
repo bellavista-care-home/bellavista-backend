@@ -188,7 +188,11 @@ const Home = () => {
           <div className="news-showcase">
             <div className="news-featured">
               <div className="news-image-large">
-                <img src={featuredNews.image} alt={featuredNews.title}/>
+                {featuredNews.image ? (
+                  <img src={featuredNews.image} alt={featuredNews.title}/>
+                ) : (
+                  <div className="featured-placeholder-image"><i className="fas fa-newspaper"></i></div>
+                )}
                 {featuredNews.badge && <div className="news-badge-large">{featuredNews.badge}</div>}
               </div>
               <div className="news-info-large">
@@ -214,7 +218,12 @@ const Home = () => {
             {newsList.map((news, index) => (
               <div key={index} className="news-card modern news-visible" data-category={news.category}>
                 <div className="news-image">
-                  <img alt={news.title} src={news.image}/>
+                  {news.image ? (
+                    <img alt={news.title} src={news.image}/>
+                  ) : (
+                    <div className="news-placeholder-image-small"><i className="fas fa-newspaper"></i></div>
+                  )}
+                  {news.badge && <div className="news-badge">{news.badge}</div>}
                 </div>
                 <div className="news-content">
                   <div className={`news-category ${news.category}`}>{news.category.charAt(0).toUpperCase() + news.category.slice(1)}</div>

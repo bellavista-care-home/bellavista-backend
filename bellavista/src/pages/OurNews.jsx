@@ -123,7 +123,11 @@ const OurNews = () => {
                   {regularNews.map((news) => (
                   <article key={news.id} className={`news-article-card ${highlightedArticleId === news.id ? 'highlighted' : ''}`}>
                     <div className="article-image">
-                      <img src={news.image} alt={news.title} />
+                      {news.image ? (
+                        <img src={news.image} alt={news.title} />
+                      ) : (
+                        <div className="article-placeholder-image"><i className="fas fa-newspaper"></i></div>
+                      )}
                       {news.badge && <div className="article-badge">{news.badge}</div>}
                     </div>
                     <div className="article-content">

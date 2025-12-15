@@ -564,7 +564,11 @@ We Regularly take advantage of our big garden space and often hold garden partie
               {cardiffNews.map((news) => (
                 <div key={news.id} className="news-card modern">
                   <div className="news-card__image">
-                    <img src={news.image} alt={news.title} />
+                    {news.image ? (
+                      <img src={news.image} alt={news.title} />
+                    ) : (
+                      <div className="news-placeholder-image"><i className="fas fa-newspaper"></i></div>
+                    )}
                   </div>
                   <div className="news-card__content">
                     <h4 className="news-card__title">{news.title}</h4>

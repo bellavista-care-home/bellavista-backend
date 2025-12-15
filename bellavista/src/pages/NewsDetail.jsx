@@ -120,7 +120,9 @@ const NewsDetail = () => {
               </div>
 
               <div className="article-image-large">
-                <img src={news.image} alt={news.title} />
+                {news.image ? (
+                  <img src={news.image} alt={news.title} />
+                ) : null}
                 {news.badge && <div className="article-badge-large">{news.badge}</div>}
               </div>
               {(Array.isArray(news.gallery) && news.gallery.length > 0) && (
