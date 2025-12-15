@@ -4,7 +4,7 @@ import uuid
 import boto3
 from flask import Blueprint, request, jsonify, current_app
 from . import db
-from .models import ScheduledTour, CareEnquiry, NewsItem
+from .models import ScheduledTour, CareEnquiry, NewsItem, Home
 
 api_bp = Blueprint('api', __name__)
 
@@ -258,6 +258,145 @@ def delete_news(id):
     if not item:
         return jsonify({"error": "Not found"}), 404
     db.session.delete(item)
+    db.session.commit()
+    return jsonify({"ok": True})
+
+def to_dict_home(h):
+    def parse_json(field):
+        try:
+            return json.loads(field) if field else []
+        except:
+            return []
+
+    return {
+        "id": h.id,
+        "homeName": h.name,
+        "homeLocation": h.location,
+        "homeImage": h.image,
+        "homeBadge": h.badge,
+        "homeDesc": h.description,
+        "heroTitle": h.heroTitle,
+        "heroSubtitle": h.heroSubtitle,
+        "heroBgImage": h.heroBgImage,
+        "heroExpandedDesc": h.heroExpandedDesc,
+        "statsBedrooms": h.statsBedrooms,
+        "statsPremier": h.statsPremier,
+        "teamMembers": parse_json(h.teamMembersJson),
+        "teamGalleryImages": parse_json(h.teamGalleryJson),
+        "activitiesIntro": h.activitiesIntro,
+        "activities": parse_json(h.activitiesJson),
+        "activityImages": parse_json(h.activityImagesJson),
+        "activitiesModalDesc": h.activitiesModalDesc,
+        "facilitiesIntro": h.facilitiesIntro,
+        "facilitiesList": parse_json(h.facilitiesListJson),
+        "detailedFacilities": parse_json(h.detailedFacilitiesJson),
+        "facilitiesGalleryImages": parse_json(h.facilitiesGalleryJson),
+        "homeFeatured": h.featured,
+        "createdAt": h.createdAt.isoformat()
+    }
+
+@api_bp.post('/homes')
+def create_home():
+    data = request.get_json(force=True)
+    hid = data.get('id') or str(uuid.uuid4())
+    
+    home = Home(
+        id=hid,
+        name=data.get('homeName', ''),
+        location=data.get('homeLocation', ''),
+        image=data.get('homeImage', ''),
+        badge=data.get('homeBadge', ''),
+        description=data.get('homeDesc', ''),
+        heroTitle=data.get('heroTitle', ''),
+        heroSubtitle=data.get('heroSubtitle', ''),
+        heroBgImage=data.get('heroBgImage', ''),
+        heroExpandedDesc=data.get('heroExpandedDesc', ''),
+        statsBedrooms=data.get('statsBedrooms', ''),
+        statsPremier=data.get('statsPremier', ''),
+        teamMembersJson=json.dumps(data.get('teamMembers', [])),
+        teamGalleryJson=json.dumps(data.get('teamGalleryImages', [])),
+        activitiesIntro=data.get('activitiesIntro', ''),
+        activitiesJson=json.dumps(data.get('activities', [])),
+        activityImagesJson=json.dumps(data.get('activityImages', [])),
+        activitiesModalDesc=data.get('activitiesModalDesc', ''),
+        facilitiesIntro=data.get('facilitiesIntro', ''),
+        facilitiesListJson=json.dumps(data.get('facilitiesList', [])),
+        detailedFacilitiesJson=json.dumps(data.get('detailedFacilities', [])),
+        facilitiesGalleryJson=json.dumps(data.get('facilitiesGalleryImages', [])),
+        featured=data.get('homeFeatured', False)
+    )
+    
+    db.session.add(home)
+    db.session.commit()
+    return jsonify({"ok": True, "id": hid}), 201
+
+@api_bp.get('/homes')
+def list_homes():
+    homes = Home.query.order_by(Home.createdAt.desc()).all()
+    return jsonify([to_dict_home(h) for h in homes])
+
+@api_bp.get('/homes/<id>')
+def get_home(id):
+    home = Home.query.get(id)
+    if not home:
+        return jsonify({"error": "Not found"}), 404
+    return jsonify(to_dict_home(home))
+
+@api_bp.put('/homes/<id>')
+def update_home(id):
+    home = Home.query.get(id)
+    if not home:
+        return jsonify({"error": "Not found"}), 404
+        
+    data = request.get_json(force=True)
+    
+    # Update fields
+    home.name = data.get('homeName', home.name)
+    home.location = data.get('homeLocation', home.location)
+    home.image = data.get('homeImage', home.image)
+    home.badge = data.get('homeBadge', home.badge)
+    home.description = data.get('homeDesc', home.description)
+    
+    home.heroTitle = data.get('heroTitle', home.heroTitle)
+    home.heroSubtitle = data.get('heroSubtitle', home.heroSubtitle)
+    home.heroBgImage = data.get('heroBgImage', home.heroBgImage)
+    home.heroExpandedDesc = data.get('heroExpandedDesc', home.heroExpandedDesc)
+    
+    home.statsBedrooms = data.get('statsBedrooms', home.statsBedrooms)
+    home.statsPremier = data.get('statsPremier', home.statsPremier)
+    
+    if 'teamMembers' in data:
+        home.teamMembersJson = json.dumps(data['teamMembers'])
+    if 'teamGalleryImages' in data:
+        home.teamGalleryJson = json.dumps(data['teamGalleryImages'])
+        
+    home.activitiesIntro = data.get('activitiesIntro', home.activitiesIntro)
+    if 'activities' in data:
+        home.activitiesJson = json.dumps(data['activities'])
+    if 'activityImages' in data:
+        home.activityImagesJson = json.dumps(data['activityImages'])
+    home.activitiesModalDesc = data.get('activitiesModalDesc', home.activitiesModalDesc)
+    
+    home.facilitiesIntro = data.get('facilitiesIntro', home.facilitiesIntro)
+    if 'facilitiesList' in data:
+        home.facilitiesListJson = json.dumps(data['facilitiesList'])
+    if 'detailedFacilities' in data:
+        home.detailedFacilitiesJson = json.dumps(data['detailedFacilities'])
+    if 'facilitiesGalleryImages' in data:
+        home.facilitiesGalleryJson = json.dumps(data['facilitiesGalleryImages'])
+        
+    if 'homeFeatured' in data:
+        home.featured = data['homeFeatured']
+        
+    db.session.commit()
+    return jsonify(to_dict_home(home))
+
+@api_bp.delete('/homes/<id>')
+def delete_home(id):
+    home = Home.query.get(id)
+    if not home:
+        return jsonify({"error": "Not found"}), 404
+    db.session.delete(home)
     db.session.commit()
     return jsonify({"ok": True})
 

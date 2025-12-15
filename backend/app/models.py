@@ -13,6 +13,41 @@ class ScheduledTour(db.Model):
     createdAt = db.Column(db.DateTime, default=datetime.utcnow)
     status = db.Column(db.String(64), default='requested')
 
+class Home(db.Model):
+    id = db.Column(db.String, primary_key=True)
+    name = db.Column(db.String(255), nullable=False)
+    location = db.Column(db.String(255))
+    image = db.Column(db.Text)
+    badge = db.Column(db.String(128))
+    description = db.Column(db.Text)
+    
+    # Hero Section
+    heroTitle = db.Column(db.String(255))
+    heroSubtitle = db.Column(db.String(255))
+    heroBgImage = db.Column(db.Text)
+    heroExpandedDesc = db.Column(db.Text)
+    
+    # Stats
+    statsBedrooms = db.Column(db.String(64))
+    statsPremier = db.Column(db.String(64))
+    
+    # JSON Fields for Lists
+    teamMembersJson = db.Column(db.Text)  # List of {name, role, image}
+    teamGalleryJson = db.Column(db.Text)  # List of {type, url}
+    
+    activitiesIntro = db.Column(db.Text)
+    activitiesJson = db.Column(db.Text)   # List of strings or objects
+    activityImagesJson = db.Column(db.Text) # List of {type, url}
+    activitiesModalDesc = db.Column(db.Text)
+    
+    facilitiesIntro = db.Column(db.Text)
+    facilitiesListJson = db.Column(db.Text) # List of {icon, title}
+    detailedFacilitiesJson = db.Column(db.Text) # List of {title, icon, description}
+    facilitiesGalleryJson = db.Column(db.Text) # List of {type, url}
+    
+    featured = db.Column(db.Boolean, default=False)
+    createdAt = db.Column(db.DateTime, default=datetime.utcnow)
+
 class CareEnquiry(db.Model):
     id = db.Column(db.String, primary_key=True)
     name = db.Column(db.String(255), nullable=False)
