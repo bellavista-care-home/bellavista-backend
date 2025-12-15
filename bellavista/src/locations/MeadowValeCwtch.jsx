@@ -17,6 +17,7 @@ const MeadowValeCwtch = () => {
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [facilitiesExpanded, setFacilitiesExpanded] = useState(false);
   const [meadowNews, setMeadowNews] = useState([]);
+  const [teamMembers, setTeamMembers] = useState([]);
 
   useEffect(() => {
     const loadNews = async () => {
@@ -192,7 +193,7 @@ const MeadowValeCwtch = () => {
             style={{ cursor: 'pointer' }}
           >
             <i className="fas fa-map-marker-alt"></i>
-            <span>Vale of Glamorgan</span>
+            <span style={{ textDecoration: 'underline', color: '#0066cc' }}>Vale of Glamorgan</span>
           </div>
           <div 
             className="loc-stats__item"
@@ -200,15 +201,15 @@ const MeadowValeCwtch = () => {
             style={{ cursor: 'pointer' }}
           >
             <i className="fas fa-user-nurse"></i>
-            <span>Nurse-Led Service</span>
+            <span style={{ textDecoration: 'underline', color: '#0066cc' }}>Nurse-Led Service</span>
           </div>
           <div 
             className="loc-stats__item"
             onClick={() => navigate('/our-care')}
             style={{ cursor: 'pointer' }}
           >
-            <i className="fas fa-brain"></i>
-            <span>Dementia Care</span>
+            <i className="fas fa-heart"></i>
+            <span style={{ textDecoration: 'underline', color: '#0066cc' }}>Our Care</span>
           </div>
         </div>
       </div>
@@ -332,34 +333,96 @@ const MeadowValeCwtch = () => {
       </section>
 
       {/* 4. TEAM & CARE */}
-      <section className="loc-section loc-section--white" id="team-section">
-        <div className="container">
-          <div className="loc-grid">
-            <div className="loc-grid__content">
-              <div className="section-header">
-                <span className="section-header__subtitle">Dedicated Staff</span>
-                <h2 className="section-header__title">Meet Our Team</h2>
+      {(teamMembers.length > 0 || teamGalleryImages.length > 0) && (
+        <section className="loc-section loc-section--white" id="team-section">
+          <div className="container">
+            <div className="loc-grid">
+              <div className="loc-grid__content">
+                <div className="section-header">
+                  <span className="section-header__subtitle">Dedicated Staff</span>
+                  <h2 className="section-header__title">Meet Our Team</h2>
+                </div>
+                <p className="loc-text">
+                  We are looking to recruit experienced caregivers with a skill set that can be applied to those living with Young Onset Dementia. Our staff are fluid caregivers, happy to move between care, cleaning, and laundry support.
+                </p>
               </div>
-              <p className="loc-text">
-                We are looking to recruit experienced caregivers with a skill set that can be applied to those living with Young Onset Dementia. Our staff are fluid caregivers, happy to move between care, cleaning, and laundry support.
-              </p>
+              <div className="loc-grid__media">
+                <div className="loc-slider">
+                  <Swiper {...sliderSettings} className="custom-swiper">
+                    {teamGalleryImages.map((img, index) => (
+                      <SwiperSlide key={index}>
+                        <div className="loc-slider__item">
+                          <img src={`/BarryTeam/${img}`} alt={`Team Member ${index + 1}`} loading="lazy" />
+                        </div>
+                      </SwiperSlide>
+                    ))}
+                  </Swiper>
+                </div>
+              </div>
             </div>
-            <div className="loc-grid__media">
-              <div className="loc-slider">
-                <Swiper {...sliderSettings} className="custom-swiper">
-                  {teamGalleryImages.map((img, index) => (
-                    <SwiperSlide key={index}>
-                      <div className="loc-slider__item">
-                        <img src={`/BarryTeam/${img}`} alt={`Team Member ${index + 1}`} loading="lazy" />
+
+            {/* Key Staff Members Scrollable List */}
+            {teamMembers.length > 0 && (
+              <div className="team-scroll-container" style={{ marginTop: '64px' }}>
+                <div className="section-header" style={{ marginBottom: '32px' }}>
+                  <h3 className="section-header__title" style={{ fontSize: '1.8rem' }}>Key Staff Members</h3>
+                </div>
+                <div className="team-scroll-wrapper" style={{
+                  display: 'flex',
+                  overflowX: 'auto',
+                  gap: '24px',
+                  paddingBottom: '24px',
+                  scrollbarWidth: 'thin',
+                  scrollbarColor: 'var(--color-primary) #f0f0f0',
+                  WebkitOverflowScrolling: 'touch'
+                }}>
+                  {teamMembers.map((member, index) => (
+                    <div key={index} className="team-member-card" style={{
+                      flex: '0 0 300px',
+                      background: '#fff',
+                      borderRadius: '12px',
+                      overflow: 'hidden',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                      transition: 'transform 0.3s ease',
+                      border: '1px solid #eee'
+                    }}>
+                      <div className="team-member-image" style={{ height: '320px', background: '#f5f5f5', position: 'relative' }}>
+                        {member.image ? (
+                          <img src={member.image} alt={member.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          <div style={{
+                            width: '100%',
+                            height: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#ccc',
+                            fontSize: '4rem'
+                          }}>
+                            <i className="fas fa-user"></i>
+                          </div>
+                        )}
+                        <div style={{
+                          position: 'absolute',
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent)',
+                          padding: '24px 20px 16px',
+                          color: 'white'
+                        }}>
+                          <h4 style={{ fontSize: '1.25rem', marginBottom: '4px', textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>{member.name}</h4>
+                          <p style={{ fontSize: '0.9rem', opacity: 0.9, fontWeight: 500 }}>{member.role}</p>
+                        </div>
                       </div>
-                    </SwiperSlide>
+                    </div>
                   ))}
-                </Swiper>
+                </div>
               </div>
-            </div>
+            )}
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* 5. NEWS SECTION */}
       {meadowNews.length > 0 && (
@@ -433,7 +496,7 @@ const MeadowValeCwtch = () => {
                   <span className="fact-label">Location:</span>
                   <span 
                     className="fact-value" 
-                    style={{ color: 'blue', textDecoration: 'underline', cursor: 'pointer' }}
+                    style={{ color: '#0066cc', textDecoration: 'underline', cursor: 'pointer' }}
                     onClick={() => window.open('https://www.google.com/maps/search/?api=1&query=Meadow+Vale+Cwtch+Barry', '_blank')}
                   >
                     Vale of Glamorgan
@@ -444,9 +507,9 @@ const MeadowValeCwtch = () => {
                   <Link 
                     to="/our-care" 
                     className="fact-value" 
-                    style={{ color: 'blue', textDecoration: 'underline', cursor: 'pointer' }}
+                    style={{ color: '#0066cc', textDecoration: 'underline', cursor: 'pointer' }}
                   >
-                    Young Onset Dementia
+                    Our Care
                   </Link>
                 </div>
                 <div className="fact-row">

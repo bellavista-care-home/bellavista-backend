@@ -15,6 +15,7 @@ const HomeForm = ({ mode = 'add', initialData = null, onCancel }) => {
     statsBedrooms: '',
     statsPremier: '',
     teamMembers: [],
+    teamGalleryImages: [],
     activitiesIntro: '',
     activities: [],
     activityImages: [],
@@ -22,6 +23,7 @@ const HomeForm = ({ mode = 'add', initialData = null, onCancel }) => {
     facilitiesIntro: '',
     facilitiesList: [],
     detailedFacilities: [],
+    facilitiesGalleryImages: [],
     homeFeatured: false
   });
 
@@ -47,12 +49,24 @@ const HomeForm = ({ mode = 'add', initialData = null, onCancel }) => {
     setFormData(prev => ({ ...prev, [field]: prev[field].filter((_, i) => i !== index) }));
   };
 
+  const moveItem = (field, index, direction) => {
+    const newArray = [...formData[field]];
+    if (direction === 'up' && index > 0) {
+      [newArray[index], newArray[index - 1]] = [newArray[index - 1], newArray[index]];
+    } else if (direction === 'down' && index < newArray.length - 1) {
+      [newArray[index], newArray[index + 1]] = [newArray[index + 1], newArray[index]];
+    }
+    setFormData(prev => ({ ...prev, [field]: newArray }));
+  };
+
   // Local state for list inputs
   const [teamInput, setTeamInput] = useState({ name: '', role: '', image: '' });
+  const [teamGalleryInput, setTeamGalleryInput] = useState({ type: 'image', url: '' });
   const [activityInput, setActivityInput] = useState('');
-  const [activityImgInput, setActivityImgInput] = useState('');
+  const [activityMediaInput, setActivityMediaInput] = useState({ type: 'image', url: '' });
   const [facilityInput, setFacilityInput] = useState({ icon: '', title: '' });
   const [detFacilityInput, setDetFacilityInput] = useState({ title: '', icon: '', description: '' });
+  const [facilityMediaInput, setFacilityMediaInput] = useState({ type: 'image', url: '' });
   const copyListingJson = async () => {
     const id = (formData.homeName || 'home').toLowerCase().replace(/[^a-z0-9]+/g, '-');
     const name = formData.homeName || '';
@@ -198,9 +212,9 @@ const HomeForm = ({ mode = 'add', initialData = null, onCancel }) => {
       {/* 4. Team Members */}
       <div className="group-title" style={{marginTop:'30px', marginBottom:'10px'}}>Team Members</div>
       <div className="grid cols-3" style={{alignItems:'end'}}>
-        <div className="field"><label>Name</label><input value={teamInput.name} onChange={e => setTeamInput({...teamInput, name: e.target.value})} type="text"/></div>
-        <div className="field"><label>Role</label><input value={teamInput.role} onChange={e => setTeamInput({...teamInput, role: e.target.value})} type="text"/></div>
-        <div className="field"><label>Image URL</label><input value={teamInput.image} onChange={e => setTeamInput({...teamInput, image: e.target.value})} type="url"/></div>
+        <div className="field"><label>Name</label><input value={teamInput.name} onChange={e => setTeamInput({...teamInput, name: e.target.value})} type="text" placeholder="Full Name"/></div>
+        <div className="field"><label>Role</label><input value={teamInput.role} onChange={e => setTeamInput({...teamInput, role: e.target.value})} type="text" placeholder="Manager / Nurse"/></div>
+        <div className="field"><label>Image URL</label><input value={teamInput.image} onChange={e => setTeamInput({...teamInput, image: e.target.value})} type="url" placeholder="https://..."/></div>
       </div>
       <button className="btn ghost small" style={{marginTop:'10px'}} onClick={() => {
         if(teamInput.name && teamInput.role) {
@@ -209,14 +223,74 @@ const HomeForm = ({ mode = 'add', initialData = null, onCancel }) => {
         }
       }}><i className="fa-solid fa-plus"></i> Add Member</button>
       
-      <div style={{marginTop:'10px', display:'flex', gap:'10px', flexWrap:'wrap'}}>
+      <div style={{marginTop:'10px', display:'flex', flexDirection:'column', gap:'10px'}}>
         {formData.teamMembers.map((m, i) => (
-          <div key={i} style={{background:'#f0f4f8', padding:'8px', borderRadius:'8px', fontSize:'13px', display:'flex', alignItems:'center', gap:'8px'}}>
-            <img src={m.image || 'https://via.placeholder.com/30'} alt="" style={{width:'30px', height:'30px', borderRadius:'50%', objectFit:'cover'}}/>
-            <div><strong>{m.name}</strong><br/><span className="muted">{m.role}</span></div>
-            <i className="fa-solid fa-times" style={{cursor:'pointer', color:'red'}} onClick={() => removeItem('teamMembers', i)}></i>
+          <div key={i} style={{background:'#f0f4f8', padding:'8px', borderRadius:'8px', display:'flex', alignItems:'center', gap:'10px'}}>
+            <img src={m.image || 'https://via.placeholder.com/30'} alt="" style={{width:'40px', height:'40px', borderRadius:'50%', objectFit:'cover'}}/>
+            <div style={{flex:1}}>
+              <strong>{m.name}</strong><br/><span className="muted">{m.role}</span>
+            </div>
+            <div style={{display:'flex', gap:'5px'}}>
+              <button className="btn ghost small icon-only" disabled={i === 0} onClick={() => moveItem('teamMembers', i, 'up')}><i className="fa-solid fa-arrow-up"></i></button>
+              <button className="btn ghost small icon-only" disabled={i === formData.teamMembers.length - 1} onClick={() => moveItem('teamMembers', i, 'down')}><i className="fa-solid fa-arrow-down"></i></button>
+              <button className="btn ghost small icon-only" style={{color:'red'}} onClick={() => removeItem('teamMembers', i)}><i className="fa-solid fa-times"></i></button>
+            </div>
           </div>
         ))}
+      </div>
+
+      <div style={{marginTop:'20px'}}>
+        <label>Team Gallery Media (Images/Videos)</label>
+        <div style={{display:'flex', gap:'5px', marginBottom:'5px'}}>
+          <select 
+            value={teamGalleryInput.type} 
+            onChange={e => setTeamGalleryInput({...teamGalleryInput, type: e.target.value})}
+            style={{width:'80px'}}
+          >
+            <option value="image">Image</option>
+            <option value="video">Video</option>
+          </select>
+          <input 
+            type="text" 
+            placeholder={teamGalleryInput.type === 'image' ? "Image URL" : "Video URL"}
+            value={teamGalleryInput.url}
+            onChange={e => setTeamGalleryInput({...teamGalleryInput, url: e.target.value})}
+            style={{flex:1}}
+          />
+          <button className="btn ghost small" onClick={() => {
+            if(teamGalleryInput.url) { 
+              const newItem = { type: teamGalleryInput.type, url: teamGalleryInput.url };
+              addItem('teamGalleryImages', newItem);
+              setTeamGalleryInput({...teamGalleryInput, url: ''});
+            }
+          }}><i className="fa-solid fa-plus"></i></button>
+        </div>
+        
+        <div style={{marginTop:'5px'}}>
+           {formData.teamGalleryImages.length} items added
+           <div style={{display:'flex', flexDirection:'column', gap:'4px', marginTop:'4px'}}>
+             {formData.teamGalleryImages.map((item, i) => {
+               const isObj = typeof item === 'object';
+               const url = isObj ? item.url : item;
+               const type = isObj ? item.type : 'image';
+               return (
+               <div key={i} style={{display:'flex', alignItems:'center', background:'#f5f5f5', padding:'4px', borderRadius:'4px'}}>
+                 <div style={{width:'40px', height:'40px', background:'#ddd', marginRight:'10px', display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden'}}>
+                   {type === 'video' ? <i className="fa-solid fa-video"></i> : <img src={url} style={{width:'100%', height:'100%', objectFit:'cover'}} alt=""/>}
+                 </div>
+                 <div style={{flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', fontSize:'12px'}} title={url}>
+                   {type.toUpperCase()}: {url}
+                 </div>
+                 <div style={{display:'flex', gap:'5px'}}>
+                   <button className="btn ghost small icon-only" disabled={i===0} onClick={() => moveItem('teamGalleryImages', i, 'up')}><i className="fa-solid fa-arrow-up"></i></button>
+                   <button className="btn ghost small icon-only" disabled={i===formData.teamGalleryImages.length-1} onClick={() => moveItem('teamGalleryImages', i, 'down')}><i className="fa-solid fa-arrow-down"></i></button>
+                   <button className="btn ghost small icon-only" style={{color:'red'}} onClick={() => removeItem('teamGalleryImages', i)}><i className="fa-solid fa-times"></i></button>
+                 </div>
+               </div>
+               );
+             })}
+           </div>
+        </div>
       </div>
 
       {/* 5. Activities */}
@@ -235,36 +309,72 @@ const HomeForm = ({ mode = 'add', initialData = null, onCancel }) => {
                if(activityInput) { addItem('activities', activityInput); setActivityInput(''); }
              }}><i className="fa-solid fa-plus"></i></button>
            </div>
-           <div style={{marginTop:'5px', display:'flex', flexWrap:'wrap', gap:'5px'}}>
+           <div style={{marginTop:'5px', display:'flex', flexDirection:'column', gap:'5px'}}>
              {formData.activities.map((a, i) => (
-               <span key={i} style={{background:'#eef', padding:'4px 8px', borderRadius:'4px', fontSize:'12px'}}>
-                 {a} <i className="fa-solid fa-times" style={{cursor:'pointer', marginLeft:'4px'}} onClick={() => removeItem('activities', i)}></i>
-               </span>
+               <div key={i} style={{background:'#eef', padding:'4px 8px', borderRadius:'4px', fontSize:'13px', display:'flex', alignItems:'center', justifyContent:'space-between'}}>
+                 <span>{a}</span>
+                 <div style={{display:'flex', gap:'5px'}}>
+                    <i className="fa-solid fa-arrow-up" style={{cursor:'pointer', opacity: i===0?0.3:1}} onClick={() => moveItem('activities', i, 'up')}></i>
+                    <i className="fa-solid fa-arrow-down" style={{cursor:'pointer', opacity: i===formData.activities.length-1?0.3:1}} onClick={() => moveItem('activities', i, 'down')}></i>
+                    <i className="fa-solid fa-times" style={{cursor:'pointer', color:'red'}} onClick={() => removeItem('activities', i)}></i>
+                 </div>
+               </div>
              ))}
            </div>
          </div>
          <div className="field">
-           <label>Add Gallery Image</label>
-           <ImageUploader 
-             label="" 
-             aspectRatio={1} // Square for gallery
-             helperText="Square crop recommended"
-             onImageSelected={(url) => {
-               if(url) addItem('activityImages', url);
-             }}
-           />
+           <label>Add Gallery Media (Image/Video)</label>
+           <div style={{display:'flex', gap:'5px', marginBottom:'5px'}}>
+             <select 
+               value={activityMediaInput.type} 
+               onChange={e => setActivityMediaInput({...activityMediaInput, type: e.target.value})}
+               style={{width:'80px'}}
+             >
+               <option value="image">Image</option>
+               <option value="video">Video</option>
+             </select>
+             <input 
+                type="text" 
+                placeholder={activityMediaInput.type === 'image' ? "Image URL" : "Video URL (YouTube/MP4)"}
+                value={activityMediaInput.url}
+                onChange={e => setActivityMediaInput({...activityMediaInput, url: e.target.value})}
+                style={{flex:1}}
+             />
+             <button className="btn ghost small" onClick={() => {
+               if(activityMediaInput.url) { 
+                 // Store as object { type, url } or string if just image? User wants both.
+                 // Let's standardize on object for mixed media lists.
+                 // But existing data might be strings. We should handle both.
+                 const newItem = { type: activityMediaInput.type, url: activityMediaInput.url };
+                 addItem('activityImages', newItem);
+                 setActivityMediaInput({...activityMediaInput, url: ''});
+               }
+             }}><i className="fa-solid fa-plus"></i></button>
+           </div>
+           
            <div style={{marginTop:'5px'}}>
-              {formData.activityImages.length} images added
-              <div style={{display:'flex', gap:'4px', marginTop:'4px', overflowX:'auto'}}>
-                {formData.activityImages.map((img, i) => (
-                  <div key={i} style={{position:'relative'}}>
-                    <img src={img} style={{width:'40px', height:'40px', objectFit:'cover', borderRadius:'4px'}} />
-                    <i className="fa-solid fa-times" 
-                       style={{position:'absolute', top:0, right:0, background:'red', color:'white', fontSize:'10px', padding:'2px', cursor:'pointer'}}
-                       onClick={() => removeItem('activityImages', i)}
-                    ></i>
+              {formData.activityImages.length} items added
+              <div style={{display:'flex', flexDirection:'column', gap:'4px', marginTop:'4px'}}>
+                {formData.activityImages.map((item, i) => {
+                  const isObj = typeof item === 'object';
+                  const url = isObj ? item.url : item;
+                  const type = isObj ? item.type : 'image';
+                  return (
+                  <div key={i} style={{display:'flex', alignItems:'center', background:'#f5f5f5', padding:'4px', borderRadius:'4px'}}>
+                    <div style={{width:'40px', height:'40px', background:'#ddd', marginRight:'10px', display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden'}}>
+                      {type === 'video' ? <i className="fa-solid fa-video"></i> : <img src={url} style={{width:'100%', height:'100%', objectFit:'cover'}} alt=""/>}
+                    </div>
+                    <div style={{flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', fontSize:'12px'}} title={url}>
+                      {type.toUpperCase()}: {url}
+                    </div>
+                    <div style={{display:'flex', gap:'5px'}}>
+                      <button className="btn ghost small icon-only" disabled={i===0} onClick={() => moveItem('activityImages', i, 'up')}><i className="fa-solid fa-arrow-up"></i></button>
+                      <button className="btn ghost small icon-only" disabled={i===formData.activityImages.length-1} onClick={() => moveItem('activityImages', i, 'down')}><i className="fa-solid fa-arrow-down"></i></button>
+                      <button className="btn ghost small icon-only" style={{color:'red'}} onClick={() => removeItem('activityImages', i)}><i className="fa-solid fa-times"></i></button>
+                    </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
            </div>
          </div>
@@ -292,14 +402,74 @@ const HomeForm = ({ mode = 'add', initialData = null, onCancel }) => {
                if(facilityInput.title) { addItem('facilitiesList', facilityInput); setFacilityInput({icon:'', title:''}); }
              }}><i className="fa-solid fa-plus"></i></button>
            </div>
-           <ul style={{marginTop:'5px', listStyle:'none'}}>
+           <ul style={{marginTop:'5px', listStyle:'none', padding:0}}>
              {formData.facilitiesList.map((f, i) => (
-               <li key={i} style={{fontSize:'13px'}}>
-                 <i className={f.icon}></i> {f.title} <i className="fa-solid fa-times" style={{cursor:'pointer', color:'red', marginLeft:'5px'}} onClick={() => removeItem('facilitiesList', i)}></i>
+               <li key={i} style={{fontSize:'13px', display:'flex', alignItems:'center', justifyContent:'space-between', padding:'4px', background:'#f9f9f9', marginBottom:'2px'}}>
+                 <span><i className={f.icon}></i> {f.title}</span>
+                 <div style={{display:'flex', gap:'5px'}}>
+                    <i className="fa-solid fa-arrow-up" style={{cursor:'pointer', opacity: i===0?0.3:1}} onClick={() => moveItem('facilitiesList', i, 'up')}></i>
+                    <i className="fa-solid fa-arrow-down" style={{cursor:'pointer', opacity: i===formData.facilitiesList.length-1?0.3:1}} onClick={() => moveItem('facilitiesList', i, 'down')}></i>
+                    <i className="fa-solid fa-times" style={{cursor:'pointer', color:'red'}} onClick={() => removeItem('facilitiesList', i)}></i>
+                 </div>
                </li>
              ))}
            </ul>
         </div>
+        
+        <div className="field">
+           <label>Add Facilities Gallery Media</label>
+           <div style={{display:'flex', gap:'5px', marginBottom:'5px'}}>
+             <select 
+               value={facilityMediaInput.type} 
+               onChange={e => setFacilityMediaInput({...facilityMediaInput, type: e.target.value})}
+               style={{width:'80px'}}
+             >
+               <option value="image">Image</option>
+               <option value="video">Video</option>
+             </select>
+             <input 
+                type="text" 
+                placeholder={facilityMediaInput.type === 'image' ? "Image URL" : "Video URL"}
+                value={facilityMediaInput.url}
+                onChange={e => setFacilityMediaInput({...facilityMediaInput, url: e.target.value})}
+                style={{flex:1}}
+             />
+             <button className="btn ghost small" onClick={() => {
+               if(facilityMediaInput.url) { 
+                 const newItem = { type: facilityMediaInput.type, url: facilityMediaInput.url };
+                 addItem('facilitiesGalleryImages', newItem);
+                 setFacilityMediaInput({...facilityMediaInput, url: ''});
+               }
+             }}><i className="fa-solid fa-plus"></i></button>
+           </div>
+           
+           <div style={{marginTop:'5px'}}>
+              {formData.facilitiesGalleryImages.length} items added
+              <div style={{display:'flex', flexDirection:'column', gap:'4px', marginTop:'4px'}}>
+                {formData.facilitiesGalleryImages.map((item, i) => {
+                  const isObj = typeof item === 'object';
+                  const url = isObj ? item.url : item;
+                  const type = isObj ? item.type : 'image';
+                  return (
+                  <div key={i} style={{display:'flex', alignItems:'center', background:'#f5f5f5', padding:'4px', borderRadius:'4px'}}>
+                    <div style={{width:'40px', height:'40px', background:'#ddd', marginRight:'10px', display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden'}}>
+                      {type === 'video' ? <i className="fa-solid fa-video"></i> : <img src={url} style={{width:'100%', height:'100%', objectFit:'cover'}} alt=""/>}
+                    </div>
+                    <div style={{flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', fontSize:'12px'}} title={url}>
+                      {type.toUpperCase()}: {url}
+                    </div>
+                    <div style={{display:'flex', gap:'5px'}}>
+                      <button className="btn ghost small icon-only" disabled={i===0} onClick={() => moveItem('facilitiesGalleryImages', i, 'up')}><i className="fa-solid fa-arrow-up"></i></button>
+                      <button className="btn ghost small icon-only" disabled={i===formData.facilitiesGalleryImages.length-1} onClick={() => moveItem('facilitiesGalleryImages', i, 'down')}><i className="fa-solid fa-arrow-down"></i></button>
+                      <button className="btn ghost small icon-only" style={{color:'red'}} onClick={() => removeItem('facilitiesGalleryImages', i)}><i className="fa-solid fa-times"></i></button>
+                    </div>
+                  </div>
+                  );
+                })}
+              </div>
+           </div>
+        </div>
+      </div>
         
         <div className="field">
            <label>Add Detailed Facility</label>
@@ -316,7 +486,6 @@ const HomeForm = ({ mode = 'add', initialData = null, onCancel }) => {
              {formData.detailedFacilities.length} details added
            </div>
         </div>
-      </div>
 
       <div className="toolbar" style={{marginTop:'30px'}}>
         <label style={{display:'flex',alignItems:'center',gap:'8px'}}>

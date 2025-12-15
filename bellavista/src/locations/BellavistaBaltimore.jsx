@@ -17,6 +17,7 @@ const BellavistaBaltimore = () => {
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [facilitiesExpanded, setFacilitiesExpanded] = useState(false);
   const [baltimoreNews, setBaltimoreNews] = useState([]);
+  const [teamMembers, setTeamMembers] = useState([]);
 
   useEffect(() => {
     const loadNews = async () => {
@@ -98,6 +99,7 @@ const BellavistaBaltimore = () => {
 
 
 
+
   const facilitiesList = [
     { icon: "fas fa-bed", title: "Total 26 Rooms" },
     { icon: "fas fa-bath", title: "7 Ensuite Rooms" },
@@ -170,11 +172,15 @@ const BellavistaBaltimore = () => {
             style={{ cursor: 'pointer' }}
           >
             <i className="fas fa-map-marker-alt"></i>
-            <span>Barry</span>
+            <span style={{ textDecoration: 'underline', color: '#0066cc' }}>Barry</span>
           </div>
-          <div className="loc-stats__item">
-            <i className="fas fa-paw"></i>
-            <span>Pet Friendly</span>
+          <div 
+            className="loc-stats__item"
+            onClick={() => navigate('/our-care')}
+            style={{ cursor: 'pointer' }}
+          >
+            <i className="fas fa-heart"></i>
+            <span style={{ textDecoration: 'underline', color: '#0066cc' }}>Our Care</span>
           </div>
           <div 
             className="loc-stats__item"
@@ -182,7 +188,7 @@ const BellavistaBaltimore = () => {
             style={{ cursor: 'pointer' }}
           >
             <i className="fas fa-users"></i>
-            <span>Family Owned</span>
+            <span style={{ textDecoration: 'underline', color: '#0066cc' }}>Family Owned</span>
           </div>
         </div>
       </div>
@@ -314,34 +320,114 @@ const BellavistaBaltimore = () => {
       </section>
 
       {/* 4. TEAM & CARE */}
-      <section className="loc-section loc-section--white" id="team-section">
-        <div className="container">
-          <div className="loc-grid">
-            <div className="loc-grid__content">
-              <div className="section-header">
-                <span className="section-header__subtitle">Dedicated Staff</span>
-                <h2 className="section-header__title">Meet Our Team</h2>
+      {(teamMembers.length > 0 || teamGalleryImages.length > 0) && (
+        <section className="loc-section loc-section--white" id="team-section">
+          <div className="container">
+            <div className="loc-grid">
+              <div className="loc-grid__content">
+                <div className="section-header">
+                  <span className="section-header__subtitle">Dedicated Staff</span>
+                  <h2 className="section-header__title">Meet Our Team</h2>
+                </div>
+                <p className="loc-text">
+                  Our directors are fully involved in the management of the home, ensuring a personal touch. Our dedicated staff provide high-quality care tailored to the needs of each resident.
+                </p>
               </div>
-              <p className="loc-text">
-                Our directors are fully involved in the management of the home, ensuring a personal touch. Our dedicated staff provide high-quality care tailored to the needs of each resident.
-              </p>
+              <div className="loc-grid__media">
+                <div className="loc-slider">
+                  <Swiper {...sliderSettings} className="custom-swiper">
+                    {teamGalleryImages.map((img, index) => (
+                      <SwiperSlide key={index}>
+                        <div className="loc-slider__item">
+                          <img src={`/BarryTeam/${img}`} alt={`Team Member ${index + 1}`} loading="lazy" />
+                        </div>
+                      </SwiperSlide>
+                    ))}
+                  </Swiper>
+                </div>
+              </div>
             </div>
-            <div className="loc-grid__media">
-              <div className="loc-slider">
-                <Swiper {...sliderSettings} className="custom-swiper">
-                  {teamGalleryImages.map((img, index) => (
-                    <SwiperSlide key={index}>
-                      <div className="loc-slider__item">
-                        <img src={`/BarryTeam/${img}`} alt={`Team Member ${index + 1}`} loading="lazy" />
+
+            {/* Key Staff Members Scrollable List */}
+            {teamMembers.length > 0 && (
+              <div className="team-scroll-container" style={{ marginTop: '64px' }}>
+                <h3 style={{ 
+                  marginBottom: '32px', 
+                  fontFamily: 'var(--font-heading)', 
+                  fontSize: '2rem', 
+                  color: 'var(--color-primary)',
+                  textAlign: 'center'
+                }}>
+                  Key Staff Members
+                </h3>
+                <div className="team-horizontal-list" style={{ 
+                  display: 'flex', 
+                  overflowX: 'auto', 
+                  gap: '24px', 
+                  padding: '10px 4px 30px 4px', 
+                  scrollSnapType: 'x mandatory',
+                  scrollbarWidth: 'thin'
+                }}>
+                  {teamMembers.map((member, index) => (
+                    <div key={index} className="team-member-card" style={{ 
+                      minWidth: '260px', 
+                      scrollSnapAlign: 'start', 
+                      background: 'var(--color-bg-light)', 
+                      padding: '32px 24px', 
+                      borderRadius: '16px', 
+                      textAlign: 'center',
+                      boxShadow: '0 4px 6px rgba(0,0,0,0.05)',
+                      border: '1px solid var(--color-border)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      transition: 'transform 0.2s'
+                    }}>
+                      <div style={{
+                        width: '100px',
+                        height: '100px',
+                        borderRadius: '50%',
+                        background: 'white',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginBottom: '20px',
+                        boxShadow: '0 4px 10px rgba(0,0,0,0.1)',
+                        color: 'var(--color-primary)',
+                        fontSize: '2.5rem',
+                        overflow: 'hidden'
+                      }}>
+                        {member.image ? (
+                          <img src={member.image} alt={member.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          <i className="fas fa-user"></i>
+                        )}
                       </div>
-                    </SwiperSlide>
+                      <h4 style={{ 
+                        fontSize: '1.25rem', 
+                        marginBottom: '8px', 
+                        color: 'var(--color-text-dark)',
+                        fontFamily: 'var(--font-heading)'
+                      }}>
+                        {member.name}
+                      </h4>
+                      <span style={{ 
+                        color: 'var(--color-accent)', 
+                        fontWeight: '600', 
+                        fontSize: '0.9rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '1px'
+                      }}>
+                        {member.role}
+                      </span>
+                    </div>
                   ))}
-                </Swiper>
+                </div>
               </div>
-            </div>
+            )}
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* 5. NEWS SECTION */}
       {baltimoreNews.length > 0 && (
@@ -419,7 +505,7 @@ const BellavistaBaltimore = () => {
                   <span className="fact-label">Location:</span>
                   <span 
                     className="fact-value" 
-                    style={{ color: 'blue', textDecoration: 'underline', cursor: 'pointer' }}
+                    style={{ color: '#0066cc', textDecoration: 'underline', cursor: 'pointer' }}
                     onClick={() => window.open('https://www.google.com/maps/search/?api=1&query=Baltimore+House+Care+Home+Barry', '_blank')}
                   >
                     Barry
@@ -430,9 +516,9 @@ const BellavistaBaltimore = () => {
                   <Link 
                     to="/our-care" 
                     className="fact-value" 
-                    style={{ color: 'blue', textDecoration: 'underline', cursor: 'pointer' }}
+                    style={{ color: '#0066cc', textDecoration: 'underline', cursor: 'pointer' }}
                   >
-                    Nursing Care
+                    Our Care
                   </Link>
                 </div>
                 <div className="fact-row">

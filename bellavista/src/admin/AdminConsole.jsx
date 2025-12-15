@@ -9,7 +9,7 @@ import './AdminConsole.css';
 
 const AdminConsole = () => {
   const navigate = useNavigate();
-  const [activeView, setActiveView] = useState('add-home');
+  const [activeView, setActiveView] = useState('update-home');
   const [globalSearch, setGlobalSearch] = useState('');
   const [selectedHome, setSelectedHome] = useState(null);
   const [newsForm, setNewsForm] = useState({
@@ -56,6 +56,7 @@ const AdminConsole = () => {
       activityImages: [],
       facilitiesList: [{icon: "fas fa-wifi", title: "Smart TVs & Wifi"}],
       detailedFacilities: [],
+      facilitiesGalleryImages: [],
       homeFeatured: true
     },
     {
@@ -72,6 +73,7 @@ const AdminConsole = () => {
       activityImages: [],
       facilitiesList: [],
       detailedFacilities: [],
+      facilitiesGalleryImages: [],
       homeFeatured: false
     }
   ];
@@ -332,10 +334,11 @@ const AdminConsole = () => {
         <div className="nav">
           <div className="group-title">Homes</div>
           <button 
-            className={activeView === 'add-home' ? 'active' : ''}
-            onClick={() => setActiveView('add-home')}
+            className="disabled"
+            style={{ opacity: 0.5, cursor: 'not-allowed' }}
+            title="Temporarily Disabled"
           >
-            <i className="fa-solid fa-house-medical"></i><span>Add Home</span>
+            <i className="fa-solid fa-house-medical"></i><span>Add Home (Disabled)</span>
           </button>
           <button 
             className={activeView === 'update-home' ? 'active' : ''}

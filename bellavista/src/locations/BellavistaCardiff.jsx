@@ -19,6 +19,14 @@ const BellavistaCardiff = () => {
   const [facilitiesExpanded, setFacilitiesExpanded] = useState(false);
   const [selectedFacility, setSelectedFacility] = useState(null);
   const [cardiffNews, setCardiffNews] = useState([]);
+  const [teamMembers, setTeamMembers] = useState([
+    { name: "Ceri A Evans", role: "Home Manager" },
+    { name: "Titty Raj", role: "Lead Nurse in Charge" },
+    { name: "Zsuzsanna Karkosak", role: "Accounts Assistant" },
+    { name: "Cerry Davies", role: "Kitchen In charge" },
+    { name: "Karen Thomas", role: "RMN in Charge" },
+    { name: "Tania", role: "Housekeeping In charge" }
+  ]);
 
   useEffect(() => {
     const loadNews = async () => {
@@ -98,14 +106,6 @@ const BellavistaCardiff = () => {
     "b2-150x150.jpg"
   ];
 
-  const teamMembers = [
-    { name: "Ceri A Evans", role: "Home Manager" },
-    { name: "Titty Raj", role: "Lead Nurse in Charge" },
-    { name: "Zsuzsanna Karkosak", role: "Accounts Assistant" },
-    { name: "Cerry Davies", role: "Kitchen In charge" },
-    { name: "Karen Thomas", role: "RMN in Charge" },
-    { name: "Tania", role: "Housekeeping In charge" }
-  ];
 
   const activitiesList = [
     "Wheelchair Zumba",
@@ -252,7 +252,7 @@ We Regularly take advantage of our big garden space and often hold garden partie
             style={{ cursor: 'pointer' }}
           >
             <i className="fas fa-map-marker-alt"></i>
-            <span>Cardiff Bay</span>
+            <span style={{ textDecoration: 'underline', color: '#0066cc' }}>Cardiff Bay</span>
           </div>
           <div 
             className="loc-stats__item"
@@ -260,7 +260,7 @@ We Regularly take advantage of our big garden space and often hold garden partie
             style={{ cursor: 'pointer' }}
           >
             <i className="fas fa-star"></i>
-            <span>Quality Care</span>
+            <span style={{ textDecoration: 'underline', color: '#0066cc' }}>Our Care</span>
           </div>
           <div 
             className="loc-stats__item"
@@ -268,7 +268,7 @@ We Regularly take advantage of our big garden space and often hold garden partie
             style={{ cursor: 'pointer' }}
           >
             <i className="fas fa-users"></i>
-            <span>Expert Team</span>
+            <span style={{ textDecoration: 'underline', color: '#0066cc' }}>Expert Team</span>
           </div>
         </div>
       </div>
@@ -463,6 +463,7 @@ We Regularly take advantage of our big garden space and often hold garden partie
       )}
 
       {/* 4. TEAM & CARE */}
+      {(teamMembers.length > 0 || teamGalleryImages.length > 0) && (
       <section className="loc-section loc-section--white" id="team-section">
         <div className="container">
           <div className="loc-grid">
@@ -493,6 +494,7 @@ We Regularly take advantage of our big garden space and often hold garden partie
           </div>
 
           {/* Key Staff Members Scrollable List */}
+          {teamMembers.length > 0 && (
           <div className="team-scroll-container" style={{ marginTop: '64px' }}>
             <h3 style={{ 
               marginBottom: '32px', 
@@ -537,9 +539,14 @@ We Regularly take advantage of our big garden space and often hold garden partie
                     marginBottom: '20px',
                     boxShadow: '0 4px 10px rgba(0,0,0,0.1)',
                     color: 'var(--color-primary)',
-                    fontSize: '2.5rem'
+                    fontSize: '2.5rem',
+                    overflow: 'hidden'
                   }}>
-                    <i className="fas fa-user"></i>
+                    {member.image ? (
+                      <img src={member.image} alt={member.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <i className="fas fa-user"></i>
+                    )}
                   </div>
                   <h4 style={{ 
                     fontSize: '1.25rem', 
@@ -562,8 +569,10 @@ We Regularly take advantage of our big garden space and often hold garden partie
               ))}
             </div>
           </div>
+          )}
         </div>
       </section>
+      )}
 
       {/* 5. NEWS SECTION */}
       {cardiffNews.length > 0 && (
@@ -641,7 +650,7 @@ We Regularly take advantage of our big garden space and often hold garden partie
                   <span className="fact-label">Location:</span>
                   <span 
                     className="fact-value" 
-                    style={{ color: 'blue', textDecoration: 'underline', cursor: 'pointer' }}
+                    style={{ color: '#0066cc', textDecoration: 'underline', cursor: 'pointer' }}
                     onClick={() => window.open('https://www.google.com/maps/search/?api=1&query=Bellavista+Nursing+Home+Cardiff', '_blank')}
                   >
                     Cardiff Bay
@@ -652,7 +661,7 @@ We Regularly take advantage of our big garden space and often hold garden partie
                   <Link 
                     to="/our-care" 
                     className="fact-value" 
-                    style={{ color: 'blue', textDecoration: 'underline', cursor: 'pointer' }}
+                    style={{ color: '#0066cc', textDecoration: 'underline', cursor: 'pointer' }}
                   >
                     Dementia Care
                   </Link>

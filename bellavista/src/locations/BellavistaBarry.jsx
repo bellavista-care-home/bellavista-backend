@@ -17,6 +17,7 @@ const BellavistaBarry = () => {
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [facilitiesExpanded, setFacilitiesExpanded] = useState(false);
   const [barryNews, setBarryNews] = useState([]);
+  const [teamMembers, setTeamMembers] = useState([]);
 
   useEffect(() => {
     const loadNews = async () => {
@@ -94,6 +95,7 @@ const BellavistaBarry = () => {
     "IMG_8885-150x150.jpg",
     "b2-150x150.jpg"
   ];
+
 
   const activitiesList = [
     "Flower arranging",
@@ -196,7 +198,7 @@ const BellavistaBarry = () => {
             style={{ cursor: 'pointer' }}
           >
             <i className="fas fa-map-marker-alt"></i>
-            <span>Barry Seaside</span>
+            <span style={{ textDecoration: 'underline', color: '#0066cc' }}>Barry Seaside</span>
           </div>
           <div 
             className="loc-stats__item"
@@ -204,7 +206,7 @@ const BellavistaBarry = () => {
             style={{ cursor: 'pointer' }}
           >
             <i className="fas fa-star"></i>
-            <span>Quality Care</span>
+            <span style={{ textDecoration: 'underline', color: '#0066cc' }}>Quality Care</span>
           </div>
           <div 
             className="loc-stats__item"
@@ -212,7 +214,7 @@ const BellavistaBarry = () => {
             style={{ cursor: 'pointer' }}
           >
             <i className="fas fa-users"></i>
-            <span>Expert Team</span>
+            <span style={{ textDecoration: 'underline', color: '#0066cc' }}>Expert Team</span>
           </div>
         </div>
       </div>
@@ -346,34 +348,114 @@ const BellavistaBarry = () => {
       </section>
 
       {/* 4. TEAM & CARE */}
-      <section className="loc-section loc-section--white" id="team-section">
-        <div className="container">
-          <div className="loc-grid">
-            <div className="loc-grid__content">
-              <div className="section-header">
-                <span className="section-header__subtitle">Dedicated Staff</span>
-                <h2 className="section-header__title">Meet Our Team</h2>
+      {(teamMembers.length > 0 || teamGalleryImages.length > 0) && (
+        <section className="loc-section loc-section--white" id="team-section">
+          <div className="container">
+            <div className="loc-grid">
+              <div className="loc-grid__content">
+                <div className="section-header">
+                  <span className="section-header__subtitle">Dedicated Staff</span>
+                  <h2 className="section-header__title">Meet Our Team</h2>
+                </div>
+                <p className="loc-text">
+                  Our cheerful and highly qualified staff are on hand 24-hours a day to enable the very best quality of life for our residents. We have a dedicated activity team who tailored person centred activity to our residents.
+                </p>
               </div>
-              <p className="loc-text">
-                Our cheerful and highly qualified staff are on hand 24-hours a day to enable the very best quality of life for our residents. We have a dedicated activity team who tailored person centred activity to our residents.
-              </p>
+              <div className="loc-grid__media">
+                <div className="loc-slider">
+                  <Swiper {...sliderSettings} className="custom-swiper">
+                    {teamGalleryImages.map((img, index) => (
+                      <SwiperSlide key={index}>
+                        <div className="loc-slider__item">
+                          <img src={`/BarryTeam/${img}`} alt={`Team Member ${index + 1}`} loading="lazy" />
+                        </div>
+                      </SwiperSlide>
+                    ))}
+                  </Swiper>
+                </div>
+              </div>
             </div>
-            <div className="loc-grid__media">
-              <div className="loc-slider">
-                <Swiper {...sliderSettings} className="custom-swiper">
-                  {teamGalleryImages.map((img, index) => (
-                    <SwiperSlide key={index}>
-                      <div className="loc-slider__item">
-                        <img src={`/BarryTeam/${img}`} alt={`Team Member ${index + 1}`} loading="lazy" />
+
+            {/* Key Staff Members Scrollable List */}
+            {teamMembers.length > 0 && (
+              <div className="team-scroll-container" style={{ marginTop: '64px' }}>
+                <h3 style={{ 
+                  marginBottom: '32px', 
+                  fontFamily: 'var(--font-heading)', 
+                  fontSize: '2rem', 
+                  color: 'var(--color-primary)',
+                  textAlign: 'center'
+                }}>
+                  Key Staff Members
+                </h3>
+                <div className="team-horizontal-list" style={{ 
+                  display: 'flex', 
+                  overflowX: 'auto', 
+                  gap: '24px', 
+                  padding: '10px 4px 30px 4px', 
+                  scrollSnapType: 'x mandatory',
+                  scrollbarWidth: 'thin'
+                }}>
+                  {teamMembers.map((member, index) => (
+                    <div key={index} className="team-member-card" style={{ 
+                      minWidth: '260px', 
+                      scrollSnapAlign: 'start', 
+                      background: 'var(--color-bg-light)', 
+                      padding: '32px 24px', 
+                      borderRadius: '16px', 
+                      textAlign: 'center',
+                      boxShadow: '0 4px 6px rgba(0,0,0,0.05)',
+                      border: '1px solid var(--color-border)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      transition: 'transform 0.2s'
+                    }}>
+                      <div style={{
+                        width: '100px',
+                        height: '100px',
+                        borderRadius: '50%',
+                        background: 'white',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginBottom: '20px',
+                        boxShadow: '0 4px 10px rgba(0,0,0,0.1)',
+                        color: 'var(--color-primary)',
+                        fontSize: '2.5rem',
+                        overflow: 'hidden'
+                      }}>
+                        {member.image ? (
+                          <img src={member.image} alt={member.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          <i className="fas fa-user"></i>
+                        )}
                       </div>
-                    </SwiperSlide>
+                      <h4 style={{ 
+                        fontSize: '1.25rem', 
+                        marginBottom: '8px', 
+                        color: 'var(--color-text-dark)',
+                        fontFamily: 'var(--font-heading)'
+                      }}>
+                        {member.name}
+                      </h4>
+                      <span style={{ 
+                        color: 'var(--color-accent)', 
+                        fontWeight: '600', 
+                        fontSize: '0.9rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '1px'
+                      }}>
+                        {member.role}
+                      </span>
+                    </div>
                   ))}
-                </Swiper>
+                </div>
               </div>
-            </div>
+            )}
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* 5. NEWS SECTION */}
       {barryNews.length > 0 && (
@@ -451,7 +533,7 @@ const BellavistaBarry = () => {
                   <span className="fact-label">Location:</span>
                   <span 
                     className="fact-value" 
-                    style={{ color: 'blue', textDecoration: 'underline', cursor: 'pointer' }}
+                    style={{ color: '#0066cc', textDecoration: 'underline', cursor: 'pointer' }}
                     onClick={() => window.open('https://www.google.com/maps/search/?api=1&query=Bellavista+Nursing+Home+Barry', '_blank')}
                   >
                     Barry
@@ -462,7 +544,7 @@ const BellavistaBarry = () => {
                   <Link 
                     to="/our-care" 
                     className="fact-value" 
-                    style={{ color: 'blue', textDecoration: 'underline', cursor: 'pointer' }}
+                    style={{ color: '#0066cc', textDecoration: 'underline', cursor: 'pointer' }}
                   >
                     Dementia Care
                   </Link>

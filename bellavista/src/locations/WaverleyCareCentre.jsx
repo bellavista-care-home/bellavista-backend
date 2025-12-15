@@ -18,6 +18,7 @@ const WaverleyCareCentre = () => {
   const [facilitiesExpanded, setFacilitiesExpanded] = useState(false);
   const [teamExpanded, setTeamExpanded] = useState(false);
   const [waverleyNews, setWaverleyNews] = useState([]);
+  const [teamMembers, setTeamMembers] = useState([]);
 
   useEffect(() => {
     const loadNews = async () => {
@@ -163,9 +164,13 @@ const WaverleyCareCentre = () => {
             <i className="fas fa-users"></i>
             <span>129 Residents</span>
           </div>
-          <div className="loc-stats__item">
+          <div 
+            className="loc-stats__item"
+            onClick={() => navigate('/our-care')}
+            style={{ cursor: 'pointer' }}
+          >
             <i className="fas fa-water"></i>
-            <span>Coastal Views</span>
+            <span style={{ textDecoration: 'underline', color: '#0066cc' }}>Our Care</span>
           </div>
           <div 
             className="loc-stats__item"
@@ -173,7 +178,7 @@ const WaverleyCareCentre = () => {
             style={{ cursor: 'pointer' }}
           >
             <i className="fas fa-user-nurse"></i>
-            <span>170+ Staff</span>
+            <span style={{ textDecoration: 'underline', color: '#0066cc' }}>170+ Staff</span>
           </div>
           <div 
             className="loc-stats__item"
@@ -181,7 +186,7 @@ const WaverleyCareCentre = () => {
             style={{ cursor: 'pointer' }}
           >
             <i className="fas fa-walking"></i>
-            <span>Walk to Penarth</span>
+            <span style={{ textDecoration: 'underline', color: '#0066cc' }}>Walk to Penarth</span>
           </div>
         </div>
       </div>
@@ -330,62 +335,124 @@ const WaverleyCareCentre = () => {
       </section>
 
       {/* 4. TEAM & CARE */}
-      <section className="loc-section loc-section--white" id="team-section">
-        <div className="container">
-          <div className="loc-grid">
-            <div className="loc-grid__content">
-              <div className="section-header">
-                <span className="section-header__subtitle">Dedicated Staff</span>
-                <h2 className="section-header__title">Meet Our Team</h2>
-              </div>
-              <div className="team-content">
-                <p className="loc-text">
-                  Each of our three units (General Nursing, EMI and FMI) is overseen by an experienced Unit Manager, supported by Sisters and Staff Nurses.
-                </p>
-                
-                <div className={`facilities-content__more ${teamExpanded ? 'facilities-content__more--expanded' : ''}`}>
-                  <p className="loc-text">
-                    Relevantly qualified staff are on duty at all times, including RGNs (general nursing) in Seaviews, RMNs (psychiatric nursing) in both Glan-y-mor and in Cliffhaven. All of our senior staff operate an open door policy and encourage friends and family to seek out the qualified nurse on duty, so that an up to date picture can be given, relevant to the person that is visiting.
-                  </p>
-                  <p className="loc-text">
-                    Senior Care Assistants work under the guidance of the qualified staff and head up the Care Assistant teams. The atmosphere within the Waverley is one of busy but calm and the relaxed but professional ambience is very evident within the units.
-                  </p>
-                  <p className="loc-text">
-                    We also benefit from 3 full time Physio Aides and Activities Officers. There are daily timetables of activities in each unit, not suitable for all, but during the week there are many activities which the majority thoroughly enjoy.
-                  </p>
-                  <p className="loc-text">
-                    Two full-time Education Officers conduct a continuous programme of staff training to ensure that our competent and capable staff provide good care delivered with respect and dignity. Training takes place within the classroom and also out in the units, where standards are constantly monitored.
-                  </p>
-                  <p className="loc-text">
-                    The management keep policies and procedures under continual review to ensure they are up-to-date with legislative changes and best practice.
-                  </p>
+      {(teamMembers.length > 0 || teamGalleryImages.length > 0) && (
+        <section className="loc-section loc-section--white" id="team-section">
+          <div className="container">
+            <div className="loc-grid">
+              <div className="loc-grid__content">
+                <div className="section-header">
+                  <span className="section-header__subtitle">Dedicated Staff</span>
+                  <h2 className="section-header__title">Meet Our Team</h2>
                 </div>
+                <div className="team-content">
+                  <p className="loc-text">
+                    Each of our three units (General Nursing, EMI and FMI) is overseen by an experienced Unit Manager, supported by Sisters and Staff Nurses.
+                  </p>
+                  
+                  <div className={`facilities-content__more ${teamExpanded ? 'facilities-content__more--expanded' : ''}`}>
+                    <p className="loc-text">
+                      Relevantly qualified staff are on duty at all times, including RGNs (general nursing) in Seaviews, RMNs (psychiatric nursing) in both Glan-y-mor and in Cliffhaven. All of our senior staff operate an open door policy and encourage friends and family to seek out the qualified nurse on duty, so that an up to date picture can be given, relevant to the person that is visiting.
+                    </p>
+                    <p className="loc-text">
+                      Senior Care Assistants work under the guidance of the qualified staff and head up the Care Assistant teams. The atmosphere within the Waverley is one of busy but calm and the relaxed but professional ambience is very evident within the units.
+                    </p>
+                    <p className="loc-text">
+                      We also benefit from 3 full time Physio Aides and Activities Officers. There are daily timetables of activities in each unit, not suitable for all, but during the week there are many activities which the majority thoroughly enjoy.
+                    </p>
+                    <p className="loc-text">
+                      Two full-time Education Officers conduct a continuous programme of staff training to ensure that our competent and capable staff provide good care delivered with respect and dignity. Training takes place within the classroom and also out in the units, where standards are constantly monitored.
+                    </p>
+                    <p className="loc-text">
+                      The management keep policies and procedures under continual review to ensure they are up-to-date with legislative changes and best practice.
+                    </p>
+                  </div>
 
-                <button 
-                  className="btn btn--outline" 
-                  onClick={() => setTeamExpanded(!teamExpanded)}
-                  style={{ marginTop: '20px' }}
-                >
-                  {teamExpanded ? 'Read Less' : 'Read More'}
-                </button>
+                  <button 
+                    className="btn btn--outline" 
+                    onClick={() => setTeamExpanded(!teamExpanded)}
+                    style={{ marginTop: '20px' }}
+                  >
+                    {teamExpanded ? 'Read Less' : 'Read More'}
+                  </button>
+                </div>
+              </div>
+              <div className="loc-grid__media">
+                <div className="loc-slider">
+                  <Swiper {...sliderSettings} className="custom-swiper">
+                    {teamGalleryImages.map((img, index) => (
+                      <SwiperSlide key={index}>
+                        <div className="loc-slider__item">
+                          <img src={`/BarryTeam/${img}`} alt={`Team Member ${index + 1}`} loading="lazy" />
+                        </div>
+                      </SwiperSlide>
+                    ))}
+                  </Swiper>
+                </div>
               </div>
             </div>
-            <div className="loc-grid__media">
-              <div className="loc-slider">
-                <Swiper {...sliderSettings} className="custom-swiper">
-                  {teamGalleryImages.map((img, index) => (
-                    <SwiperSlide key={index}>
-                      <div className="loc-slider__item">
-                        <img src={`/BarryTeam/${img}`} alt={`Team Member ${index + 1}`} loading="lazy" />
+
+            {/* Key Staff Members Scrollable List */}
+            {teamMembers.length > 0 && (
+              <div className="team-scroll-container" style={{ marginTop: '64px' }}>
+                <div className="section-header" style={{ marginBottom: '32px' }}>
+                  <h3 className="section-header__title" style={{ fontSize: '1.8rem' }}>Key Staff Members</h3>
+                </div>
+                <div className="team-scroll-wrapper" style={{
+                  display: 'flex',
+                  overflowX: 'auto',
+                  gap: '24px',
+                  paddingBottom: '24px',
+                  scrollbarWidth: 'thin',
+                  scrollbarColor: 'var(--color-primary) #f0f0f0',
+                  WebkitOverflowScrolling: 'touch'
+                }}>
+                  {teamMembers.map((member, index) => (
+                    <div key={index} className="team-member-card" style={{
+                      flex: '0 0 300px',
+                      background: '#fff',
+                      borderRadius: '12px',
+                      overflow: 'hidden',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                      transition: 'transform 0.3s ease',
+                      border: '1px solid #eee'
+                    }}>
+                      <div className="team-member-image" style={{ height: '320px', background: '#f5f5f5', position: 'relative' }}>
+                        {member.image ? (
+                          <img src={member.image} alt={member.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          <div style={{
+                            width: '100%',
+                            height: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#ccc',
+                            fontSize: '4rem'
+                          }}>
+                            <i className="fas fa-user"></i>
+                          </div>
+                        )}
+                        <div style={{
+                          position: 'absolute',
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent)',
+                          padding: '24px 20px 16px',
+                          color: 'white'
+                        }}>
+                          <h4 style={{ fontSize: '1.25rem', marginBottom: '4px', textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>{member.name}</h4>
+                          <p style={{ fontSize: '0.9rem', opacity: 0.9, fontWeight: 500 }}>{member.role}</p>
+                        </div>
                       </div>
-                    </SwiperSlide>
+                    </div>
                   ))}
-                </Swiper>
+                </div>
               </div>
-            </div>
+            )}
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* 5. NEWS SECTION */}
       {waverleyNews.length > 0 && (
@@ -463,7 +530,7 @@ const WaverleyCareCentre = () => {
                   <span className="fact-label">Location:</span>
                   <span 
                     className="fact-value" 
-                    style={{ color: 'blue', textDecoration: 'underline', cursor: 'pointer' }}
+                    style={{ color: '#0066cc', textDecoration: 'underline', cursor: 'pointer' }}
                     onClick={() => window.open('https://www.google.com/maps/search/?api=1&query=Waverley+Care+Centre+Penarth', '_blank')}
                   >
                     Penarth
@@ -474,9 +541,9 @@ const WaverleyCareCentre = () => {
                   <Link 
                     to="/our-care" 
                     className="fact-value" 
-                    style={{ color: 'blue', textDecoration: 'underline', cursor: 'pointer' }}
+                    style={{ color: '#0066cc', textDecoration: 'underline', cursor: 'pointer' }}
                   >
-                    EMI & FMI
+                    Our Care
                   </Link>
                 </div>
                 <div className="fact-row">

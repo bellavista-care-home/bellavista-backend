@@ -18,6 +18,7 @@ const CollegeFieldsNursingHome = () => {
   const [facilitiesExpanded, setFacilitiesExpanded] = useState(false);
   const [teamExpanded, setTeamExpanded] = useState(false);
   const [collegeNews, setCollegeNews] = useState([]);
+  const [teamMembers, setTeamMembers] = useState([]);
 
   useEffect(() => {
     const loadNews = async () => {
@@ -161,9 +162,13 @@ const CollegeFieldsNursingHome = () => {
 
         {/* Quick Stats Row (Floating) */}
         <div className="loc-stats">
-          <div className="loc-stats__item">
+          <div 
+            className="loc-stats__item"
+            onClick={() => navigate('/our-care')}
+            style={{ cursor: 'pointer' }}
+          >
             <i className="fas fa-home"></i>
-            <span>Home-from-Home</span>
+            <span style={{ textDecoration: 'underline', color: '#0066cc' }}>Our Care</span>
           </div>
           <div 
             className="loc-stats__item"
@@ -171,11 +176,15 @@ const CollegeFieldsNursingHome = () => {
             style={{ cursor: 'pointer' }}
           >
             <i className="fas fa-map-marker-alt"></i>
-            <span>Barry</span>
+            <span style={{ textDecoration: 'underline', color: '#0066cc' }}>Barry</span>
           </div>
-          <div className="loc-stats__item">
-            <i className="fas fa-utensils"></i>
-            <span>4 Meals Daily</span>
+          <div 
+            className="loc-stats__item"
+            onClick={() => document.getElementById('team-section')?.scrollIntoView({ behavior: 'smooth' })}
+            style={{ cursor: 'pointer' }}
+          >
+            <i className="fas fa-users"></i>
+            <span style={{ textDecoration: 'underline', color: '#0066cc' }}>Expert Team</span>
           </div>
           <div className="loc-stats__item">
             <i className="fas fa-door-open"></i>
@@ -344,87 +353,149 @@ const CollegeFieldsNursingHome = () => {
       </section>
 
       {/* 4. TEAM & CARE */}
-      <section className="loc-section loc-section--white">
-        <div className="container">
-          <div className="loc-grid">
-            <div className="loc-grid__content">
-              <div className="section-header">
-                <span className="section-header__subtitle">Dedicated Staff</span>
-                <h2 className="section-header__title">Meet Our Team</h2>
-              </div>
-              <div className="team-content">
-                <p className="loc-text">
-                  Our valued staff are key to high quality of care, starting here with the kitchen…
-                </p>
-                <p className="loc-text" style={{ marginTop: '15px' }}>
-                  Our main kitchen creates four meals a day for residents. Residents have likes and dislikes about what they want to eat. Our kitchen staff try to cater for individual choices. All produce is sourced as locally as possible and as fresh as possible. We have a large team dedicated to making the ‘dining experience’ as good as it can be. All resident’s dietary needs are catered for. Whether each resident can eat traditionally, or need a ‘soft’ diet or even be peg fed or as is often the case, need assistance with actually eating, the team are there to help and support.
-                </p>
-                
-                <div className={`facilities-content__more ${teamExpanded ? 'facilities-content__more--expanded' : ''}`}>
-                    <p className="loc-text">
-                        In addition to the main kitchen, there are small kitchens on every floor. Each one has a microwave, a kettle and a dishwasher. This enables staff at all times of day to prepare a hot or cold snack and a warm drink.
-                    </p>
-                    <p className="loc-text">
-                        I have yet to meet a family who when visiting mum or dad don’t have a cuppa. When mum or dad’s home is College Fields then nothing should change. Family should be able to make a cuppa. So they will find tea and coffee. Cups and saucers (or mugs) available. Milk in the fridge. They should feel at home too!!!!
-                    </p>
-
-                    <h3 style={{ fontSize: '1.2rem', color: 'var(--color-primary)', marginBottom: '10px', marginTop: '25px' }}>Other important staff involvement</h3>
-                    <p className="loc-text">
-                        We regularly ask residents what they think of the service they have with us. We find this helpful as we can continue doing things they like and change things they don’t.
-                    </p>
-                    <p className="loc-text">
-                        Our domestic staff, one of whom can be seen in the pictures above, not only keep everything as spotless as possible but also chat and take an interest in resident’s families. On one response to our questionaire the resident wrote that although no one ever came to clean her room it was always immaculate. The domestic staff in that case obviously did her job of interacting so well her cleaning taks were never noticed being done.
-                    </p>
-                    <p className="loc-text">
-                        We have our own in house laundry as can be seen above. The commercial machine can be set to ensure that everything is hygenically washed for infection control purposes.
-                    </p>
-                    <p className="loc-text">
-                        Reception staff are invaluable in welcoming new visitors to the home and ensuring visiting professionals know where to go so they waste none of their valuable time.
-                    </p>
-                    <p className="loc-text">
-                        Administration in the modern world is more and more necessary. Not only to check the books balance but all the masses of client records are correctly filed so they can be found when needed.
-                    </p>
-                    <p className="loc-text">
-                        A building the size and age of ours needs constant maintenance and our team are up to the challenge.
-                    </p>
-
-                    <h3 style={{ fontSize: '1.2rem', color: 'var(--color-primary)', marginBottom: '10px', marginTop: '25px' }}>Nurses and Care Staff</h3>
-                    <p className="loc-text">
-                        Nurses, nursing auxiliaries and care staff are the backbone of the care we provide.
-                    </p>
-                    <p className="loc-text">
-                        We have a full compliment of trained, qualified nurses. These are supported by nurse auxiliaries. Both are trained to a high standard with the qualified nurses now generally to degree standards. They are responsible for supporting residents, understanding their medical and other needs and knowing how to react to their individual problems and needs.
-                    </p>
-                    <p className="loc-text">
-                        Care practitioners support the top level nurses. They, too, are trained to a high standard here at College Fields. They undertake so much of the personal care helping each resident with their particular needs. Although care staff do not need to be registered with Social Care Wales until 2021 we are putting in place now all the preparatory education they will need to make their registration as swift and simple as possible
-                    </p>
+      {(teamMembers.length > 0 || teamGalleryImages.length > 0) && (
+        <section id="team-section" className="loc-section loc-section--white">
+          <div className="container">
+            <div className="loc-grid">
+              <div className="loc-grid__content">
+                <div className="section-header">
+                  <span className="section-header__subtitle">Dedicated Staff</span>
+                  <h2 className="section-header__title">Meet Our Team</h2>
                 </div>
+                <div className="team-content">
+                  <p className="loc-text">
+                    Our valued staff are key to high quality of care, starting here with the kitchen…
+                  </p>
+                  <p className="loc-text" style={{ marginTop: '15px' }}>
+                    Our main kitchen creates four meals a day for residents. Residents have likes and dislikes about what they want to eat. Our kitchen staff try to cater for individual choices. All produce is sourced as locally as possible and as fresh as possible. We have a large team dedicated to making the ‘dining experience’ as good as it can be. All resident’s dietary needs are catered for. Whether each resident can eat traditionally, or need a ‘soft’ diet or even be peg fed or as is often the case, need assistance with actually eating, the team are there to help and support.
+                  </p>
+                  
+                  <div className={`facilities-content__more ${teamExpanded ? 'facilities-content__more--expanded' : ''}`}>
+                      <p className="loc-text">
+                          In addition to the main kitchen, there are small kitchens on every floor. Each one has a microwave, a kettle and a dishwasher. This enables staff at all times of day to prepare a hot or cold snack and a warm drink.
+                      </p>
+                      <p className="loc-text">
+                          I have yet to meet a family who when visiting mum or dad don’t have a cuppa. When mum or dad’s home is College Fields then nothing should change. Family should be able to make a cuppa. So they will find tea and coffee. Cups and saucers (or mugs) available. Milk in the fridge. They should feel at home too!!!!
+                      </p>
 
-                <button 
-                  className="btn btn--outline" 
-                  onClick={() => setTeamExpanded(!teamExpanded)}
-                  style={{ marginTop: '20px' }}
-                >
-                  {teamExpanded ? 'Read Less' : 'Read More'}
-                </button>
+                      <h3 style={{ fontSize: '1.2rem', color: 'var(--color-primary)', marginBottom: '10px', marginTop: '25px' }}>Other important staff involvement</h3>
+                      <p className="loc-text">
+                          We regularly ask residents what they think of the service they have with us. We find this helpful as we can continue doing things they like and change things they don’t.
+                      </p>
+                      <p className="loc-text">
+                          Our domestic staff, one of whom can be seen in the pictures above, not only keep everything as spotless as possible but also chat and take an interest in resident’s families. On one response to our questionaire the resident wrote that although no one ever came to clean her room it was always immaculate. The domestic staff in that case obviously did her job of interacting so well her cleaning taks were never noticed being done.
+                      </p>
+                      <p className="loc-text">
+                          We have our own in house laundry as can be seen above. The commercial machine can be set to ensure that everything is hygenically washed for infection control purposes.
+                      </p>
+                      <p className="loc-text">
+                          Reception staff are invaluable in welcoming new visitors to the home and ensuring visiting professionals know where to go so they waste none of their valuable time.
+                      </p>
+                      <p className="loc-text">
+                          Administration in the modern world is more and more necessary. Not only to check the books balance but all the masses of client records are correctly filed so they can be found when needed.
+                      </p>
+                      <p className="loc-text">
+                          A building the size and age of ours needs constant maintenance and our team are up to the challenge.
+                      </p>
+
+                      <h3 style={{ fontSize: '1.2rem', color: 'var(--color-primary)', marginBottom: '10px', marginTop: '25px' }}>Nurses and Care Staff</h3>
+                      <p className="loc-text">
+                          Nurses, nursing auxiliaries and care staff are the backbone of the care we provide.
+                      </p>
+                      <p className="loc-text">
+                          We have a full compliment of trained, qualified nurses. These are supported by nurse auxiliaries. Both are trained to a high standard with the qualified nurses now generally to degree standards. They are responsible for supporting residents, understanding their medical and other needs and knowing how to react to their individual problems and needs.
+                      </p>
+                      <p className="loc-text">
+                          Care practitioners support the top level nurses. They, too, are trained to a high standard here at College Fields. They undertake so much of the personal care helping each resident with their particular needs. Although care staff do not need to be registered with Social Care Wales until 2021 we are putting in place now all the preparatory education they will need to make their registration as swift and simple as possible
+                      </p>
+                  </div>
+
+                  <button 
+                    className="btn btn--outline" 
+                    onClick={() => setTeamExpanded(!teamExpanded)}
+                    style={{ marginTop: '20px' }}
+                  >
+                    {teamExpanded ? 'Read Less' : 'Read More'}
+                  </button>
+                </div>
+              </div>
+              <div className="loc-grid__media">
+                <div className="loc-slider">
+                  <Swiper {...sliderSettings} className="custom-swiper">
+                    {teamGalleryImages.map((img, index) => (
+                      <SwiperSlide key={index}>
+                        <div className="loc-slider__item">
+                          <img src={`/BarryTeam/${img}`} alt={`Team Member ${index + 1}`} loading="lazy" />
+                        </div>
+                      </SwiperSlide>
+                    ))}
+                  </Swiper>
+                </div>
               </div>
             </div>
-            <div className="loc-grid__media">
-              <div className="loc-slider">
-                <Swiper {...sliderSettings} className="custom-swiper">
-                  {teamGalleryImages.map((img, index) => (
-                    <SwiperSlide key={index}>
-                      <div className="loc-slider__item">
-                        <img src={`/BarryTeam/${img}`} alt={`Team Member ${index + 1}`} loading="lazy" />
+
+            {/* Key Staff Members Scrollable List */}
+            {teamMembers.length > 0 && (
+              <div className="team-scroll-container" style={{ marginTop: '64px' }}>
+                <div className="section-header" style={{ marginBottom: '32px' }}>
+                  <h3 className="section-header__title" style={{ fontSize: '1.8rem' }}>Key Staff Members</h3>
+                </div>
+                <div className="team-scroll-wrapper" style={{
+                  display: 'flex',
+                  overflowX: 'auto',
+                  gap: '24px',
+                  paddingBottom: '24px',
+                  scrollbarWidth: 'thin',
+                  scrollbarColor: 'var(--color-primary) #f0f0f0',
+                  WebkitOverflowScrolling: 'touch'
+                }}>
+                  {teamMembers.map((member, index) => (
+                    <div key={index} className="team-member-card" style={{
+                      flex: '0 0 300px',
+                      background: '#fff',
+                      borderRadius: '12px',
+                      overflow: 'hidden',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                      transition: 'transform 0.3s ease',
+                      border: '1px solid #eee'
+                    }}>
+                      <div className="team-member-image" style={{ height: '320px', background: '#f5f5f5', position: 'relative' }}>
+                        {member.image ? (
+                          <img src={member.image} alt={member.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          <div style={{
+                            width: '100%',
+                            height: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#ccc',
+                            fontSize: '4rem'
+                          }}>
+                            <i className="fas fa-user"></i>
+                          </div>
+                        )}
+                        <div style={{
+                          position: 'absolute',
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent)',
+                          padding: '24px 20px 16px',
+                          color: 'white'
+                        }}>
+                          <h4 style={{ fontSize: '1.25rem', marginBottom: '4px', textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>{member.name}</h4>
+                          <p style={{ fontSize: '0.9rem', opacity: 0.9, fontWeight: 500 }}>{member.role}</p>
+                        </div>
                       </div>
-                    </SwiperSlide>
+                    </div>
                   ))}
-                </Swiper>
+                </div>
               </div>
-            </div>
+            )}
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* 5. NEWS SECTION */}
       {collegeNews.length > 0 && (
