@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ImageUploader from '../components/ImageUploader';
-import { fetchNewsItems, createNewsItem, updateNewsItem } from '../services/newsService';
+import NewsForm from './components/NewsForm';
+import { fetchNewsItems, createNewsItem, updateNewsItem, deleteNewsItem } from '../services/newsService';
 import { fetchScheduledTours } from '../services/tourService';
 import { fetchCareEnquiries } from '../services/enquiryService';
 import { fetchHomes, updateHome } from '../services/homeService';
@@ -416,102 +417,35 @@ const AdminConsole = () => {
         )}
 
         {activeView === 'add-news' && (
-          <section className="panel">
-            <h2>Add News</h2>
-            <p className="muted">Publish a news item for the Latest News & Updates.</p>
-            <div className="grid cols-2">
-              <div className="field"><label>Title</label><input value={newsForm.title} onChange={e=>handleNewsChange('title',e.target.value)} type="text" placeholder="Headline"/></div>
-              <div className="field"><label>Date</label><input value={newsForm.date} onChange={e=>handleNewsChange('date',e.target.value)} type="text" placeholder="e.g. Jun 14, 2024"/></div>
-              <div className="field">
-                <label>Category</label>
-                <select value={newsForm.category} onChange={e=>handleNewsChange('category',e.target.value)}>
-                  <option value="events">Events</option>
-                  <option value="community">Community</option>
-                  <option value="awards">Awards</option>
-                  <option value="innovation">Innovation</option>
-                  <option value="health-updates">Health Updates</option>
-                </select>
-              </div>
-              <div className="field">
-                <label>Location</label>
-                <select value={newsForm.location} onChange={e=>handleNewsChange('location',e.target.value)}>
-                  <option>All Locations</option>
-                  <option>Bellavista Cardiff</option>
-                  <option>Bellavista Barry</option>
-                  <option>Waverley Care Centre</option>
-                  <option>College Fields Nursing Home</option>
-                  <option>Baltimore Care Home</option>
-                </select>
-              </div>
-              <div className="field">
-                <ImageUploader 
-                  label="Image" 
-                  aspectRatio={16/9}
-                  initialValue={newsForm.image}
-                  onImageSelected={(url)=>handleNewsChange('image',url)}
-                />
-              </div>
-              <div className="field" style={{gridColumn:'1/-1'}}>
-                <label>Gallery Images</label>
-                <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(240px, 1fr))', gap:'12px'}}>
-                  {(newsForm.gallery || []).map((img, idx) => (
-                    <div key={idx} style={{position:'relative'}}>
-                      <ImageUploader 
-                        label={`Image ${idx+1}`} 
-                        aspectRatio={16/9}
-                        initialValue={img}
-                        onImageSelected={(url)=>{
-                          setNewsForm(prev=>{
-                            const g = [...(prev.gallery||[])];
-                            g[idx] = url;
-                            return {...prev, gallery: g};
-                          });
-                        }}
-                      />
-                      <button className="btn ghost small" style={{position:'absolute', top:'6px', right:'6px'}} onClick={()=>{
-                        setNewsForm(prev=>{
-                          const g = [...(prev.gallery||[])];
-                          g.splice(idx,1);
-                          return {...prev, gallery: g};
-                        });
-                      }}><i className="fa-solid fa-trash"></i></button>
-                    </div>
-                  ))}
-                </div>
-                <div className="toolbar">
-                  <div className="right"></div>
-                  <button className="btn small" onClick={()=>setNewsForm(prev=>({...prev, gallery:[...(prev.gallery||[]), '']}))}>
-                    <i className="fa-solid fa-plus"></i>&nbsp;Add Gallery Image
-                  </button>
-                </div>
-              </div>
-              <div className="field" style={{gridColumn:'1/-1'}}>
-                <label>Summary</label>
-                <textarea value={newsForm.excerpt} onChange={e=>handleNewsChange('excerpt',e.target.value.slice(0,MAX_EXCERPT))} placeholder="Short summary shown on the card…"></textarea>
-                <div className="muted" style={{fontSize:'12px'}}>Max {MAX_EXCERPT} characters</div>
-              </div>
-              <div className="field" style={{gridColumn:'1/-1'}}>
-                <label>Body (optional)</label>
-                <textarea value={newsForm.fullDescription} onChange={e=>handleNewsChange('fullDescription',e.target.value)} placeholder="Full article body (for detail page)"></textarea>
-              </div>
-              <div className="field" style={{gridColumn:'1/-1'}}>
-                <label>Video URL (optional)</label>
-                <input type="text" value={newsForm.videoUrl} onChange={e=>handleNewsChange('videoUrl', e.target.value)} placeholder="https://... (YouTube or MP4 link)"/>
-              </div>
-              <div className="field" style={{gridColumn:'1/-1'}}>
-                <label style={{display:'flex', alignItems:'center', gap:'10px'}}>
-                  <input checked={newsForm.important} onChange={e=>handleNewsChange('important',e.target.checked)} type="checkbox" style={{width:'auto', margin:0}}/>
-                  <span>Mark as Important (will be highlighted on main page)</span>
-                </label>
-              </div>
-            </div>
-            <div className="toolbar">
-              <div className="right"></div>
-              <button className="btn" onClick={addNews}>
-                <i className="fa-solid fa-paper-plane"></i>&nbsp;Save News
-              </button>
-            </div>
-          </section>
+          <NewsForm 
+            mode="add"
+            onSave={async (newsData) => {
+              try {
+                await createNewsItem(newsData);
+                alert('News published successfully!');
+                // Reset form after successful save
+                setNewsForm({
+                  id: '',
+                  title: '',
+                  excerpt: '',
+                  fullDescription: '',
+                  image: '',
+                  category: 'events',
+                  date: '',
+                  location: 'All Locations',
+                  author: 'Bellavista Team',
+                  badge: '',
+                  important: false,
+                  gallery: [],
+                  videoUrl: '',
+                  videoDescription: ''
+                });
+              } catch (error) {
+                console.error('Failed to publish news:', error);
+                alert('Failed to publish news. Please try again.');
+              }
+            }}
+          />
         )}
 
         {activeView === 'update-news' && (
@@ -537,98 +471,38 @@ const AdminConsole = () => {
               </>
             )}
             {selectedNews && (
-              <>
-                <div className="toolbar">
-                  <button className="btn ghost" onClick={()=>{setSelectedNews(null); setNewsForm({id:'',title:'',excerpt:'',fullDescription:'',image:'',category:'events',date:'',location:'All Locations',author:'Bellavista Team',badge:'',important:false,gallery:[],videoUrl:''});}}>
-                    <i className="fa-solid fa-arrow-left"></i>&nbsp;Back
-                  </button>
-                </div>
-                <div className="grid cols-2">
-                  <div className="field"><label>Title</label><input value={newsForm.title} onChange={e=>handleNewsChange('title',e.target.value)} type="text"/></div>
-                  <div className="field"><label>Date</label><input value={newsForm.date} onChange={e=>handleNewsChange('date',e.target.value)} type="text"/></div>
-                  <div className="field">
-                    <label>Category</label>
-                    <select value={newsForm.category} onChange={e=>handleNewsChange('category',e.target.value)}>
-                      <option value="events">Events</option>
-                      <option value="community">Community</option>
-                      <option value="awards">Awards</option>
-                      <option value="innovation">Innovation</option>
-                      <option value="health-updates">Health Updates</option>
-                    </select>
-                  </div>
-                  <div className="field">
-                    <label>Location</label>
-                    <select value={newsForm.location} onChange={e=>handleNewsChange('location',e.target.value)}>
-                      <option>All Locations</option>
-                      <option>Bellavista Cardiff</option>
-                      <option>Bellavista Barry</option>
-                      <option>Waverley Care Centre</option>
-                      <option>College Fields Nursing Home</option>
-                      <option>Baltimore Care Home</option>
-                    </select>
-                  </div>
-                  <div className="field" style={{gridColumn:'1/-1'}}>
-                    <ImageUploader label="Image" aspectRatio={16/9} initialValue={newsForm.image} onImageSelected={(url)=>handleNewsChange('image',url)} />
-                  </div>
-                  <div className="field" style={{gridColumn:'1/-1'}}>
-                    <label>Summary</label>
-                    <textarea value={newsForm.excerpt} onChange={e=>handleNewsChange('excerpt',e.target.value.slice(0,MAX_EXCERPT))}></textarea>
-                    <div className="muted" style={{fontSize:'12px'}}>Max {MAX_EXCERPT} characters</div>
-                  </div>
-                  <div className="field" style={{gridColumn:'1/-1'}}>
-                    <label>Body</label>
-                    <textarea value={newsForm.fullDescription} onChange={e=>handleNewsChange('fullDescription',e.target.value)}></textarea>
-                  </div>
-                  <div className="field" style={{gridColumn:'1/-1'}}>
-                    <label>Gallery Images</label>
-                    <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(240px, 1fr))', gap:'12px'}}>
-                      {(newsForm.gallery || []).map((img, idx) => (
-                        <div key={idx} style={{position:'relative'}}>
-                          <ImageUploader 
-                            label={`Image ${idx+1}`} 
-                            aspectRatio={16/9}
-                            initialValue={img}
-                            onImageSelected={(url)=>{
-                              setNewsForm(prev=>{
-                                const g = [...(prev.gallery||[])];
-                                g[idx] = url;
-                                return {...prev, gallery: g};
-                              });
-                            }}
-                          />
-                          <button className="btn ghost small" style={{position:'absolute', top:'6px', right:'6px'}} onClick={()=>{
-                            setNewsForm(prev=>{
-                              const g = [...(prev.gallery||[])];
-                              g.splice(idx,1);
-                              return {...prev, gallery: g};
-                            });
-                          }}><i className="fa-solid fa-trash"></i></button>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="toolbar">
-                      <div className="right"></div>
-                      <button className="btn small" onClick={()=>setNewsForm(prev=>({...prev, gallery:[...(prev.gallery||[]), '']}))}>
-                        <i className="fa-solid fa-plus"></i>&nbsp;Add Gallery Image
-                      </button>
-                    </div>
-                  </div>
-                  <div className="field" style={{gridColumn:'1/-1'}}>
-                    <label>Video URL (optional)</label>
-                    <input type="text" value={newsForm.videoUrl} onChange={e=>handleNewsChange('videoUrl', e.target.value)} placeholder="https://... (YouTube or MP4 link)"/>
-                  </div>
-                  <div className="field" style={{gridColumn:'1/-1'}}>
-                    <label style={{display:'flex', alignItems:'center', gap:'10px'}}>
-                      <input checked={newsForm.important} onChange={e=>handleNewsChange('important',e.target.checked)} type="checkbox" style={{width:'auto', margin:0}}/>
-                      <span>Important</span>
-                    </label>
-                  </div>
-                </div>
-                <div className="toolbar">
-                  <div className="right"></div>
-                  <button className="btn" onClick={updateNews}><i className="fa-solid fa-save"></i>&nbsp;Save Changes</button>
-                </div>
-              </>
+              <NewsForm 
+                mode="edit"
+                initialData={selectedNews}
+                onCancel={()=>{
+                  setSelectedNews(null); 
+                  setNewsForm({id:'',title:'',excerpt:'',fullDescription:'',image:'',category:'events',date:'',location:'All Locations',author:'Bellavista Team',badge:'',important:false,gallery:[],videoUrl:'',videoDescription:''});
+                }}
+                onSave={async (newsData) => {
+                  try {
+                    await updateNewsItem(newsData);
+                    alert('News updated successfully!');
+                    setSelectedNews(null);
+                    setNewsForm({id:'',title:'',excerpt:'',fullDescription:'',image:'',category:'events',date:'',location:'All Locations',author:'Bellavista Team',badge:'',important:false,gallery:[],videoUrl:'',videoDescription:''});
+                    loadNews();
+                  } catch (error) {
+                    console.error('Failed to update news:', error);
+                    alert('Failed to update news. Please try again.');
+                  }
+                }}
+                onDelete={async (id) => {
+                  try {
+                    await deleteNewsItem(id);
+                    alert('News deleted successfully!');
+                    setSelectedNews(null);
+                    setNewsForm({id:'',title:'',excerpt:'',fullDescription:'',image:'',category:'events',date:'',location:'All Locations',author:'Bellavista Team',badge:'',important:false,gallery:[],videoUrl:'',videoDescription:''});
+                    loadNews();
+                  } catch (error) {
+                    console.error('Failed to delete news:', error);
+                    alert('Failed to delete news. Please try again.');
+                  }
+                }}
+              />
             )}
           </section>
         )}

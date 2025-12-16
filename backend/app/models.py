@@ -73,4 +73,5 @@ class NewsItem(db.Model):
     important = db.Column(db.Boolean, default=False)
     galleryJson = db.Column(db.Text)
     videoUrl = db.Column(db.Text)
+    videoDescription = db.Column(db.Text)
     createdAt = db.Column(db.DateTime, default=datetime.utcnow)
