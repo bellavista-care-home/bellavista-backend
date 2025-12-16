@@ -4,6 +4,8 @@ import { fetchNewsItemById, fetchNewsItems } from '../services/newsService';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Autoplay, Navigation, Pagination } from 'swiper/modules';
 import 'swiper/css';
+import 'swiper/css/navigation';
+import 'swiper/css/pagination';
 import '../styles/MainPage.css';
 
 const NewsDetail = () => {
@@ -72,12 +74,36 @@ const NewsDetail = () => {
     }
   };
 
-  const isYouTube = (url) => /youtube\.com|youtu\.be/.test(url || '');
+  const isYouTube = (url) => {
+    if (!url) return false;
+    return /youtube\.com|youtu\.be/i.test(url);
+  };
+  
   const toYouTubeEmbed = (url) => {
     if (!url) return '';
-    const match = url.match(/(?:v=|\/)([A-Za-z0-9_-]{11})/);
-    const id = match ? match[1] : '';
-    return id ? `https://www.youtube.com/embed/${id}` : url;
+    
+    // Handle different YouTube URL formats
+    let videoId = '';
+    
+    // Standard youtube.com/watch?v= format
+    const watchMatch = url.match(/[?&]v=([^&]+)/);
+    if (watchMatch) {
+      videoId = watchMatch[1];
+    }
+    
+    // Handle youtu.be/ format
+    const shortMatch = url.match(/youtu\.be\/([^?]+)/);
+    if (shortMatch) {
+      videoId = shortMatch[1];
+    }
+    
+    // Handle embed format
+    const embedMatch = url.match(/embed\/([^?]+)/);
+    if (embedMatch) {
+      videoId = embedMatch[1];
+    }
+    
+    return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
   };
 
   return (
@@ -125,44 +151,6 @@ const NewsDetail = () => {
                 ) : null}
                 {news.badge && <div className="article-badge-large">{news.badge}</div>}
               </div>
-              {(Array.isArray(news.gallery) && news.gallery.length > 0) && (
-                <div style={{marginTop:'20px'}}>
-                  <Swiper
-                    modules={[Autoplay, Navigation, Pagination]}
-                    autoplay={{ delay: 3000 }}
-                    navigation
-                    pagination={{ clickable: true }}
-                    style={{width:'100%', borderRadius:'10px'}}
-                  >
-                    {news.gallery.filter(Boolean).map((img, idx) => (
-                      <SwiperSlide key={idx}>
-                        <img src={img} alt={`Gallery ${idx+1}`} style={{width:'100%', display:'block'}} />
-                      </SwiperSlide>
-                    ))}
-                  </Swiper>
-                </div>
-              )}
-              {news.videoUrl && (
-                <div style={{marginTop:'20px'}}>
-                  {isYouTube(news.videoUrl) ? (
-                    <div style={{position:'relative', paddingBottom:'56.25%', height:0}}>
-                      <iframe
-                        src={toYouTubeEmbed(news.videoUrl)}
-                        title="Video"
-                        style={{position:'absolute', top:0, left:0, width:'100%', height:'100%', border:0}}
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                        allowFullScreen
-                      />
-                    </div>
-                  ) : (
-                    <video controls style={{width:'100%', borderRadius:'10px'}}>
-                      <source src={news.videoUrl} />
-                      Your browser does not support the video tag.
-                    </video>
-                  )}
-                </div>
-              )}
-
               <div className="article-content">
                 <div className="article-description">
                   <div style={{ whiteSpace: 'pre-line' }}>
@@ -179,6 +167,67 @@ const NewsDetail = () => {
                   )}
                 </div>
               </div>
+
+              {/* Gallery Section */}
+              {(Array.isArray(news.gallery) && news.gallery.length > 0) && (
+                <div className="gallery-section">
+                  <h3 className="gallery-title">Gallery</h3>
+                  {news.gallery.length === 1 ? (
+                    // Single image - no swiper needed
+                    <div className="gallery-single">
+                      <img 
+                        src={news.gallery[0]} 
+                        alt="Gallery image" 
+                        className="gallery-single-image"
+                      />
+                    </div>
+                  ) : (
+                    // Multiple images - use swiper with auto-scroll
+                    <Swiper
+                      className="gallery-swiper"
+                      modules={[Autoplay, Navigation, Pagination]}
+                      autoplay={{ delay: 3000 }}
+                      navigation
+                      pagination={{ clickable: true }}
+                    >
+                      {news.gallery.filter(Boolean).map((img, idx) => (
+                        <SwiperSlide key={idx}>
+                          <img src={img} alt={`Gallery ${idx+1}`} className="gallery-slide-image"/>
+                        </SwiperSlide>
+                      ))}
+                    </Swiper>
+                  )}
+                </div>
+              )}
+
+              {/* Video Section */}
+              {news.videoUrl && (
+                <div className="video-section">
+                  <h3 className="video-title">Video</h3>
+                  {isYouTube(news.videoUrl) ? (
+                    <div className="video-container">
+                      <iframe
+                        src={toYouTubeEmbed(news.videoUrl)}
+                        title="Video"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allowFullScreen
+                      />
+                    </div>
+                  ) : (
+                    <div className="video-container">
+                      <video controls>
+                        <source src={news.videoUrl} />
+                        Your browser does not support the video tag.
+                      </video>
+                    </div>
+                  )}
+                  {news.videoDescription && (
+                    <div className="video-description">
+                      {news.videoDescription}
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="article-navigation">
                 <Link to="/news" className="btn btn-primary">
