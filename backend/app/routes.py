@@ -5,8 +5,93 @@ import boto3
 from flask import Blueprint, request, jsonify, current_app
 from . import db
 from .models import ScheduledTour, CareEnquiry, NewsItem, Home
+from .image_processor import ImageProcessor
 
 api_bp = Blueprint('api', __name__)
+s3_bucket = os.environ.get('S3_BUCKET')
+
+def generate_unique_filename(original_filename):
+    ext = original_filename.rsplit('.', 1)[1].lower() if '.' in original_filename else 'jpg'
+    unique_id = str(uuid.uuid4())[:8]
+    return f"{unique_id}.{ext}"
+
+@api_bp.route('/upload', methods=['POST'])
+def upload_file_route():
+    try:
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file provided'}), 400
+        
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+            
+        # Use existing helper or save locally
+        filename = generate_unique_filename(file.filename)
+        upload_folder = current_app.config['UPLOAD_FOLDER']
+        
+        # Ensure upload folder exists
+        os.makedirs(upload_folder, exist_ok=True)
+        
+        filepath = os.path.join(upload_folder, filename)
+        file.save(filepath)
+        
+        # Process if requested
+        process_type = request.form.get('process_type', 'none')
+        
+        result = {
+            'url': f"/uploads/{filename}",
+            'filename': filename
+        }
+        
+        if process_type == 'resize_crop':
+            try:
+                # Create processed folder
+                processed_folder = os.path.join(upload_folder, 'processed')
+                os.makedirs(processed_folder, exist_ok=True)
+                
+                processor = ImageProcessor(filepath, processed_folder)
+                processed_result = processor.process_news_main_card(filepath)
+                
+                processed_filename = os.path.basename(processed_result['output_path'])
+                result['url'] = f"/uploads/processed/{processed_filename}"
+                result['processed'] = True
+            except Exception as e:
+                print(f"Processing error: {e}")
+                # Fallback to original
+                pass
+        elif process_type == 'resize_gallery':
+            try:
+                processed_folder = os.path.join(upload_folder, 'processed')
+                os.makedirs(processed_folder, exist_ok=True)
+                processor = ImageProcessor(filepath, processed_folder)
+                img = processor.resize_with_crop(filepath, (1200, 675), 'center')
+                processed_filename = f"{os.path.splitext(filename)[0]}_gallery.jpg"
+                output_path = os.path.join(processed_folder, processed_filename)
+                img.save(output_path, format='JPEG', quality=85, optimize=True)
+                result['url'] = f"/uploads/processed/{processed_filename}"
+                result['processed'] = True
+            except Exception as e:
+                print(f"Processing error: {e}")
+                pass
+        elif process_type == 'resize_gallery_pad':
+            try:
+                processed_folder = os.path.join(upload_folder, 'processed')
+                os.makedirs(processed_folder, exist_ok=True)
+                processor = ImageProcessor(filepath, processed_folder)
+                img = processor.resize_with_padding(filepath, (1200, 675), (255, 255, 255))
+                processed_filename = f"{os.path.splitext(filename)[0]}_gallery_pad.jpg"
+                output_path = os.path.join(processed_folder, processed_filename)
+                img.save(output_path, format='JPEG', quality=85, optimize=True)
+                result['url'] = f"/uploads/processed/{processed_filename}"
+                result['processed'] = True
+            except Exception as e:
+                print(f"Processing error: {e}")
+                pass
+                
+        return jsonify(result), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 def upload_file_helper(file, filename):
     s3_bucket = os.environ.get('S3_BUCKET')
@@ -56,6 +141,7 @@ def to_dict_news(n):
         "important": n.important,
         "gallery": gallery,
         "videoUrl": n.videoUrl,
+        "videoDescription": n.videoDescription,
         "createdAt": n.createdAt.isoformat()
     }
 
@@ -139,6 +225,18 @@ def create_news():
         uploaded_url = upload_file_helper(f, filename)
         if uploaded_url:
             main_image_url = uploaded_url
+            # Process main image to standard card size
+            try:
+                if not s3_bucket:  # Only process if using local storage
+                    upload_folder = current_app.config['UPLOAD_FOLDER']
+                    filepath = os.path.join(upload_folder, filename)
+                    processor = ImageProcessor(filepath, upload_folder)
+                    result = processor.process_news_main_card(filepath, f"{nid}-main-card.jpg")
+                    main_image_url = f"/uploads/{os.path.basename(result['output_path'])}"
+            except Exception as e:
+                print(f"Image processing error: {e}")
+                # Fallback to original
+                pass
 
     gallery_urls = []
     for key in files:
@@ -147,13 +245,29 @@ def create_news():
             filename = f"{nid}-g-{uuid.uuid4().hex}.jpg"
             uploaded_url = upload_file_helper(f, filename)
             if uploaded_url:
-                gallery_urls.append(uploaded_url)
+                # Process gallery image to standard detail size
+                try:
+                    if not s3_bucket:  # Only process if using local storage
+                        upload_folder = current_app.config['UPLOAD_FOLDER']
+                        filepath = os.path.join(upload_folder, filename)
+                        processor = ImageProcessor(filepath, upload_folder)
+                        result = processor.resize_with_crop(filepath, (1200, 675), 'center')
+                        output_name = f"{nid}-gallery-{uuid.uuid4().hex}.jpg"
+                        output_path = os.path.join(upload_folder, output_name)
+                        result.save(output_path, format='JPEG', quality=85, optimize=True)
+                        gallery_urls.append(f"/uploads/{output_name}")
+                    else:
+                        gallery_urls.append(uploaded_url)
+                except Exception as e:
+                    print(f"Gallery processing error: {e}")
+                    gallery_urls.append(uploaded_url)
     if data.get('gallery'):
         try:
             gallery_urls.extend(json.loads(data.get('gallery')))
         except:
             pass
     video_url = data.get('videoUrl','')
+    video_desc = data.get('videoDescription','')
     item = NewsItem(
         id=nid,
         title=data.get('title',''),
@@ -167,7 +281,8 @@ def create_news():
         badge=data.get('badge'),
         important=data.get('important') in ['true','1', True],
         galleryJson=json.dumps(gallery_urls),
-        videoUrl=video_url
+        videoUrl=video_url,
+        videoDescription=video_desc
     )
     db.session.add(item)
     db.session.commit()
@@ -196,7 +311,19 @@ def update_news(id):
         filename = f"{id}-main-{uuid.uuid4().hex}.jpg"
         uploaded_url = upload_file_helper(f, filename)
         if uploaded_url:
-            item.image = uploaded_url
+            # Process main image to standard card size
+            try:
+                if not s3_bucket:  # Only process if using local storage
+                    upload_folder = current_app.config['UPLOAD_FOLDER']
+                    filepath = os.path.join(upload_folder, filename)
+                    processor = ImageProcessor(filepath, upload_folder)
+                    result = processor.process_news_main_card(filepath, f"{id}-main-card.jpg")
+                    item.image = f"/uploads/{os.path.basename(result['output_path'])}"
+                else:
+                    item.image = uploaded_url
+            except Exception as e:
+                print(f"Image processing error: {e}")
+                item.image = uploaded_url
     elif 'image' in data:
         item.image = data['image']
 
@@ -229,13 +356,30 @@ def update_news(id):
             filename = f"{id}-g-{uuid.uuid4().hex}.jpg"
             uploaded_url = upload_file_helper(f, filename)
             if uploaded_url:
-                new_gallery_urls.append(uploaded_url)
+                # Process gallery image to standard detail size
+                try:
+                    if not s3_bucket:  # Only process if using local storage
+                        upload_folder = current_app.config['UPLOAD_FOLDER']
+                        filepath = os.path.join(upload_folder, filename)
+                        processor = ImageProcessor(filepath, upload_folder)
+                        result = processor.resize_with_crop(filepath, (1200, 675), 'center')
+                        output_name = f"{id}-gallery-{uuid.uuid4().hex}.jpg"
+                        output_path = os.path.join(upload_folder, output_name)
+                        result.save(output_path, format='JPEG', quality=85, optimize=True)
+                        new_gallery_urls.append(f"/uploads/{output_name}")
+                    else:
+                        new_gallery_urls.append(uploaded_url)
+                except Exception as e:
+                    print(f"Gallery processing error: {e}")
+                    new_gallery_urls.append(uploaded_url)
     
     # Merge old and new gallery
     item.galleryJson = json.dumps(current_gallery + new_gallery_urls)
 
     if 'videoUrl' in data:
         item.videoUrl = data['videoUrl']
+    if 'videoDescription' in data:
+        item.videoDescription = data['videoDescription']
 
     db.session.commit()
     return jsonify(to_dict_news(item))
