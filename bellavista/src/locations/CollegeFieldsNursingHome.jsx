@@ -9,6 +9,7 @@ import 'swiper/css/pagination';
 import '../styles/CareHome.css';
 import ReviewForm from '../components/ReviewForm';
 import { fetchNewsItems } from '../services/newsService';
+import { fetchHome } from '../services/homeService';
 
 const CollegeFieldsNursingHome = () => {
   const navigate = useNavigate();
@@ -19,21 +20,10 @@ const CollegeFieldsNursingHome = () => {
   const [teamExpanded, setTeamExpanded] = useState(false);
   const [collegeNews, setCollegeNews] = useState([]);
   const [teamMembers, setTeamMembers] = useState([]);
-
-  useEffect(() => {
-    const loadNews = async () => {
-      const allNews = await fetchNewsItems();
-      const filtered = allNews.filter(news => 
-        news.location.toLowerCase().includes('college') || 
-        news.location === 'All Locations'
-      );
-      setCollegeNews(filtered);
-    };
-    loadNews();
-  }, []);
+  const [homeData, setHomeData] = useState(null);
 
   // Using Barry's images as placeholders
-  const activitiesGalleryImages = [
+  const defaultActivitiesImages = [
     "Bingo-Activity-150x150.jpg",
     "IMG-20180716-WA0005-150x150.jpg",
     "IMG-20180716-WA0013-150x150.jpg",
@@ -49,8 +39,8 @@ const CollegeFieldsNursingHome = () => {
     "IMG_8332-150x150.jpg",
     "IMG_8340-150x150.jpg"
   ];
-
-  const facilitiesGalleryImages = [
+  
+  const defaultFacilitiesImages = [
     "98000815_933014320502979_5416674318329315328_n-150x150.jpg",
     "98005368_933014173836327_3282387137734901760_n-150x150.jpg",
     "98185714_933014203836324_2891158467958013952_n-150x150.jpg",
@@ -86,7 +76,7 @@ const CollegeFieldsNursingHome = () => {
     "IMG_8313-150x150.jpg"
   ];
 
-  const teamGalleryImages = [
+  const defaultTeamImages = [
     "Barry-Teamn-150x150.png",
     "IMG-20180816-WA0019-150x150.jpg",
     "IMG_0324-150x150.jpg",
@@ -98,7 +88,47 @@ const CollegeFieldsNursingHome = () => {
     "b2-150x150.jpg"
   ];
 
+  const [activitiesGalleryImages, setActivitiesGalleryImages] = useState(defaultActivitiesImages);
+  const [facilitiesGalleryImages, setFacilitiesGalleryImages] = useState(defaultFacilitiesImages);
+  const [teamGalleryImages, setTeamGalleryImages] = useState(defaultTeamImages);
 
+  useEffect(() => {
+    const loadData = async () => {
+      // Load News
+      const allNews = await fetchNewsItems();
+      const filtered = allNews.filter(news => 
+        news.location.toLowerCase().includes('college') || 
+        news.location === 'All Locations'
+      );
+      setCollegeNews(filtered);
+
+      // Load Home Data from Backend
+      const home = await fetchHome('college-fields');
+      if (home) {
+        setHomeData(home);
+        if (home.teamMembers && home.teamMembers.length > 0) {
+          setTeamMembers(home.teamMembers);
+        }
+        if (home.activityImages && home.activityImages.length > 0) {
+          setActivitiesGalleryImages(home.activityImages);
+        }
+        if (home.facilitiesGalleryImages && home.facilitiesGalleryImages.length > 0) {
+          setFacilitiesGalleryImages(home.facilitiesGalleryImages);
+        }
+        if (home.teamGalleryImages && home.teamGalleryImages.length > 0) {
+          setTeamGalleryImages(home.teamGalleryImages);
+        }
+      }
+    };
+    loadData();
+  }, []);
+
+  // Helper to resolve image source
+  const getImgSrc = (img, folder) => {
+    if (typeof img === 'object') return img.url;
+    if (img.startsWith('http') || img.startsWith('/')) return img;
+    return `/${folder}/${img}`;
+  };
 
   const facilitiesList = [
     { icon: "fas fa-utensils", title: "Home-Cooked Meals" },
@@ -215,7 +245,7 @@ const CollegeFieldsNursingHome = () => {
                   {activitiesGalleryImages.map((img, index) => (
                     <SwiperSlide key={index}>
                       <div className="loc-slider__item">
-                        <img src={`/BarryActivitiesGallery/${img}`} alt={`Activity ${index + 1}`} loading="lazy" />
+                        <img src={getImgSrc(img, 'BarryActivitiesGallery')} alt={`Activity ${index + 1}`} loading="lazy" />
                       </div>
                     </SwiperSlide>
                   ))}
@@ -277,7 +307,7 @@ const CollegeFieldsNursingHome = () => {
                   {facilitiesGalleryImages.map((img, index) => (
                     <SwiperSlide key={index}>
                       <div className="loc-slider__item">
-                        <img src={`/BarryFacilitiesGalley/${img}`} alt={`Facility ${index + 1}`} loading="lazy" />
+                        <img src={getImgSrc(img, 'BarryFacilitiesGalley')} alt={`Facility ${index + 1}`} loading="lazy" />
                       </div>
                     </SwiperSlide>
                   ))}
@@ -425,7 +455,7 @@ const CollegeFieldsNursingHome = () => {
                     {teamGalleryImages.map((img, index) => (
                       <SwiperSlide key={index}>
                         <div className="loc-slider__item">
-                          <img src={`/BarryTeam/${img}`} alt={`Team Member ${index + 1}`} loading="lazy" />
+                          <img src={getImgSrc(img, 'BarryTeam')} alt={`Team Member ${index + 1}`} loading="lazy" />
                         </div>
                       </SwiperSlide>
                     ))}

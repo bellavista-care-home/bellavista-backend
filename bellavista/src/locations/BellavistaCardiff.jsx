@@ -10,6 +10,7 @@ import 'swiper/css/effect-fade';
 import '../styles/CareHome.css';
 import ReviewForm from '../components/ReviewForm';
 import { fetchNewsItems } from '../services/newsService';
+import { fetchHome } from '../services/homeService';
 
 const BellavistaCardiff = () => {
   const navigate = useNavigate();
@@ -19,29 +20,18 @@ const BellavistaCardiff = () => {
   const [facilitiesExpanded, setFacilitiesExpanded] = useState(false);
   const [selectedFacility, setSelectedFacility] = useState(null);
   const [cardiffNews, setCardiffNews] = useState([]);
-  const [teamMembers, setTeamMembers] = useState([
+  const [homeData, setHomeData] = useState(null);
+
+  const defaultTeamMembers = [
     { name: "Ceri A Evans", role: "Home Manager" },
     { name: "Titty Raj", role: "Lead Nurse in Charge" },
     { name: "Zsuzsanna Karkosak", role: "Accounts Assistant" },
     { name: "Cerry Davies", role: "Kitchen In charge" },
     { name: "Karen Thomas", role: "RMN in Charge" },
     { name: "Tania", role: "Housekeeping In charge" }
-  ]);
+  ];
 
-  useEffect(() => {
-    const loadNews = async () => {
-      const allNews = await fetchNewsItems();
-      const filtered = allNews.filter(news => 
-        news.location.toLowerCase().includes('cardiff') || 
-        news.location === 'All Locations'
-      );
-      setCardiffNews(filtered);
-    };
-    loadNews();
-  }, []);
-
-  // Using Barry's images as placeholders as requested
-  const activitiesGalleryImages = [
+  const defaultActivitiesImages = [
     "Bingo-Activity-150x150.jpg",
     "IMG-20180716-WA0005-150x150.jpg",
     "IMG-20180716-WA0013-150x150.jpg",
@@ -58,7 +48,7 @@ const BellavistaCardiff = () => {
     "IMG_8340-150x150.jpg"
   ];
 
-  const facilitiesGalleryImages = [
+  const defaultFacilitiesImages = [
     "98000815_933014320502979_5416674318329315328_n-150x150.jpg",
     "98005368_933014173836327_3282387137734901760_n-150x150.jpg",
     "98185714_933014203836324_2891158467958013952_n-150x150.jpg",
@@ -94,7 +84,7 @@ const BellavistaCardiff = () => {
     "IMG_8313-150x150.jpg"
   ];
 
-  const teamGalleryImages = [
+  const defaultTeamImages = [
     "Barry-Teamn-150x150.png",
     "IMG-20180816-WA0019-150x150.jpg",
     "IMG_0324-150x150.jpg",
@@ -105,6 +95,49 @@ const BellavistaCardiff = () => {
     "IMG_8885-150x150.jpg",
     "b2-150x150.jpg"
   ];
+
+  const [teamMembers, setTeamMembers] = useState(defaultTeamMembers);
+  const [activitiesGalleryImages, setActivitiesGalleryImages] = useState(defaultActivitiesImages);
+  const [facilitiesGalleryImages, setFacilitiesGalleryImages] = useState(defaultFacilitiesImages);
+  const [teamGalleryImages, setTeamGalleryImages] = useState(defaultTeamImages);
+
+  useEffect(() => {
+    const loadData = async () => {
+      // Load News
+      const allNews = await fetchNewsItems();
+      const filtered = allNews.filter(news => 
+        news.location.toLowerCase().includes('cardiff') || 
+        news.location === 'All Locations'
+      );
+      setCardiffNews(filtered);
+
+      // Load Home Data from Backend
+      const home = await fetchHome('bellavista-cardiff');
+      if (home) {
+        setHomeData(home);
+        if (home.teamMembers && home.teamMembers.length > 0) {
+          setTeamMembers(home.teamMembers);
+        }
+        if (home.activityImages && home.activityImages.length > 0) {
+          setActivitiesGalleryImages(home.activityImages);
+        }
+        if (home.facilitiesGalleryImages && home.facilitiesGalleryImages.length > 0) {
+          setFacilitiesGalleryImages(home.facilitiesGalleryImages);
+        }
+        if (home.teamGalleryImages && home.teamGalleryImages.length > 0) {
+          setTeamGalleryImages(home.teamGalleryImages);
+        }
+      }
+    };
+    loadData();
+  }, []);
+
+  // Helper to resolve image source
+  const getImgSrc = (img, folder) => {
+    if (typeof img === 'object') return img.url;
+    if (img.startsWith('http') || img.startsWith('/')) return img;
+    return `/${folder}/${img}`;
+  };
 
 
   const activitiesList = [
@@ -295,7 +328,7 @@ We Regularly take advantage of our big garden space and often hold garden partie
                   {activitiesGalleryImages.map((img, index) => (
                     <SwiperSlide key={index}>
                       <div className="loc-slider__item">
-                        <img src={`/BarryActivitiesGallery/${img}`} alt={`Activity ${index + 1}`} loading="lazy" />
+                        <img src={getImgSrc(img, 'BarryActivitiesGallery')} alt={`Activity ${index + 1}`} loading="lazy" />
                       </div>
                     </SwiperSlide>
                   ))}
@@ -346,7 +379,7 @@ We Regularly take advantage of our big garden space and often hold garden partie
                   {facilitiesGalleryImages.map((img, index) => (
                     <SwiperSlide key={index}>
                       <div className="loc-slider__item">
-                        <img src={`/BarryFacilitiesGalley/${img}`} alt={`Facility ${index + 1}`} loading="lazy" />
+                        <img src={getImgSrc(img, 'BarryFacilitiesGalley')} alt={`Facility ${index + 1}`} loading="lazy" />
                       </div>
                     </SwiperSlide>
                   ))}
@@ -484,7 +517,7 @@ We Regularly take advantage of our big garden space and often hold garden partie
                   {teamGalleryImages.map((img, index) => (
                     <SwiperSlide key={index}>
                       <div className="loc-slider__item">
-                        <img src={`/BarryTeam/${img}`} alt={`Team Member ${index + 1}`} loading="lazy" />
+                        <img src={getImgSrc(img, 'BarryTeam')} alt={`Team Member ${index + 1}`} loading="lazy" />
                       </div>
                     </SwiperSlide>
                   ))}

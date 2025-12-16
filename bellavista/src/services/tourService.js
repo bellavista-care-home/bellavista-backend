@@ -1,6 +1,6 @@
 import emailjs from '@emailjs/browser';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL;
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
 export async function sendBookingEmail(booking) {
   const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID;

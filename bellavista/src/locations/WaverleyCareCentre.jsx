@@ -9,6 +9,7 @@ import 'swiper/css/pagination';
 import '../styles/CareHome.css';
 import ReviewForm from '../components/ReviewForm';
 import { fetchNewsItems } from '../services/newsService';
+import { fetchHome } from '../services/homeService';
 
 const WaverleyCareCentre = () => {
   const navigate = useNavigate();
@@ -19,21 +20,10 @@ const WaverleyCareCentre = () => {
   const [teamExpanded, setTeamExpanded] = useState(false);
   const [waverleyNews, setWaverleyNews] = useState([]);
   const [teamMembers, setTeamMembers] = useState([]);
-
-  useEffect(() => {
-    const loadNews = async () => {
-      const allNews = await fetchNewsItems();
-      const filtered = allNews.filter(news => 
-        news.location.toLowerCase().includes('waverley') || 
-        news.location === 'All Locations'
-      );
-      setWaverleyNews(filtered);
-    };
-    loadNews();
-  }, []);
+  const [homeData, setHomeData] = useState(null);
 
   // Using Barry's images as placeholders as requested
-  const activitiesGalleryImages = [
+  const defaultActivitiesImages = [
     "Bingo-Activity-150x150.jpg",
     "IMG-20180716-WA0005-150x150.jpg",
     "IMG-20180716-WA0013-150x150.jpg",
@@ -49,8 +39,8 @@ const WaverleyCareCentre = () => {
     "IMG_8332-150x150.jpg",
     "IMG_8340-150x150.jpg"
   ];
-
-  const facilitiesGalleryImages = [
+  
+  const defaultFacilitiesImages = [
     "98000815_933014320502979_5416674318329315328_n-150x150.jpg",
     "98005368_933014173836327_3282387137734901760_n-150x150.jpg",
     "98185714_933014203836324_2891158467958013952_n-150x150.jpg",
@@ -85,8 +75,8 @@ const WaverleyCareCentre = () => {
     "IMG_4610-150x150.jpg",
     "IMG_8313-150x150.jpg"
   ];
-
-  const teamGalleryImages = [
+  
+  const defaultTeamImages = [
     "Barry-Teamn-150x150.png",
     "IMG-20180816-WA0019-150x150.jpg",
     "IMG_0324-150x150.jpg",
@@ -97,6 +87,48 @@ const WaverleyCareCentre = () => {
     "IMG_8885-150x150.jpg",
     "b2-150x150.jpg"
   ];
+
+  const [activitiesGalleryImages, setActivitiesGalleryImages] = useState(defaultActivitiesImages);
+  const [facilitiesGalleryImages, setFacilitiesGalleryImages] = useState(defaultFacilitiesImages);
+  const [teamGalleryImages, setTeamGalleryImages] = useState(defaultTeamImages);
+
+  useEffect(() => {
+    const loadData = async () => {
+      // Load News
+      const allNews = await fetchNewsItems();
+      const filtered = allNews.filter(news => 
+        news.location.toLowerCase().includes('waverley') || 
+        news.location === 'All Locations'
+      );
+      setWaverleyNews(filtered);
+
+      // Load Home Data from Backend
+      const home = await fetchHome('waverley-care-centre');
+      if (home) {
+        setHomeData(home);
+        if (home.teamMembers && home.teamMembers.length > 0) {
+          setTeamMembers(home.teamMembers);
+        }
+        if (home.activityImages && home.activityImages.length > 0) {
+          setActivitiesGalleryImages(home.activityImages);
+        }
+        if (home.facilitiesGalleryImages && home.facilitiesGalleryImages.length > 0) {
+          setFacilitiesGalleryImages(home.facilitiesGalleryImages);
+        }
+        if (home.teamGalleryImages && home.teamGalleryImages.length > 0) {
+          setTeamGalleryImages(home.teamGalleryImages);
+        }
+      }
+    };
+    loadData();
+  }, []);
+
+  // Helper to resolve image source
+  const getImgSrc = (img, folder) => {
+    if (typeof img === 'object') return img.url;
+    if (img.startsWith('http') || img.startsWith('/')) return img;
+    return `/${folder}/${img}`;
+  };
 
 
 

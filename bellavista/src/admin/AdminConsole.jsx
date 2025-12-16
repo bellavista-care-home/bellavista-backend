@@ -4,6 +4,7 @@ import ImageUploader from '../components/ImageUploader';
 import { fetchNewsItems, createNewsItem, updateNewsItem } from '../services/newsService';
 import { fetchScheduledTours } from '../services/tourService';
 import { fetchCareEnquiries } from '../services/enquiryService';
+import { fetchHomes, updateHome } from '../services/homeService';
 import HomeForm from './components/HomeForm';
 import './AdminConsole.css';
 
@@ -12,6 +13,7 @@ const AdminConsole = () => {
   const [activeView, setActiveView] = useState('update-home');
   const [globalSearch, setGlobalSearch] = useState('');
   const [selectedHome, setSelectedHome] = useState(null);
+  const [homes, setHomes] = useState([]);
   const [newsForm, setNewsForm] = useState({
     id: '',
     title: '',
@@ -34,49 +36,22 @@ const AdminConsole = () => {
   const [faqAnswer, setFaqAnswer] = useState('');
   const [faqs, setFaqs] = useState([]);
 
-  // Mock Data for "Update Home"
-  const mockHomes = [
-    {
-      id: 1,
-      homeName: "Bellavista Cardiff",
-      homeLocation: "Cardiff Bay",
-      homeImage: "/HomeImages/preview_cfnh10-1_425x300_acf_cropped.jpg",
-      homeBadge: "Featured",
-      homeDesc: "A chic, cosmopolitan atmosphere with views of Cardiff Bay.",
-      heroTitle: "Welcome to Bellavista Cardiff",
-      heroSubtitle: "A chic, cosmopolitan atmosphere with views of Cardiff Bay.",
-      heroBgImage: "/FrontPageBanner/preview_Home_Banner1_1300x400_acf_cropped.png",
-      statsBedrooms: 62,
-      statsPremier: 18,
-      teamMembers: [
-        { name: "Ceri A Evans", role: "Home Manager", image: "" },
-        { name: "Titty Raj", role: "Lead Nurse", image: "" }
-      ],
-      activities: ["Bingo", "Trips out", "Gardening"],
-      activityImages: [],
-      facilitiesList: [{icon: "fas fa-wifi", title: "Smart TVs & Wifi"}],
-      detailedFacilities: [],
-      facilitiesGalleryImages: [],
-      homeFeatured: true
-    },
-    {
-      id: 2,
-      homeName: "Bellavista Barry",
-      homeLocation: "Barry",
-      homeImage: "/HomeImages/preview_b-1_425x300_acf_cropped-2.jpg",
-      homeBadge: "",
-      homeDesc: "Stunning views of Barry Island and the Bristol Channel.",
-      statsBedrooms: 48,
-      statsPremier: 0,
-      teamMembers: [],
-      activities: [],
-      activityImages: [],
-      facilitiesList: [],
-      detailedFacilities: [],
-      facilitiesGalleryImages: [],
-      homeFeatured: false
+  const loadHomes = async () => {
+    const data = await fetchHomes();
+    setHomes(data);
+  };
+
+  const handleSaveHome = async (homeData) => {
+    try {
+      await updateHome(homeData.id, homeData);
+      alert('Home updated successfully!');
+      setSelectedHome(null);
+      loadHomes();
+    } catch (error) {
+      console.error(error);
+      alert('Failed to update home.');
     }
-  ];
+  };
 
   const [bookings, setBookings] = useState([]);
   const [bookingSearch, setBookingSearch] = useState('');
@@ -145,6 +120,9 @@ const AdminConsole = () => {
     }
     if (activeView === 'update-news') {
       loadNews();
+    }
+    if (activeView === 'update-home') {
+      loadHomes();
     }
   }, [activeView]);
 
@@ -405,20 +383,21 @@ const AdminConsole = () => {
             <HomeForm 
               mode="edit" 
               initialData={selectedHome} 
-              onCancel={() => setSelectedHome(null)} 
+              onCancel={() => setSelectedHome(null)}
+              onSave={handleSaveHome}
             />
           ) : (
             <section className="panel">
               <h2>Update Home</h2>
               <div className="toolbar">
                 <input id="homeSearch" placeholder="Search homes…" style={{flex:1}} />
-                <button className="btn ghost small" onClick={() => setActiveView('add-home')}>
+                <button className="btn ghost small" style={{opacity: 0.5, cursor: 'not-allowed'}} title="Disabled">
                   <i className="fa-solid fa-plus"></i>&nbsp;New
                 </button>
               </div>
               <div style={{marginTop:'20px'}}>
                 <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(250px, 1fr))', gap:'20px'}}>
-                  {mockHomes.map(home => (
+                  {homes.map(home => (
                     <div key={home.id} style={{border:'1px solid #e0e0e0', borderRadius:'10px', overflow:'hidden', background:'white'}}>
                       <div style={{height:'140px', background:`url(${home.homeImage}) center/cover`}}></div>
                       <div style={{padding:'15px'}}>
