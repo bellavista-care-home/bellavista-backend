@@ -20,7 +20,7 @@
 }
 
 .dementia-header {
-    background-image: url('/background-banner-image.png') !important; /* Specific image for Dementia page */
+    background: linear-gradient(135deg, rgba(0, 51, 102, 0.9), rgba(0, 30, 60, 0.8)), url('/background-banner-image.png') !important; /* Specific image for Dementia page */
 }
 
 .services-page .page-header h1 {
