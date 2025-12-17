@@ -3,22 +3,22 @@ import '../styles/Facilities.css';
 
 const Facilities = () => {
   const facilities = [
-    { title: 'Reception', image: '/images/reception-facility.jpeg' },
-    { title: 'Lounge Area', image: '/images/lounge-area.jpg' },
-    { title: 'Dining Room', image: '/images/dining-room.jpg' },
-    { title: 'Private Room', image: '/images/private-room.jpg' },
-    { title: 'Garden', image: '/images/garden-facility.jpeg' },
-    { title: 'Outdoor Terrace', image: '/images/outdoor-terrace.jpg' },
-    { title: 'Activity Room', image: '/images/activity-room.jpg' },
-    { title: 'Cinema', image: '/images/cinema-facility.jpeg' },
-    { title: 'Library', image: '/images/library-facility.jpeg' },
-    { title: 'Arts & Crafts', image: '/images/arts-facility.jpeg' },
-    { title: 'Music Therapy', image: '/images/music-therapy.jpeg' },
-    { title: 'Wellness Spa', image: '/images/wellness-spa.jpg' },
-    { title: 'Physiotherapy', image: '/images/physiotherapy-room.jpg' },
-    { title: 'Medical Suite', image: '/images/medical-suite.jpg' },
-    { title: 'Kitchen', image: '/images/kitchen-area.jpg' },
-    { title: 'Laundry Service', image: '/images/laundry-service.jpg' }
+    { title: 'Reception', image: '/facilities/reception-facility.jpeg' },
+    { title: 'Lounge Area', image: '/facilities/lounge-area.jpg' },
+    { title: 'Dining Room', image: '/facilities/dining-room.jpg' },
+    { title: 'Private Room', image: '/facilities/private-room.jpg' },
+    { title: 'Garden', image: '/facilities/garden-facility.jpeg' },
+    { title: 'Outdoor Terrace', image: '/facilities/outdoor-terrace.jpg' },
+    { title: 'Activity Room', image: '/facilities/activity-room.jpg' },
+    { title: 'Cinema', image: '/facilities/cinema-facility.jpeg' },
+    { title: 'Library', image: '/facilities/library-facility.jpeg' },
+    { title: 'Arts & Crafts', image: '/facilities/arts-facility.jpg' },
+    { title: 'Music Therapy', image: '/facilities/music-therapy.jpeg' },
+    { title: 'Wellness Spa', image: '/facilities/wellness-spa.jpg' },
+    { title: 'Physiotherapy', image: '/facilities/physiotherapy-room.jpg' },
+    { title: 'Medical Suite', image: '/facilities/medical-suite.jpg' },
+    { title: 'Kitchen', image: '/facilities/kitchen-area.jpg' },
+    { title: 'Laundry Service', image: '/facilities/laundry-service.jpg' }
   ];
 
   return (

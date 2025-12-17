@@ -3,12 +3,12 @@ import '../styles/Services.css';
 
 const DementiaEnvironment = () => {
   const galleryImages = [
-    { src: "/DimentiaFriendlyEnvironment/BuyingDress.jpg", alt: "Dementia Friendly Shopping Experience" },
-    { src: "/DimentiaFriendlyEnvironment/Cafe.jpg", alt: "On-site Café" },
-    { src: "/DimentiaFriendlyEnvironment/DiningArea.jpg", alt: "Dementia Friendly Dining" },
-    { src: "/DimentiaFriendlyEnvironment/Library.jpg", alt: "Quiet Library Space" },
-    { src: "/DimentiaFriendlyEnvironment/wallart.jpg", alt: "Stimulating Wall Art" },
-    { src: "/DimentiaFriendlyEnvironment/wallposters.jpg", alt: "Themed Wall Posters" }
+    { src: "/DementiaFriendlyEnvironment/BuyingDress.jpg", alt: "Dementia Friendly Shopping Experience" },
+    { src: "/DementiaFriendlyEnvironment/Cafe.jpg", alt: "On-site Café" },
+    { src: "/DementiaFriendlyEnvironment/DiningArea.jpg", alt: "Dementia Friendly Dining" },
+    { src: "/DementiaFriendlyEnvironment/Library.jpg", alt: "Quiet Library Space" },
+    { src: "/DementiaFriendlyEnvironment/wallart.jpg", alt: "Stimulating Wall Art" },
+    { src: "/DementiaFriendlyEnvironment/wallposters.jpg", alt: "Themed Wall Posters" }
   ];
 
   return (
