@@ -10,6 +10,42 @@ from .image_processor import ImageProcessor
 api_bp = Blueprint('api', __name__)
 s3_bucket = os.environ.get('S3_BUCKET')
 
+def upload_file_helper(file_or_path, filename, content_type=None):
+    if not s3_bucket:
+        return None
+        
+    try:
+        s3 = boto3.client(
+            's3',
+            aws_access_key_id=os.environ.get('AWS_ACCESS_KEY_ID'),
+            aws_secret_access_key=os.environ.get('AWS_SECRET_ACCESS_KEY'),
+            region_name=os.environ.get('AWS_REGION', 'eu-west-2')
+        )
+
+        if isinstance(file_or_path, str):
+            # It's a file path
+            with open(file_or_path, 'rb') as data:
+                s3.upload_fileobj(
+                    data, 
+                    s3_bucket, 
+                    filename,
+                    ExtraArgs={'ContentType': content_type or 'image/jpeg', 'ACL': 'public-read'}
+                )
+        else:
+            # It's a FileStorage object
+            file_or_path.seek(0)
+            s3.upload_fileobj(
+                file_or_path,
+                s3_bucket,
+                filename,
+                ExtraArgs={'ContentType': content_type or file_or_path.content_type, 'ACL': 'public-read'}
+            )
+            
+        return f"https://{s3_bucket}.s3.amazonaws.com/{filename}"
+    except Exception as e:
+        print(f"S3 Upload Error: {e}")
+        return None
+
 def generate_unique_filename(original_filename):
     ext = original_filename.rsplit('.', 1)[1].lower() if '.' in original_filename else 'jpg'
     unique_id = str(uuid.uuid4())[:8]
