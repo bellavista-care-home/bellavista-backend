@@ -37,11 +37,9 @@ def upload_file_route():
         
         # Process if requested
         process_type = request.form.get('process_type', 'none')
-        
-        result = {
-            'url': f"/uploads/{filename}",
-            'filename': filename
-        }
+        final_filepath = filepath
+        final_filename = filename
+        processed = False
         
         if process_type == 'resize_crop':
             try:
@@ -52,9 +50,9 @@ def upload_file_route():
                 processor = ImageProcessor(filepath, processed_folder)
                 processed_result = processor.process_news_main_card(filepath)
                 
-                processed_filename = os.path.basename(processed_result['output_path'])
-                result['url'] = f"/uploads/processed/{processed_filename}"
-                result['processed'] = True
+                final_filepath = processed_result['output_path']
+                final_filename = f"processed/{os.path.basename(final_filepath)}"
+                processed = True
             except Exception as e:
                 print(f"Processing error: {e}")
                 # Fallback to original
@@ -66,10 +64,10 @@ def upload_file_route():
                 processor = ImageProcessor(filepath, processed_folder)
                 img = processor.resize_with_crop(filepath, (1200, 675), 'center')
                 processed_filename = f"{os.path.splitext(filename)[0]}_gallery.jpg"
-                output_path = os.path.join(processed_folder, processed_filename)
-                img.save(output_path, format='JPEG', quality=85, optimize=True)
-                result['url'] = f"/uploads/processed/{processed_filename}"
-                result['processed'] = True
+                final_filepath = os.path.join(processed_folder, processed_filename)
+                img.save(final_filepath, format='JPEG', quality=85, optimize=True)
+                final_filename = f"processed/{processed_filename}"
+                processed = True
             except Exception as e:
                 print(f"Processing error: {e}")
                 pass
@@ -80,45 +78,40 @@ def upload_file_route():
                 processor = ImageProcessor(filepath, processed_folder)
                 img = processor.resize_with_padding(filepath, (1200, 675), (255, 255, 255))
                 processed_filename = f"{os.path.splitext(filename)[0]}_gallery_pad.jpg"
-                output_path = os.path.join(processed_folder, processed_filename)
-                img.save(output_path, format='JPEG', quality=85, optimize=True)
-                result['url'] = f"/uploads/processed/{processed_filename}"
-                result['processed'] = True
+                final_filepath = os.path.join(processed_folder, processed_filename)
+                img.save(final_filepath, format='JPEG', quality=85, optimize=True)
+                final_filename = f"processed/{processed_filename}"
+                processed = True
             except Exception as e:
                 print(f"Processing error: {e}")
                 pass
+
+        # Check if S3 is enabled
+        s3_url = upload_to_s3(final_filepath, final_filename, file.content_type)
+        
+        if s3_url:
+            # If uploaded to S3, return S3 URL and cleanup local files
+            result = {
+                'url': s3_url,
+                'filename': final_filename,
+                'processed': processed
+            }
+            # Optional: Clean up local files if you want to save space
+            # os.remove(filepath)
+            # if final_filepath != filepath:
+            #     os.remove(final_filepath)
+        else:
+            # Return local URL
+            result = {
+                'url': f"/uploads/{final_filename}",
+                'filename': final_filename,
+                'processed': processed
+            }
                 
         return jsonify(result), 200
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
-def upload_file_helper(file, filename):
-    s3_bucket = os.environ.get('S3_BUCKET')
-    
-    if s3_bucket:
-        try:
-            s3 = boto3.client('s3',
-                aws_access_key_id=os.environ.get('AWS_ACCESS_KEY_ID'),
-                aws_secret_access_key=os.environ.get('AWS_SECRET_ACCESS_KEY'),
-                region_name=os.environ.get('AWS_REGION', 'eu-west-2')
-            )
-            s3.upload_fileobj(
-                file,
-                s3_bucket,
-                filename,
-                ExtraArgs={
-                    "ContentType": file.content_type
-                }
-            )
-            return f"https://{s3_bucket}.s3.amazonaws.com/{filename}"
-        except Exception as e:
-            print(f"S3 Upload Error: {e}")
-            return None
-    else:
-        path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
-        file.save(path)
-        return f"/uploads/{filename}"
 
 def to_dict_news(n):
     gallery = []
