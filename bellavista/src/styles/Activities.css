@@ -3,12 +3,11 @@
 }
 
 .activities-page .page-header {
-    background: linear-gradient(135deg, rgba(0, 102, 204, 0.85), rgba(0, 180, 216, 0.85)), url('/NewsImages/activities-life-barry.jpg');
+    background: linear-gradient(135deg, rgba(0, 51, 102, 0.9), rgba(0, 30, 60, 0.8)), url('/background-banner-image.png');
     background-size: cover;
     background-position: center;
-    background-attachment: fixed;
     color: white;
-    padding: 140px 0;
+    padding: 120px 0;
     text-align: center;
     margin-bottom: 60px;
     backdrop-filter: blur(4px);
@@ -19,7 +18,7 @@
 }
 
 .activities-page .page-header h1 {
-    font-size: 3.5rem;
+    font-size: 3rem;
     font-weight: 700;
     margin-bottom: 15px;
     color: white;
