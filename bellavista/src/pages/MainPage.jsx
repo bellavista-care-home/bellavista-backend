@@ -15,10 +15,11 @@ const Home = () => {
   const featuredNews = newsList.find(news => news.important) || newsList[0] || {};
 
   const slides = [
-    '/images/hero-care-staff.jpg',
-    '/images/hero-family-visit.jpg',
-    '/images/hero-resident-selfie.jpg',
-    '/images/hero-wheelchair-assistance.jpg'
+    '/FrontPageBanner/banner-first.jpg',
+    '/FrontPageBanner/banner-second.png',
+    '/FrontPageBanner/banner-third.png',
+    '/FrontPageBanner/banner-fourth.jpg',
+    '/FrontPageBanner/banner-fifth.jpg'
   ];
 
   useEffect(() => {
