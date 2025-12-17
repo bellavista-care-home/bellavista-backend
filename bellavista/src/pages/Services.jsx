@@ -69,7 +69,7 @@ const Services = () => {
             <div className="service-content">
               <div className="service-grid-layout">
                 <div className="service-image">
-                  <img src="/OurCare/DementiaCare.jpg" alt="Dementia Care" loading="lazy" />
+                  <img src="/OurCare/dementia-care.jpg" alt="Dementia Care" loading="lazy" />
                 </div>
                 <div className="service-text">
                   <div className="icon-box" style={{ margin: '0 0 20px 0' }}>
@@ -95,7 +95,7 @@ const Services = () => {
             <div className="service-content">
               <div className="service-grid-layout">
                 <div className="service-image">
-                  <img src="/OurCare/LongTimeNursing.jpg" alt="Long Term Nursing" loading="lazy" />
+                  <img src="/OurCare/long-time-nursing.jpg" alt="Long Term Nursing" loading="lazy" />
                 </div>
                 <div className="service-text">
                   <div className="icon-box" style={{ margin: '0 0 20px 0' }}>
@@ -118,7 +118,7 @@ const Services = () => {
             <div className="service-content">
               <div className="service-grid-layout">
                 <div className="service-image">
-                  <img src="/OurCare/PalliativeCare.jpg" alt="Palliative Care" loading="lazy" />
+                  <img src="/OurCare/palliative-care.jpg" alt="Palliative Care" loading="lazy" />
                 </div>
                 <div className="service-text">
                   <div className="icon-box" style={{ margin: '0 0 20px 0' }}>
@@ -141,7 +141,7 @@ const Services = () => {
             <div className="service-content">
               <div className="service-grid-layout">
                 <div className="service-image">
-                  <img src="/OurCare/RespiteCare.jpg" alt="Respite Care" loading="lazy" />
+                  <img src="/OurCare/respite-care.jpg" alt="Respite Care" loading="lazy" />
                 </div>
                 <div className="service-text">
                   <div className="icon-box" style={{ margin: '0 0 20px 0' }}>
@@ -164,7 +164,7 @@ const Services = () => {
             <div className="service-content">
               <div className="service-grid-layout">
                 <div className="service-image">
-                  <img src="/OurCare/EmiNursingandResidentialCare.png" alt="EMI Nursing & Residential Care" loading="lazy" />
+                  <img src="/OurCare/emi-nursing-and-residential-care.jpg" alt="EMI Nursing & Residential Care" loading="lazy" />
                 </div>
                 <div className="service-text">
                   <div className="icon-box" style={{ margin: '0 0 20px 0' }}>
