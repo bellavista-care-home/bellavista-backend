@@ -536,16 +536,6 @@ const ImageUploader = ({
     }
   };
 
-  const handleUrlSubmit = (url) => {
-    if (url.trim()) {
-      setTempImageUrl(url);
-      setShowCropModal(true);
-    }
-  };
-
-  const [showUrlInput, setShowUrlInput] = useState(false);
-  const [imageUrlInput, setImageUrlInput] = useState('');
-
   return (
     <div style={{ marginBottom: '15px' }}>
       {showCropModal && (
@@ -619,45 +609,7 @@ const ImageUploader = ({
             >
               <i className="fa-solid fa-upload"></i> Choose File
             </button>
-            <button 
-              className="btn ghost small"
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowUrlInput(!showUrlInput);
-              }}
-            >
-              <i className="fa-solid fa-link"></i> Use URL
-            </button>
           </div>
-          
-          {showUrlInput && (
-            <div style={{ marginTop: '15px', display: 'flex', gap: '10px', maxWidth: '300px', margin: '15px auto 0' }}>
-              <input
-                type="url"
-                placeholder="Enter image URL"
-                value={imageUrlInput}
-                onChange={(e) => setImageUrlInput(e.target.value)}
-                style={{ flex: 1 }}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    handleUrlSubmit(imageUrlInput);
-                    setImageUrlInput('');
-                    setShowUrlInput(false);
-                  }
-                }}
-              />
-              <button 
-                className="btn small"
-                onClick={() => {
-                  handleUrlSubmit(imageUrlInput);
-                  setImageUrlInput('');
-                  setShowUrlInput(false);
-                }}
-              >
-                Add
-              </button>
-            </div>
-          )}
         </div>
       )}
 

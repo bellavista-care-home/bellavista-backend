@@ -24,11 +24,6 @@ const ImageUploader = ({
     }
   };
 
-  const handleUrlChange = (e) => {
-    setPreview(e.target.value);
-    onImageSelected(e.target.value);
-  };
-
   const processImage = (type) => {
     if (!tempImage) return;
 
@@ -90,19 +85,12 @@ const ImageUploader = ({
       
       {/* Input Area */}
       <div style={{display:'flex', gap:'10px', alignItems:'center'}}>
-        <input 
-          type="text" 
-          placeholder="https://... or upload" 
-          value={preview && preview.startsWith('data:') ? '(Uploaded Image Data)' : preview}
-          onChange={handleUrlChange}
-          style={{flex:1}}
-        />
         <button 
-          className="btn ghost" 
+          className="btn" 
           onClick={() => fileInputRef.current.click()}
-          style={{margin:0, whiteSpace:'nowrap'}}
+          style={{margin:0, whiteSpace:'nowrap', width: '100%'}}
         >
-          <i className="fa-solid fa-cloud-arrow-up"></i> Upload
+          <i className="fa-solid fa-cloud-arrow-up"></i> Upload Image
         </button>
         <input 
           type="file" 

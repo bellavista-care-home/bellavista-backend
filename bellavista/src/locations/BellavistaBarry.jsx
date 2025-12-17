@@ -11,6 +11,8 @@ import ReviewForm from '../components/ReviewForm';
 import { fetchNewsItems } from '../services/newsService';
 import { fetchHome } from '../services/homeService';
 
+import SlideMedia from '../components/SlideMedia';
+
 const BellavistaBarry = () => {
   const navigate = useNavigate();
   const [heroExpanded, setHeroExpanded] = useState(false);
@@ -122,12 +124,7 @@ const BellavistaBarry = () => {
     loadData();
   }, []);
 
-  // Helper to resolve image source
-  const getImgSrc = (img, folder) => {
-    if (typeof img === 'object') return img.url;
-    if (img.startsWith('http') || img.startsWith('/')) return img;
-    return `/${folder}/${img}`;
-  };
+
 
 
 
@@ -232,7 +229,7 @@ const BellavistaBarry = () => {
             style={{ cursor: 'pointer' }}
           >
             <i className="fas fa-map-marker-alt"></i>
-            <span style={{ textDecoration: 'underline', color: '#0066cc' }}>Barry Seaside</span>
+            <span>Barry Seaside</span>
           </div>
           <div 
             className="loc-stats__item"
@@ -240,7 +237,7 @@ const BellavistaBarry = () => {
             style={{ cursor: 'pointer' }}
           >
             <i className="fas fa-star"></i>
-            <span style={{ textDecoration: 'underline', color: '#0066cc' }}>Quality Care</span>
+            <span>Quality Care</span>
           </div>
           <div 
             className="loc-stats__item"
@@ -248,7 +245,7 @@ const BellavistaBarry = () => {
             style={{ cursor: 'pointer' }}
           >
             <i className="fas fa-users"></i>
-            <span style={{ textDecoration: 'underline', color: '#0066cc' }}>Expert Team</span>
+            <span>Expert Team</span>
           </div>
         </div>
       </div>
@@ -275,7 +272,7 @@ const BellavistaBarry = () => {
                   {activitiesGalleryImages.map((img, index) => (
                     <SwiperSlide key={index}>
                       <div className="loc-slider__item">
-                        <img src={getImgSrc(img, 'BarryActivitiesGallery')} alt={`Activity ${index + 1}`} loading="lazy" />
+                        <SlideMedia item={img} folder="BarryActivitiesGallery" />
                       </div>
                     </SwiperSlide>
                   ))}
@@ -326,7 +323,7 @@ const BellavistaBarry = () => {
                   {facilitiesGalleryImages.map((img, index) => (
                     <SwiperSlide key={index}>
                       <div className="loc-slider__item">
-                        <img src={getImgSrc(img, 'BarryFacilitiesGalley')} alt={`Facility ${index + 1}`} loading="lazy" />
+                        <SlideMedia item={img} folder="BarryFacilitiesGalley" />
                       </div>
                     </SwiperSlide>
                   ))}
@@ -401,7 +398,7 @@ const BellavistaBarry = () => {
                     {teamGalleryImages.map((img, index) => (
                       <SwiperSlide key={index}>
                         <div className="loc-slider__item">
-                          <img src={getImgSrc(img, 'BarryTeam')} alt={`Team Member ${index + 1}`} loading="lazy" />
+                          <SlideMedia item={img} folder="BarryTeam" />
                         </div>
                       </SwiperSlide>
                     ))}

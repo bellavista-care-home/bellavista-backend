@@ -8,6 +8,7 @@ import 'swiper/css/pagination';
 
 import '../styles/CareHome.css';
 import ReviewForm from '../components/ReviewForm';
+import SlideMedia from '../components/SlideMedia';
 import { fetchNewsItems } from '../services/newsService';
 import { fetchHome } from '../services/homeService';
 
@@ -123,13 +124,6 @@ const CollegeFieldsNursingHome = () => {
     loadData();
   }, []);
 
-  // Helper to resolve image source
-  const getImgSrc = (img, folder) => {
-    if (typeof img === 'object') return img.url;
-    if (img.startsWith('http') || img.startsWith('/')) return img;
-    return `/${folder}/${img}`;
-  };
-
   const facilitiesList = [
     { icon: "fas fa-utensils", title: "Home-Cooked Meals" },
     { icon: "fas fa-coffee", title: "Kitchenettes on Floors" },
@@ -192,13 +186,9 @@ const CollegeFieldsNursingHome = () => {
 
         {/* Quick Stats Row (Floating) */}
         <div className="loc-stats">
-          <div 
-            className="loc-stats__item"
-            onClick={() => navigate('/our-care')}
-            style={{ cursor: 'pointer' }}
-          >
-            <i className="fas fa-home"></i>
-            <span style={{ textDecoration: 'underline', color: '#0066cc' }}>Our Care</span>
+          <div className="loc-stats__item">
+            <i className="fas fa-bed"></i>
+            <span>68 Bedrooms</span>
           </div>
           <div 
             className="loc-stats__item"
@@ -206,7 +196,15 @@ const CollegeFieldsNursingHome = () => {
             style={{ cursor: 'pointer' }}
           >
             <i className="fas fa-map-marker-alt"></i>
-            <span style={{ textDecoration: 'underline', color: '#0066cc' }}>Barry</span>
+            <span>Barry</span>
+          </div>
+          <div 
+            className="loc-stats__item"
+            onClick={() => navigate('/our-care')}
+            style={{ cursor: 'pointer' }}
+          >
+            <i className="fas fa-star"></i>
+            <span>Quality Care</span>
           </div>
           <div 
             className="loc-stats__item"
@@ -214,11 +212,7 @@ const CollegeFieldsNursingHome = () => {
             style={{ cursor: 'pointer' }}
           >
             <i className="fas fa-users"></i>
-            <span style={{ textDecoration: 'underline', color: '#0066cc' }}>Expert Team</span>
-          </div>
-          <div className="loc-stats__item">
-            <i className="fas fa-door-open"></i>
-            <span>Open Visiting</span>
+            <span>Expert Team</span>
           </div>
         </div>
       </div>
@@ -245,7 +239,7 @@ const CollegeFieldsNursingHome = () => {
                   {activitiesGalleryImages.map((img, index) => (
                     <SwiperSlide key={index}>
                       <div className="loc-slider__item">
-                        <img src={getImgSrc(img, 'BarryActivitiesGallery')} alt={`Activity ${index + 1}`} loading="lazy" />
+                        <SlideMedia item={img} folder="BarryActivitiesGallery" />
                       </div>
                     </SwiperSlide>
                   ))}
@@ -307,7 +301,7 @@ const CollegeFieldsNursingHome = () => {
                   {facilitiesGalleryImages.map((img, index) => (
                     <SwiperSlide key={index}>
                       <div className="loc-slider__item">
-                        <img src={getImgSrc(img, 'BarryFacilitiesGalley')} alt={`Facility ${index + 1}`} loading="lazy" />
+                        <SlideMedia item={img} folder="BarryFacilitiesGalley" />
                       </div>
                     </SwiperSlide>
                   ))}
@@ -455,7 +449,7 @@ const CollegeFieldsNursingHome = () => {
                     {teamGalleryImages.map((img, index) => (
                       <SwiperSlide key={index}>
                         <div className="loc-slider__item">
-                          <img src={getImgSrc(img, 'BarryTeam')} alt={`Team Member ${index + 1}`} loading="lazy" />
+                          <SlideMedia item={img} folder="BarryTeam" />
                         </div>
                       </SwiperSlide>
                     ))}

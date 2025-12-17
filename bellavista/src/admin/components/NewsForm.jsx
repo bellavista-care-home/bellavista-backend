@@ -285,6 +285,7 @@ const NewsForm = ({ mode = 'add', initialData = null, onCancel, onSave, onDelete
                 initialValue={formData.mainImage}
                 onImageSelected={handleMainImageSelect}
                 showCrop={true}
+                allowSkipOnUpload={true}
               />
             </div>
           </div>
@@ -395,7 +396,8 @@ const NewsForm = ({ mode = 'add', initialData = null, onCancel, onSave, onDelete
                         style={{ 
                           width: '100%', 
                           height: '120px', 
-                          objectFit: 'cover',
+                          objectFit: 'contain',
+                          backgroundColor: '#f0f0f0',
                           borderBottom: '1px solid #eee',
                           opacity: editingImageIndex === index ? 0.6 : 1
                         }}
@@ -624,7 +626,7 @@ const NewsForm = ({ mode = 'add', initialData = null, onCancel, onSave, onDelete
             </div>
             <div style={{padding:'12px', maxHeight: 'calc(100vh - 280px)', overflowY: 'auto'}}>
               {formData.mainImage && (
-                <div style={{width:'100%', aspectRatio:'16/9', background:`url(${formData.mainImage}) center/cover`, borderRadius:'8px', position:'relative'}}>
+                <div style={{width:'100%', aspectRatio:'16/9', background:`url(${formData.mainImage}) center/contain no-repeat`, backgroundColor: '#333', borderRadius:'8px', position:'relative'}}>
                   <div style={{position:'absolute', bottom:'4px', right:'4px', background:'rgba(0,0,0,0.7)', color:'white', fontSize:'10px', padding:'2px 6px', borderRadius:'3px'}}>800×450</div>
                 </div>
               )}
@@ -636,7 +638,7 @@ const NewsForm = ({ mode = 'add', initialData = null, onCancel, onSave, onDelete
                   <div style={{display:'flex', gap:'8px', overflowX:'auto', padding:'6px', borderRadius:'8px', border:'1px solid #eee', background:'#fafafa'}}>
                     {formData.galleryImages.map((img, i) => (
                       <div key={i} style={{flex:'0 0 120px', height:'70px', borderRadius:'6px', overflow:'hidden', border:'1px solid #ddd', background:'#fff'}}>
-                        <img src={img} alt={`Preview ${i+1}`} style={{width:'100%', height:'100%', objectFit:'cover'}} />
+                        <img src={img} alt={`Preview ${i+1}`} style={{width:'100%', height:'100%', objectFit:'contain'}} />
                       </div>
                     ))}
                   </div>

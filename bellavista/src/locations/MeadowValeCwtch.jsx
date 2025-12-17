@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Swiper, SwiperSlide } from 'swiper/react';
+import { Swiper, SwiperSlide, useSwiper } from 'swiper/react';
 import { Navigation, Pagination, Autoplay } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/navigation';
@@ -10,6 +10,8 @@ import '../styles/CareHome.css';
 import ReviewForm from '../components/ReviewForm';
 import { fetchNewsItems } from '../services/newsService';
 import { fetchHome } from '../services/homeService';
+
+import SlideMedia from '../components/SlideMedia';
 
 const MeadowValeCwtch = () => {
   const navigate = useNavigate();
@@ -122,13 +124,6 @@ const MeadowValeCwtch = () => {
     loadData();
   }, []);
 
-  // Helper to resolve image source
-  const getImgSrc = (img, folder) => {
-    if (typeof img === 'object') return img.url;
-    if (img.startsWith('http') || img.startsWith('/')) return img;
-    return `/${folder}/${img}`;
-  };
-
   const activitiesList = [
     "Flower arranging",
     "Arts and Crafts",
@@ -217,7 +212,7 @@ const MeadowValeCwtch = () => {
         <div className="loc-stats">
           <div className="loc-stats__item">
             <i className="fas fa-bed"></i>
-            <span>9 Bed Capacity</span>
+            <span>9 Bedrooms</span>
           </div>
           <div 
             className="loc-stats__item"
@@ -225,23 +220,23 @@ const MeadowValeCwtch = () => {
             style={{ cursor: 'pointer' }}
           >
             <i className="fas fa-map-marker-alt"></i>
-            <span style={{ textDecoration: 'underline', color: '#0066cc' }}>Vale of Glamorgan</span>
-          </div>
-          <div 
-            className="loc-stats__item"
-            onClick={() => document.getElementById('team-section')?.scrollIntoView({ behavior: 'smooth' })}
-            style={{ cursor: 'pointer' }}
-          >
-            <i className="fas fa-user-nurse"></i>
-            <span style={{ textDecoration: 'underline', color: '#0066cc' }}>Nurse-Led Service</span>
+            <span>Barry</span>
           </div>
           <div 
             className="loc-stats__item"
             onClick={() => navigate('/our-care')}
             style={{ cursor: 'pointer' }}
           >
-            <i className="fas fa-heart"></i>
-            <span style={{ textDecoration: 'underline', color: '#0066cc' }}>Our Care</span>
+            <i className="fas fa-star"></i>
+            <span>Quality Care</span>
+          </div>
+          <div 
+            className="loc-stats__item"
+            onClick={() => document.getElementById('team-section')?.scrollIntoView({ behavior: 'smooth' })}
+            style={{ cursor: 'pointer' }}
+          >
+            <i className="fas fa-users"></i>
+            <span>Expert Team</span>
           </div>
         </div>
       </div>
@@ -268,7 +263,7 @@ const MeadowValeCwtch = () => {
                   {activitiesGalleryImages.map((img, index) => (
                     <SwiperSlide key={index}>
                       <div className="loc-slider__item">
-                        <img src={getImgSrc(img, 'BarryActivitiesGallery')} alt={`Activity ${index + 1}`} loading="lazy" />
+                        <SlideMedia item={img} folder="BarryActivitiesGallery" />
                       </div>
                     </SwiperSlide>
                   ))}
@@ -312,7 +307,7 @@ const MeadowValeCwtch = () => {
                   {facilitiesGalleryImages.map((img, index) => (
                     <SwiperSlide key={index}>
                       <div className="loc-slider__item">
-                        <img src={getImgSrc(img, 'BarryFacilitiesGalley')} alt={`Facility ${index + 1}`} loading="lazy" />
+                        <SlideMedia item={img} folder="BarryFacilitiesGalley" />
                       </div>
                     </SwiperSlide>
                   ))}
@@ -384,7 +379,7 @@ const MeadowValeCwtch = () => {
                     {teamGalleryImages.map((img, index) => (
                       <SwiperSlide key={index}>
                         <div className="loc-slider__item">
-                          <img src={getImgSrc(img, 'BarryTeam')} alt={`Team Member ${index + 1}`} loading="lazy" />
+                          <SlideMedia item={img} folder="BarryTeam" />
                         </div>
                       </SwiperSlide>
                     ))}

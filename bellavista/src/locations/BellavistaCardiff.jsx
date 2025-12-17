@@ -9,6 +9,7 @@ import 'swiper/css/effect-fade';
 
 import '../styles/CareHome.css';
 import ReviewForm from '../components/ReviewForm';
+import SlideMedia from '../components/SlideMedia';
 import { fetchNewsItems } from '../services/newsService';
 import { fetchHome } from '../services/homeService';
 
@@ -131,14 +132,6 @@ const BellavistaCardiff = () => {
     };
     loadData();
   }, []);
-
-  // Helper to resolve image source
-  const getImgSrc = (img, folder) => {
-    if (typeof img === 'object') return img.url;
-    if (img.startsWith('http') || img.startsWith('/')) return img;
-    return `/${folder}/${img}`;
-  };
-
 
   const activitiesList = [
     "Wheelchair Zumba",
@@ -280,12 +273,12 @@ We Regularly take advantage of our big garden space and often hold garden partie
             <span>62 Bedrooms</span>
           </div>
           <div 
-            className="loc-stats__item" 
+            className="loc-stats__item"
             onClick={() => window.open('https://www.google.com/maps/search/?api=1&query=Bellavista+Nursing+Home+Cardiff+Bay', '_blank')}
             style={{ cursor: 'pointer' }}
           >
             <i className="fas fa-map-marker-alt"></i>
-            <span style={{ textDecoration: 'underline', color: '#0066cc' }}>Cardiff Bay</span>
+            <span>Cardiff Bay</span>
           </div>
           <div 
             className="loc-stats__item"
@@ -293,7 +286,7 @@ We Regularly take advantage of our big garden space and often hold garden partie
             style={{ cursor: 'pointer' }}
           >
             <i className="fas fa-star"></i>
-            <span style={{ textDecoration: 'underline', color: '#0066cc' }}>Our Care</span>
+            <span>Quality Care</span>
           </div>
           <div 
             className="loc-stats__item"
@@ -301,7 +294,7 @@ We Regularly take advantage of our big garden space and often hold garden partie
             style={{ cursor: 'pointer' }}
           >
             <i className="fas fa-users"></i>
-            <span style={{ textDecoration: 'underline', color: '#0066cc' }}>Expert Team</span>
+            <span>Expert Team</span>
           </div>
         </div>
       </div>
@@ -328,7 +321,7 @@ We Regularly take advantage of our big garden space and often hold garden partie
                   {activitiesGalleryImages.map((img, index) => (
                     <SwiperSlide key={index}>
                       <div className="loc-slider__item">
-                        <img src={getImgSrc(img, 'BarryActivitiesGallery')} alt={`Activity ${index + 1}`} loading="lazy" />
+                        <SlideMedia item={img} folder="BarryActivitiesGallery" />
                       </div>
                     </SwiperSlide>
                   ))}
@@ -379,7 +372,7 @@ We Regularly take advantage of our big garden space and often hold garden partie
                   {facilitiesGalleryImages.map((img, index) => (
                     <SwiperSlide key={index}>
                       <div className="loc-slider__item">
-                        <img src={getImgSrc(img, 'BarryFacilitiesGalley')} alt={`Facility ${index + 1}`} loading="lazy" />
+                        <SlideMedia item={img} folder="BarryFacilitiesGalley" />
                       </div>
                     </SwiperSlide>
                   ))}
@@ -517,7 +510,7 @@ We Regularly take advantage of our big garden space and often hold garden partie
                   {teamGalleryImages.map((img, index) => (
                     <SwiperSlide key={index}>
                       <div className="loc-slider__item">
-                        <img src={getImgSrc(img, 'BarryTeam')} alt={`Team Member ${index + 1}`} loading="lazy" />
+                        <SlideMedia item={img} folder="BarryTeam" />
                       </div>
                     </SwiperSlide>
                   ))}

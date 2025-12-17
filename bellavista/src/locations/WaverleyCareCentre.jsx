@@ -8,6 +8,7 @@ import 'swiper/css/pagination';
 
 import '../styles/CareHome.css';
 import ReviewForm from '../components/ReviewForm';
+import SlideMedia from '../components/SlideMedia';
 import { fetchNewsItems } from '../services/newsService';
 import { fetchHome } from '../services/homeService';
 
@@ -123,15 +124,6 @@ const WaverleyCareCentre = () => {
     loadData();
   }, []);
 
-  // Helper to resolve image source
-  const getImgSrc = (img, folder) => {
-    if (typeof img === 'object') return img.url;
-    if (img.startsWith('http') || img.startsWith('/')) return img;
-    return `/${folder}/${img}`;
-  };
-
-
-
   const facilitiesList = [
     { icon: "fas fa-users", title: "129 Registered Places" },
     { icon: "fas fa-water", title: "Coastal Views" },
@@ -193,32 +185,32 @@ const WaverleyCareCentre = () => {
         {/* Quick Stats Row (Floating) */}
         <div className="loc-stats">
           <div className="loc-stats__item">
-            <i className="fas fa-users"></i>
-            <span>129 Residents</span>
-          </div>
-          <div 
-            className="loc-stats__item"
-            onClick={() => navigate('/our-care')}
-            style={{ cursor: 'pointer' }}
-          >
-            <i className="fas fa-water"></i>
-            <span style={{ textDecoration: 'underline', color: '#0066cc' }}>Our Care</span>
-          </div>
-          <div 
-            className="loc-stats__item"
-            onClick={() => document.getElementById('team-section')?.scrollIntoView({ behavior: 'smooth' })}
-            style={{ cursor: 'pointer' }}
-          >
-            <i className="fas fa-user-nurse"></i>
-            <span style={{ textDecoration: 'underline', color: '#0066cc' }}>170+ Staff</span>
+            <i className="fas fa-bed"></i>
+            <span>129 Bedrooms</span>
           </div>
           <div 
             className="loc-stats__item"
             onClick={() => window.open('https://www.google.com/maps/search/?api=1&query=Waverley+Care+Centre+Penarth', '_blank')}
             style={{ cursor: 'pointer' }}
           >
-            <i className="fas fa-walking"></i>
-            <span style={{ textDecoration: 'underline', color: '#0066cc' }}>Walk to Penarth</span>
+            <i className="fas fa-map-marker-alt"></i>
+            <span>Penarth</span>
+          </div>
+          <div 
+            className="loc-stats__item"
+            onClick={() => navigate('/our-care')}
+            style={{ cursor: 'pointer' }}
+          >
+            <i className="fas fa-star"></i>
+            <span>Quality Care</span>
+          </div>
+          <div 
+            className="loc-stats__item"
+            onClick={() => document.getElementById('team-section')?.scrollIntoView({ behavior: 'smooth' })}
+            style={{ cursor: 'pointer' }}
+          >
+            <i className="fas fa-users"></i>
+            <span>Expert Team</span>
           </div>
         </div>
       </div>
@@ -245,7 +237,7 @@ const WaverleyCareCentre = () => {
                   {activitiesGalleryImages.map((img, index) => (
                     <SwiperSlide key={index}>
                       <div className="loc-slider__item">
-                        <img src={`/BarryActivitiesGallery/${img}`} alt={`Activity ${index + 1}`} loading="lazy" />
+                        <SlideMedia item={img} folder="BarryActivitiesGallery" />
                       </div>
                     </SwiperSlide>
                   ))}
@@ -284,7 +276,7 @@ const WaverleyCareCentre = () => {
                   {facilitiesGalleryImages.map((img, index) => (
                     <SwiperSlide key={index}>
                       <div className="loc-slider__item">
-                        <img src={`/BarryFacilitiesGalley/${img}`} alt={`Facility ${index + 1}`} loading="lazy" />
+                        <SlideMedia item={img} folder="BarryFacilitiesGalley" />
                       </div>
                     </SwiperSlide>
                   ))}
@@ -414,7 +406,7 @@ const WaverleyCareCentre = () => {
                     {teamGalleryImages.map((img, index) => (
                       <SwiperSlide key={index}>
                         <div className="loc-slider__item">
-                          <img src={`/BarryTeam/${img}`} alt={`Team Member ${index + 1}`} loading="lazy" />
+                          <SlideMedia item={img} folder="BarryTeam" />
                         </div>
                       </SwiperSlide>
                     ))}
