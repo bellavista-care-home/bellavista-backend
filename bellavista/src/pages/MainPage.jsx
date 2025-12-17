@@ -224,22 +224,7 @@ const Home = () => {
             </Link>
           </div>
         </div>
-        <div className="container">
-          <div className="hero-stats">
-            <div className="stat-item">
-              <span className="stat-number">25+</span>
-              <span className="stat-label">Years Experience</span>
-            </div>
-            <div className="stat-item">
-              <span className="stat-number">4</span>
-              <span className="stat-label">Premium Locations</span>
-            </div>
-            <div className="stat-item">
-              <span className="stat-number">24/7</span>
-              <span className="stat-label">Professional Care</span>
-            </div>
-          </div>
-        </div>
+
 
       </section>
       <OurHomes isStandalone={false} />

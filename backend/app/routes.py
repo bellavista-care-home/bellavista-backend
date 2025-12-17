@@ -15,45 +15,6 @@ def generate_unique_filename(original_filename):
     unique_id = str(uuid.uuid4())[:8]
     return f"{unique_id}.{ext}"
 
-def upload_file_helper(file_or_path, filename, content_type=None):
-    is_path = isinstance(file_or_path, str)
-    
-    if s3_bucket:
-        try:
-            s3_client = boto3.client('s3')
-            extra_args = {'ACL': 'public-read'}
-            if content_type:
-                extra_args['ContentType'] = content_type
-            elif not is_path and hasattr(file_or_path, 'content_type'):
-                extra_args['ContentType'] = file_or_path.content_type
-            
-            if is_path:
-                s3_client.upload_file(file_or_path, s3_bucket, filename, ExtraArgs=extra_args)
-            else:
-                file_or_path.seek(0)
-                s3_client.upload_fileobj(file_or_path, s3_bucket, filename, ExtraArgs=extra_args)
-                file_or_path.seek(0)
-                
-            region = os.environ.get('AWS_REGION', 'us-east-1')
-            return f"https://{s3_bucket}.s3.{region}.amazonaws.com/{filename}"
-        except Exception as e:
-            print(f"S3 Upload Error: {e}")
-            return None
-    else:
-        # Local Fallback
-        if is_path:
-            return None # Caller handles local path URL generation
-        else:
-            try:
-                upload_folder = current_app.config['UPLOAD_FOLDER']
-                filepath = os.path.join(upload_folder, filename)
-                file_or_path.save(filepath)
-                file_or_path.seek(0)
-                return f"/uploads/{filename}"
-            except Exception as e:
-                print(f"Local Save Error: {e}")
-                return None
-
 @api_bp.route('/upload', methods=['POST'])
 def upload_file_route():
     try:
@@ -126,7 +87,7 @@ def upload_file_route():
                 pass
 
         # Check if S3 is enabled
-        s3_url = upload_to_s3(final_filepath, final_filename, file.content_type)
+        s3_url = upload_file_helper(final_filepath, final_filename, file.content_type)
         
         if s3_url:
             # If uploaded to S3, return S3 URL and cleanup local files

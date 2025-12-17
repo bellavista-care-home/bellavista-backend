@@ -92,33 +92,7 @@
     flex-wrap: wrap;
 }
 
-.hero-stats {
-    display: flex;
-    justify-content: center;
-    gap: 40px;
-    margin-top: 40px;
-    flex-wrap: wrap;
-}
 
-.stat-item {
-    text-align: center;
-    color: var(--white);
-}
-
-.stat-number {
-    display: block;
-    font-size: 32px;
-    font-weight: 700;
-    color: var(--primary-orange);
-    margin-bottom: 5px;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
-}
-
-.stat-label {
-    font-size: 14px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-}
 
 @keyframes fadeInDown {
     from { opacity: 0; transform: translateY(-30px); }
