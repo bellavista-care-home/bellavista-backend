@@ -15,9 +15,9 @@
   --color-accent-dark: #c2410c;
   
   /* Location Specific Hero Theme (Default) */
-  --hero-gradient-start: rgba(0, 102, 204, 0.85);
-  --hero-gradient-end: rgba(0, 180, 216, 0.85);
-  --hero-bg-image: url('/FrontPageBanner/preview_Home_Banner1_1300x400_acf_cropped.png');
+  --hero-gradient-start: rgba(0, 51, 102, 0.9);
+  --hero-gradient-end: rgba(0, 30, 60, 0.8);
+  --hero-bg-image: url('/care-home-banner-image.png');
 
   /* Neutral Colors */
   --color-text-main: #4b5563;     /* Gray 600 */
@@ -54,42 +54,9 @@
 }
 
 /* --------------------------------------------------------------------------
-   2. THEMES & OVERRIDES
+   2. THEMES & OVERRIDES (REMOVED - Single Theme Applied)
    -------------------------------------------------------------------------- */
-
-/* Barry Location Theme */
-.theme-barry {
-  --hero-gradient-start: rgba(0, 51, 102, 0.9);
-  --hero-gradient-end: rgba(0, 30, 60, 0.8);
-  --hero-bg-image: url('/FrontPageBanner/preview_Home_Banner1_1300x400_acf_cropped.png');
-}
-
-/* Cardiff Location Theme */
-.theme-cardiff {
-  --color-primary: #0d9488;       /* Teal */
-  --color-primary-dark: #0f766e;  /* Dark Teal */
-  --color-accent: #f97316;        /* Orange */
-  --hero-gradient-start: rgba(30, 91, 168, 0.88);
-  --hero-gradient-end: rgba(13, 148, 136, 0.88);
-  --hero-bg-image: url('/HomeImages/preview_cfnh10-1_425x300_acf_cropped.jpg');
-}
-
-/* Waverley Location Theme */
-.theme-waverley {
-  --hero-bg-image: url('/HomeImages/preview_b-1_425x300_acf_cropped-2.jpg');
-}
-
-/* College Fields Location Theme */
-.theme-college-fields {
-  --hero-bg-image: url('/HomeImages/preview_Carresr-Page_425x300_acf_cropped.png');
-}
-
-/* Baltimore/Meadow Vale Theme */
-.theme-baltimore,
-.theme-meadow-vale {
-  --hero-bg-image: url('/HomeImages/preview_cfnh2-1_425x300_acf_cropped.jpg');
-}
-
+/* All locations now use the default variables defined in :root above */
 
 /* Horizontal Scroll for News Grid (Modern Style) - Copied from MainPage.css for consistency */
 .news-grid.modern {
