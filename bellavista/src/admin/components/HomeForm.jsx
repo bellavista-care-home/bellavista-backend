@@ -61,7 +61,7 @@ const HomeForm = ({ mode = 'add', initialData = null, onCancel, onSave }) => {
 
   // Local state for list inputs
   const [teamInput, setTeamInput] = useState({ name: '', role: '', image: '' });
-  const [teamGalleryInput, setTeamGalleryInput] = useState({ type: 'image', url: '' });
+  const [teamGalleryInput, setTeamGalleryInput] = useState({ type: 'image', url: '', cropMode: 'uncropped' });
   const [activityMediaInput, setActivityMediaInput] = useState({ type: 'image', url: '', cropMode: 'uncropped' });
   const [facilityMediaInput, setFacilityMediaInput] = useState({ type: 'image', url: '', cropMode: 'uncropped' });
 
@@ -434,7 +434,7 @@ const HomeForm = ({ mode = 'add', initialData = null, onCancel, onSave }) => {
                 label=""
                 aspectRatio={16/9}
                 onImageSelected={(url) => {
-                   if (url) addItem('facilitiesGalleryImages', { type: 'image', url });
+                   if (url) addItem('facilitiesGalleryImages', { type: 'image', url, cropMode: facilityMediaInput.cropMode });
                 }}
                 autoReset={true}
                 allowSkipOnUpload={true}
@@ -657,6 +657,54 @@ const HomeForm = ({ mode = 'add', initialData = null, onCancel, onSave }) => {
             </div>
           </div>
           
+          {teamGalleryInput.type === 'image' && (
+            <div style={{marginBottom:'15px'}}>
+              <label style={{fontWeight: 'bold', fontSize: '14px', marginBottom: '8px', display: 'block'}}>Display Mode</label>
+              <div style={{display: 'flex', gap: '15px'}}>
+                <label style={{
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '8px', 
+                  cursor: 'pointer',
+                  padding: '8px 16px',
+                  background: teamGalleryInput.cropMode === 'uncropped' ? '#e6f7ff' : 'white',
+                  border: `1px solid ${teamGalleryInput.cropMode === 'uncropped' ? '#1890ff' : '#d9d9d9'}`,
+                  borderRadius: '4px'
+                }}>
+                  <input 
+                    type="radio" 
+                    name="teamDisplayMode" 
+                    value="uncropped"
+                    checked={teamGalleryInput.cropMode === 'uncropped'}
+                    onChange={() => setTeamGalleryInput({...teamGalleryInput, cropMode: 'uncropped'})}
+                    style={{cursor: 'pointer'}}
+                  />
+                  <span>Uncropped (Fit)</span>
+                </label>
+                <label style={{
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '8px', 
+                  cursor: 'pointer',
+                  padding: '8px 16px',
+                  background: teamGalleryInput.cropMode === 'cropped' ? '#e6f7ff' : 'white',
+                  border: `1px solid ${teamGalleryInput.cropMode === 'cropped' ? '#1890ff' : '#d9d9d9'}`,
+                  borderRadius: '4px'
+                }}>
+                  <input 
+                    type="radio" 
+                    name="teamDisplayMode" 
+                    value="cropped"
+                    checked={teamGalleryInput.cropMode === 'cropped'}
+                    onChange={() => setTeamGalleryInput({...teamGalleryInput, cropMode: 'cropped'})}
+                    style={{cursor: 'pointer'}}
+                  />
+                  <span>Cropped (Fill)</span>
+                </label>
+              </div>
+            </div>
+          )}
+          
           {teamGalleryInput.type === 'video' ? (
             <div style={{display: 'flex', flexDirection: 'column', gap: '15px'}}>
               <div style={{display: 'flex', gap: '10px'}}>
@@ -699,7 +747,7 @@ const HomeForm = ({ mode = 'add', initialData = null, onCancel, onSave }) => {
               label=""
               aspectRatio={16/9}
               onImageSelected={(url) => {
-                 if (url) addItem('teamGalleryImages', { type: 'image', url });
+                 if (url) addItem('teamGalleryImages', { type: 'image', url, cropMode: teamGalleryInput.cropMode });
               }}
               autoReset={true}
               allowSkipOnUpload={true}
