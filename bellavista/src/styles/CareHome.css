@@ -200,7 +200,7 @@
   align-items: center;
   background: linear-gradient(135deg, var(--hero-gradient-start), var(--hero-gradient-end)),
               var(--hero-bg-image) center/cover no-repeat;
-  background-attachment: fixed;
+  /* background-attachment: fixed; Removed to fix "stuck" image issue */
   color: var(--color-text-light);
   padding: var(--space-xl) var(--space-sm);
   text-align: center;
