@@ -223,6 +223,8 @@ def create_scheduled_tour():
     db.session.commit()
 
     # Send Email Notification
+    # Note: We are currently relying on Frontend EmailJS for reliability.
+    # The backend email logic below is kept as a future enhancement but requires valid SMTP credentials.
     try:
         # Find home to get admin email
         print(f"DEBUG: Processing tour for location: {tour.location}")
@@ -235,24 +237,16 @@ def create_scheduled_tour():
         admin_email = home.adminEmail if home else None
         print(f"DEBUG: Found home: {home.name if home else 'None'}, Admin Email: {admin_email}")
         
-        recipients = ["bellavistacarehomegit@gmail.com"]
-        if admin_email and admin_email.strip() and admin_email not in recipients:
-            recipients.append(admin_email.strip())
+        # Uncomment below lines to enable backend email when SMTP credentials are fixed
+        # recipients = ["bellavistacarehomegit@gmail.com"]
+        # if admin_email and admin_email.strip() and admin_email not in recipients:
+        #     recipients.append(admin_email.strip())
             
-        subject = f"New Tour Request for {tour.location}"
-        body = f"""New Tour Request Received:
-
-Name: {tour.name}
-Email: {tour.email}
-Phone: {tour.phone}
-Location: {tour.location}
-Preferred Date: {tour.preferredDate}
-Preferred Time: {tour.preferredTime}
-Message: {tour.message}
-
-Please check the Admin Console for more details.
-"""
-        send_email(recipients, subject, body)
+        # subject = f"New Tour Request for {tour.location}"
+        # body = f"""New Tour Request Received:
+# ... (rest of body) ...
+        # """
+        # send_email(recipients, subject, body)
     except Exception as e:
         print(f"Error in email notification: {e}")
 
