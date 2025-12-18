@@ -12,6 +12,8 @@ const Enquiry = () => {
     message: ''
   });
 
+  const [loading, setLoading] = useState(false);
+
   const handleChange = (e) => {
     setFormData({
       ...formData,
@@ -21,6 +23,7 @@ const Enquiry = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
     const enquiry = {
       id: `${Date.now()}`,
       name: formData.name,
@@ -43,6 +46,8 @@ const Enquiry = () => {
     try {
       await saveEnquiryToAPI(enquiry);
     } catch {}
+    
+    setLoading(false);
     if (savedLocal) {
       alert('Thank you for your enquiry. We will get back to you as soon as possible.');
     } else {
@@ -164,7 +169,13 @@ const Enquiry = () => {
                 ></textarea>
               </div>
 
-              <button type="submit" className="submit-btn">Send Enquiry</button>
+              <button type="submit" className="submit-btn" disabled={loading}>
+                {loading ? (
+                  <span><i className="fa-solid fa-spinner fa-spin"></i> Sending...</span>
+                ) : (
+                  "Send Enquiry"
+                )}
+              </button>
             </form>
           </div>
         </div>

@@ -4,9 +4,10 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api
 
 export async function sendEnquiryEmail(enquiry) {
   const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID;
-  const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
+  const templateId = import.meta.env.VITE_EMAILJS_CARE_TEMPLATE_ID || import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
   const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
   if (!serviceId || !templateId || !publicKey) return false;
+
   const emailData = {
     from_name: enquiry.name,
     from_email: enquiry.email,
@@ -14,10 +15,37 @@ export async function sendEnquiryEmail(enquiry) {
     enquiry_type: enquiry.enquiryType,
     location: enquiry.location,
     message: enquiry.message,
-    to_email: 'bellavistacarehomegit@gmail.com'
   };
-  await emailjs.send(serviceId, templateId, emailData, publicKey);
-  return true;
+
+  const promises = [];
+
+  // 1. Send to Global Admin
+  promises.push(
+    emailjs.send(serviceId, templateId, { ...emailData, to_email: 'bellavistacarehomegit@gmail.com' }, publicKey)
+  );
+
+  // 2. Determine Location Admin
+  let locationEmail = 'anwing4umuthe@gmail.com';
+  const loc = (enquiry.location || '').toLowerCase();
+  
+  if (loc.includes('barry')) {
+    locationEmail = 'anwinws@gmail.com';
+  }
+
+  // 3. Send to Location Admin (if different from global)
+  if (locationEmail !== 'bellavistacarehomegit@gmail.com') {
+    promises.push(
+      emailjs.send(serviceId, templateId, { ...emailData, to_email: locationEmail }, publicKey)
+    );
+  }
+
+  try {
+    await Promise.all(promises);
+    return true;
+  } catch (error) {
+    console.error('EmailJS Error:', error);
+    return false;
+  }
 }
 
 export function saveEnquiryLocal(enquiry) {
