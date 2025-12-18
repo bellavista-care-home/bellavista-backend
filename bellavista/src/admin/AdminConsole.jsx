@@ -7,6 +7,7 @@ import { fetchNewsItems, createNewsItem, updateNewsItem, deleteNewsItem } from '
 import { fetchScheduledTours, updateBookingInAPI } from '../services/tourService';
 import { fetchCareEnquiries } from '../services/enquiryService';
 import { fetchHomes, updateHome } from '../services/homeService';
+import { fetchFaqs, createFaq, deleteFaq } from '../services/faqService';
 import HomeForm from './components/HomeForm';
 import './AdminConsole.css';
 
@@ -196,6 +197,12 @@ const AdminConsole = () => {
     if (activeView === 'update-home') {
       loadHomes();
     }
+    if (activeView === 'manage-faqs') {
+      loadFaqs();
+    }
+    if (activeView === 'manage-users') {
+      loadHomes(); // Reuse homes for "Home Admins"
+    }
   }, [activeView]);
 
   // Add news
@@ -314,22 +321,41 @@ const AdminConsole = () => {
     if (activeView === 'update-news') loadNews();
   }, []);
 
-  const addFaq = () => {
+  const loadFaqs = async () => {
+    try {
+      const data = await fetchFaqs();
+      setFaqs(Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.error(e);
+      setFaqs([]);
+    }
+  };
+
+  const addFaqHandler = async () => {
     if (!faqQuestion || !faqAnswer) {
       alert('Please enter question and answer');
       return;
     }
-    setFaqs(prev => [...prev, { question: faqQuestion, answer: faqAnswer }]);
-    setFaqQuestion('');
-    setFaqAnswer('');
-  };
-  const copyFaqs = async () => {
-    const json = JSON.stringify(faqs, null, 2);
     try {
-      await navigator.clipboard.writeText(json);
-      alert('FAQs JSON copied to clipboard');
-    } catch {
-      alert(json);
+      await createFaq({ question: faqQuestion, answer: faqAnswer });
+      alert('FAQ added successfully!');
+      setFaqQuestion('');
+      setFaqAnswer('');
+      loadFaqs();
+    } catch (e) {
+      console.error(e);
+      alert('Failed to add FAQ');
+    }
+  };
+
+  const removeFaq = async (id) => {
+    if(!window.confirm('Delete this FAQ?')) return;
+    try {
+      await deleteFaq(id);
+      loadFaqs();
+    } catch (e) {
+      console.error(e);
+      alert('Failed to delete FAQ');
     }
   };
 
@@ -339,22 +365,24 @@ const AdminConsole = () => {
       navigate('/login');
     }
   };
-  const [userForm, setUserForm] = useState({ name: '', email: '', role: 'Admin' });
-  const handleUserChange = (field, value) => setUserForm(prev => ({ ...prev, [field]: value }));
-  const copyUserJson = async () => {
-    if (!userForm.name || !userForm.email) {
-      alert('Enter name and email');
-      return;
-    }
-    const payload = { id: `${Date.now()}`, name: userForm.name, email: userForm.email, role: userForm.role, createdAt: new Date().toISOString() };
-    const json = JSON.stringify(payload, null, 2);
+  const [editingHomeId, setEditingHomeId] = useState(null);
+  const [tempAdminEmail, setTempAdminEmail] = useState('');
+
+  const startEditHomeEmail = (home) => {
+    setEditingHomeId(home.id);
+    setTempAdminEmail(home.adminEmail || '');
+  };
+
+  const saveHomeEmail = async (home) => {
     try {
-      await navigator.clipboard.writeText(json);
-      alert('User JSON copied to clipboard');
-    } catch {
-      alert(json);
+      await updateHome(home.id, { ...home, adminEmail: tempAdminEmail });
+      alert('Admin email updated successfully!');
+      setEditingHomeId(null);
+      loadHomes();
+    } catch (error) {
+      console.error(error);
+      alert('Failed to update email.');
     }
-    setUserForm({ name: '', email: '', role: 'Viewer' });
   };
 
   return (
@@ -422,7 +450,7 @@ const AdminConsole = () => {
             className={activeView === 'manage-users' ? 'active' : ''}
             onClick={() => setActiveView('manage-users')}
           >
-            <i className="fa-solid fa-users-gear"></i><span>Manage Users</span>
+            <i className="fa-solid fa-users-gear"></i><span>Home Admins</span>
           </button>
           <div className="group-title">Enquiries</div>
           <button 
@@ -597,23 +625,25 @@ const AdminConsole = () => {
             </div>
             <div className="toolbar">
               <div className="right"></div>
-              <button className="btn" onClick={addFaq}>
+              <button className="btn" onClick={addFaqHandler}>
                 <i className="fa-solid fa-plus"></i>&nbsp;Add FAQ
               </button>
             </div>
             <div style={{marginTop:'10px'}}>
-              {faqs.map((f,i)=>(
-                <div key={i} style={{background:'#f0f4f8', padding:'8px', borderRadius:'8px', marginBottom:'6px'}}>
-                  <strong>{f.question}</strong>
-                  <div className="muted" style={{fontSize:'13px'}}>{f.answer}</div>
+              {faqs.map((f)=>(
+                <div key={f.id || Math.random()} style={{background:'#f0f4f8', padding:'12px', borderRadius:'8px', marginBottom:'8px', display:'flex', justifyContent:'space-between', alignItems:'start'}}>
+                  <div>
+                    <strong>{f.question}</strong>
+                    <div className="muted" style={{fontSize:'13px', marginTop:'4px'}}>{f.answer}</div>
+                  </div>
+                  {f.id && (
+                    <button className="btn small" style={{background:'#ff4d4f', color:'white', marginLeft:'10px'}} onClick={()=>removeFaq(f.id)}>
+                      <i className="fa-solid fa-trash"></i>
+                    </button>
+                  )}
                 </div>
               ))}
-            </div>
-            <div className="toolbar">
-              <div className="right"></div>
-              <button className="btn" onClick={copyFaqs}>
-                <i className="fa-solid fa-copy"></i>&nbsp;Copy JSON
-              </button>
+              {faqs.length === 0 && <p className="muted">No FAQs found.</p>}
             </div>
           </section>
         )}
@@ -852,24 +882,55 @@ const AdminConsole = () => {
 
         {activeView === 'manage-users' && (
           <section className="panel">
-            <h2>Manage Users</h2>
-            <div className="grid cols-3">
-              <div className="field"><label>Full Name</label><input type="text" placeholder="Jane Doe" value={userForm.name} onChange={e=>handleUserChange('name', e.target.value)} /></div>
-              <div className="field"><label>Email</label><input type="email" placeholder="jane@bellavista.co.uk" value={userForm.email} onChange={e=>handleUserChange('email', e.target.value)} /></div>
-              <div className="field">
-                <label>Role</label>
-                <select value={userForm.role} onChange={e=>handleUserChange('role', e.target.value)}>
-                  <option>Admin</option>
-                  <option>Editor</option>
-                  <option>Viewer</option>
-                </select>
-              </div>
-            </div>
-            <div className="toolbar">
-              <div className="right"></div>
-              <button className="btn" onClick={copyUserJson}>
-                <i className="fa-solid fa-user-plus"></i>&nbsp;Copy JSON
-              </button>
+            <h2>Home Admins</h2>
+            <p className="muted">Configure email recipients for tour bookings at each location.</p>
+            <div style={{marginTop:'20px', overflowX:'auto'}}>
+              <table style={{width:'100%', borderCollapse:'collapse'}}>
+                <thead>
+                  <tr style={{background:'#f7f9fc'}}>
+                    <th style={{textAlign:'left', padding:'12px', borderBottom:'1px solid #e0e0e0'}}>Home</th>
+                    <th style={{textAlign:'left', padding:'12px', borderBottom:'1px solid #e0e0e0'}}>Location</th>
+                    <th style={{textAlign:'left', padding:'12px', borderBottom:'1px solid #e0e0e0'}}>Admin Email</th>
+                    <th style={{textAlign:'right', padding:'12px', borderBottom:'1px solid #e0e0e0'}}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {homes.map(home => (
+                    <tr key={home.id}>
+                      <td style={{padding:'12px', borderBottom:'1px solid #f0f0f0'}}><strong>{home.homeName}</strong></td>
+                      <td style={{padding:'12px', borderBottom:'1px solid #f0f0f0'}}>{home.homeLocation}</td>
+                      <td style={{padding:'12px', borderBottom:'1px solid #f0f0f0'}}>
+                        {editingHomeId === home.id ? (
+                          <input 
+                            type="email" 
+                            value={tempAdminEmail} 
+                            onChange={(e) => setTempAdminEmail(e.target.value)}
+                            style={{padding:'8px', width:'100%', boxSizing:'border-box'}}
+                          />
+                        ) : (
+                          home.adminEmail || <span className="muted">Not set</span>
+                        )}
+                      </td>
+                      <td style={{padding:'12px', borderBottom:'1px solid #f0f0f0', textAlign:'right'}}>
+                        {editingHomeId === home.id ? (
+                          <>
+                            <button className="btn small" onClick={() => saveHomeEmail(home)} style={{marginRight:'5px', background:'#28a745', color:'white'}}>
+                              <i className="fa-solid fa-check"></i> Save
+                            </button>
+                            <button className="btn small ghost" onClick={() => setEditingHomeId(null)}>
+                              <i className="fa-solid fa-xmark"></i>
+                            </button>
+                          </>
+                        ) : (
+                          <button className="btn small" onClick={() => startEditHomeEmail(home)}>
+                            <i className="fa-solid fa-pen"></i> Edit
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </section>
         )}
