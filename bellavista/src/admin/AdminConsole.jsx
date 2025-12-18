@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import * as XLSX from 'xlsx';
 import ImageUploader from '../components/ImageUploader';
 import NewsForm from './components/NewsForm';
 import { fetchNewsItems, createNewsItem, updateNewsItem, deleteNewsItem } from '../services/newsService';
@@ -58,51 +59,60 @@ const AdminConsole = () => {
   const [bookingSearch, setBookingSearch] = useState('');
   const [showDownloadModal, setShowDownloadModal] = useState(false);
 
-  const downloadCSV = (data, filename) => {
+  const downloadExcel = (data, filename) => {
     if (!data.length) {
       alert('No data to download');
       return;
     }
     
-    // Define headers
-    const headers = ['Name', 'Phone', 'Email', 'Location', 'Preferred Date', 'Preferred Time', 'Created At', 'Status', 'Message'];
-    
-    // Convert data to CSV rows
-    const csvContent = [
-      headers.join(','),
-      ...data.map(row => [
-        `"${row.name || ''}"`,
-        `"${row.phone || ''}"`,
-        `"${row.email || ''}"`,
-        `"${row.location || ''}"`,
-        `"${row.preferredDate || ''}"`,
-        `"${row.preferredTime || ''}"`,
-        `"${new Date(row.createdAt).toLocaleString()}"`,
-        `"${row.status || 'requested'}"`,
-        `"${(row.message || '').replace(/"/g, '""')}"` // Escape quotes in message
-      ].join(','))
-    ].join('\n');
+    // Format data for Excel
+    const formattedData = data.map(row => ({
+      'Name': row.name || '',
+      'Phone': row.phone || '',
+      'Email': row.email || '',
+      'Location': row.location || '',
+      'Preferred Date': row.preferredDate || '',
+      'Preferred Time': row.preferredTime || '',
+      'Created At': new Date(row.createdAt).toLocaleString(),
+      'Status': row.status || 'requested',
+      'Message': row.message || ''
+    }));
 
-    // Create and download file
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    if (link.download !== undefined) {
-      const url = URL.createObjectURL(blob);
-      link.setAttribute('href', url);
-      link.setAttribute('download', filename);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
+    // Create worksheet
+    const worksheet = XLSX.utils.json_to_sheet(formattedData);
+    
+    // Auto-size columns (simple estimation)
+    const columnWidths = [
+      { wch: 20 }, // Name
+      { wch: 15 }, // Phone
+      { wch: 25 }, // Email
+      { wch: 25 }, // Location
+      { wch: 15 }, // Date
+      { wch: 15 }, // Time
+      { wch: 20 }, // Created
+      { wch: 12 }, // Status
+      { wch: 40 }  // Message
+    ];
+    worksheet['!cols'] = columnWidths;
+
+    // Create workbook
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Bookings");
+
+    // Write file
+    XLSX.writeFile(workbook, filename);
   };
 
   const handleDownload = (type) => {
+    const filename = type === 'all' 
+      ? `All_Bookings_${new Date().toISOString().split('T')[0]}.xlsx`
+      : `Visited_Bookings_${new Date().toISOString().split('T')[0]}.xlsx`;
+
     if (type === 'all') {
-      downloadCSV(bookings, `all_bookings_${new Date().toISOString().split('T')[0]}.csv`);
+      downloadExcel(bookings, filename);
     } else if (type === 'visited') {
       const visited = bookings.filter(b => b.status === 'visited');
-      downloadCSV(visited, `visited_bookings_${new Date().toISOString().split('T')[0]}.csv`);
+      downloadExcel(visited, filename);
     }
     setShowDownloadModal(false);
   };
