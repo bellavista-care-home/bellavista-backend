@@ -2,6 +2,9 @@ import os
 import json
 import uuid
 import boto3
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from flask import Blueprint, request, jsonify, current_app
 from . import db
 from .models import ScheduledTour, CareEnquiry, NewsItem, Home
@@ -9,6 +12,33 @@ from .image_processor import ImageProcessor
 
 api_bp = Blueprint('api', __name__)
 s3_bucket = os.environ.get('S3_BUCKET')
+
+def send_email(to_emails, subject, body):
+    sender_email = "bellavistacarehomegit@gmail.com"
+    sender_password = "naitwsniavalleb"
+    
+    if not isinstance(to_emails, list):
+        to_emails = [to_emails]
+        
+    msg = MIMEMultipart()
+    msg['From'] = sender_email
+    msg['To'] = ", ".join(to_emails)
+    msg['Subject'] = subject
+    
+    msg.attach(MIMEText(body, 'plain'))
+    
+    try:
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
+        server.login(sender_email, sender_password)
+        text = msg.as_string()
+        server.sendmail(sender_email, to_emails, text)
+        server.quit()
+        print(f"Email sent to {to_emails}")
+        return True
+    except Exception as e:
+        print(f"Failed to send email: {e}")
+        return False
 
 def upload_file_helper(file_or_path, filename, content_type=None):
     if not s3_bucket:
@@ -191,6 +221,34 @@ def create_scheduled_tour():
     )
     db.session.add(tour)
     db.session.commit()
+
+    # Send Email Notification
+    try:
+        # Find home to get admin email
+        home = Home.query.filter(Home.name == tour.location).first()
+        admin_email = home.adminEmail if home else None
+        
+        recipients = ["bellavistacarehomegit@gmail.com"]
+        if admin_email and admin_email not in recipients:
+            recipients.append(admin_email)
+            
+        subject = f"New Tour Request for {tour.location}"
+        body = f"""New Tour Request Received:
+
+Name: {tour.name}
+Email: {tour.email}
+Phone: {tour.phone}
+Location: {tour.location}
+Preferred Date: {tour.preferredDate}
+Preferred Time: {tour.preferredTime}
+Message: {tour.message}
+
+Please check the Admin Console for more details.
+"""
+        send_email(recipients, subject, body)
+    except Exception as e:
+        print(f"Error in email notification: {e}")
+
     return jsonify({"ok": True, "id": tid}), 201
 
 @api_bp.get('/scheduled-tours')
@@ -458,6 +516,7 @@ def to_dict_home(h):
         "id": h.id,
         "homeName": h.name,
         "homeLocation": h.location,
+        "adminEmail": h.adminEmail,
         "homeImage": h.image,
         "homeBadge": h.badge,
         "homeDesc": h.description,
@@ -490,6 +549,7 @@ def create_home():
         id=hid,
         name=data.get('homeName', ''),
         location=data.get('homeLocation', ''),
+        adminEmail=data.get('adminEmail', ''),
         image=data.get('homeImage', ''),
         badge=data.get('homeBadge', ''),
         description=data.get('homeDesc', ''),
@@ -539,6 +599,7 @@ def update_home(id):
     # Update fields
     home.name = data.get('homeName', home.name)
     home.location = data.get('homeLocation', home.location)
+    home.adminEmail = data.get('adminEmail', home.adminEmail)
     home.image = data.get('homeImage', home.image)
     home.badge = data.get('homeBadge', home.badge)
     home.description = data.get('homeDesc', home.description)

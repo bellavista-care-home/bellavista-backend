@@ -17,6 +17,7 @@ class Home(db.Model):
     id = db.Column(db.String, primary_key=True)
     name = db.Column(db.String(255), nullable=False)
     location = db.Column(db.String(255))
+    adminEmail = db.Column(db.String(255))
     image = db.Column(db.Text)
     badge = db.Column(db.String(128))
     description = db.Column(db.Text)
