@@ -58,6 +58,7 @@ const DementiaEnvironment = lazy(() => import('./pages/DementiaEnvironment'));
 
 // Admin Pages
 const AdminConsole = lazy(() => import('./admin/AdminConsole'));
+const ReceptionKiosk = lazy(() => import('./pages/ReceptionKiosk'));
 const Login = ComingSoon;
 
 // =============================================================================
@@ -92,6 +93,7 @@ const NotFound = () => (
 const AppContent = () => {
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith('/admin') || location.pathname === '/admin-console';
+  const isKioskRoute = location.pathname.startsWith('/kiosk');
 
   // Define routes where ChatWidget should appear (Home page and all Location pages)
   const showChatWidget = [
@@ -106,7 +108,7 @@ const AppContent = () => {
     '/bellavista-pontypridd'
   ].includes(location.pathname);
 
-  if (isAdminRoute) {
+  if (isAdminRoute || isKioskRoute) {
     return (
       <div className="App">
         <Suspense fallback={<LoadingSpinner />}>
@@ -115,6 +117,7 @@ const AppContent = () => {
             <Route path="/admin-console" element={<AdminConsole />} />
             <Route path="/admin/login" element={<Login />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/kiosk/:locationId" element={<ReceptionKiosk />} />
           </Routes>
         </Suspense>
       </div>

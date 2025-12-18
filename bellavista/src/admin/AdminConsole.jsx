@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import ImageUploader from '../components/ImageUploader';
 import NewsForm from './components/NewsForm';
 import { fetchNewsItems, createNewsItem, updateNewsItem, deleteNewsItem } from '../services/newsService';
-import { fetchScheduledTours } from '../services/tourService';
+import { fetchScheduledTours, updateBookingInAPI } from '../services/tourService';
 import { fetchCareEnquiries } from '../services/enquiryService';
 import { fetchHomes, updateHome } from '../services/homeService';
 import HomeForm from './components/HomeForm';
@@ -63,6 +63,17 @@ const AdminConsole = () => {
       setBookings(Array.isArray(data) ? data : []);
     } catch {
       setBookings([]);
+    }
+  };
+
+  const updateBookingStatus = async (id, status) => {
+    try {
+      await updateBookingInAPI(id, { status });
+      // Update local state to reflect change immediately
+      setBookings(prev => prev.map(b => b.id === id ? { ...b, status } : b));
+    } catch (error) {
+      console.error('Failed to update booking status:', error);
+      alert('Failed to update status');
     }
   };
 
@@ -354,6 +365,12 @@ const AdminConsole = () => {
           </button>
           <div className="group-title">Enquiries</div>
           <button 
+            className={activeView === 'kiosk-links' ? 'active' : ''}
+            onClick={() => setActiveView('kiosk-links')}
+          >
+            <i className="fa-solid fa-tablet-screen-button"></i><span>Reception Kiosks</span>
+          </button>
+          <button 
             className={activeView === 'scheduled-tours' ? 'active' : ''}
             onClick={() => setActiveView('scheduled-tours')}
           >
@@ -540,6 +557,38 @@ const AdminConsole = () => {
           </section>
         )}
 
+        {activeView === 'kiosk-links' && (
+          <section className="panel">
+            <h2>Reception Kiosk Links</h2>
+            <p>Open these links on the tablet/device at each reception desk.</p>
+            <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(250px, 1fr))', gap:'20px', marginTop:'20px'}}>
+              {[
+                {id: 'barry', name: 'Bellavista Barry'},
+                {id: 'cardiff', name: 'Bellavista Cardiff'},
+                {id: 'waverley', name: 'Waverley Care Centre'},
+                {id: 'college-fields', name: 'College Fields'},
+                {id: 'baltimore', name: 'Baltimore Care Home'},
+                {id: 'meadow-vale', name: 'Meadow Vale Cwtch'}
+              ].map(home => (
+                <div key={home.id} style={{border:'1px solid #e0e0e0', borderRadius:'10px', padding:'20px', background:'white'}}>
+                  <h3>{home.name}</h3>
+                  <div style={{marginTop:'15px'}}>
+                    <a 
+                      href={`/kiosk/${home.id}`} 
+                      target="_blank" 
+                      rel="noreferrer"
+                      className="btn"
+                      style={{display:'block', textAlign:'center', textDecoration:'none'}}
+                    >
+                      <i className="fa-solid fa-external-link-alt"></i> Open Kiosk
+                    </a>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
         {activeView === 'scheduled-tours' && (
           <section className="panel">
             <h2>Scheduled Tours</h2>
@@ -558,6 +607,7 @@ const AdminConsole = () => {
                     <th style={{textAlign:'left', padding:'10px', borderBottom:'1px solid #e0e0e0'}}>Preferred</th>
                     <th style={{textAlign:'left', padding:'10px', borderBottom:'1px solid #e0e0e0'}}>Created</th>
                     <th style={{textAlign:'left', padding:'10px', borderBottom:'1px solid #e0e0e0'}}>Status</th>
+                    <th style={{textAlign:'left', padding:'10px', borderBottom:'1px solid #e0e0e0'}}>Visited?</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -578,13 +628,37 @@ const AdminConsole = () => {
                         <td style={{padding:'10px', borderBottom:'1px solid #f0f0f0'}}>{b.preferredDate} • {b.preferredTime}</td>
                         <td style={{padding:'10px', borderBottom:'1px solid #f0f0f0'}}>{new Date(b.createdAt).toLocaleString()}</td>
                         <td style={{padding:'10px', borderBottom:'1px solid #f0f0f0'}}>
-                          <span style={{background:'#eaf6ff', color:'#0366d6', padding:'4px 8px', borderRadius:'12px', fontSize:'12px'}}>{b.status || 'requested'}</span>
+                          <span style={{
+                            background: b.status === 'visited' ? '#d4edda' : (b.status === 'cancelled' ? '#f8d7da' : '#eaf6ff'), 
+                            color: b.status === 'visited' ? '#155724' : (b.status === 'cancelled' ? '#721c24' : '#0366d6'), 
+                            padding:'4px 8px', borderRadius:'12px', fontSize:'12px'
+                          }}>
+                            {b.status || 'requested'}
+                          </span>
+                        </td>
+                        <td style={{padding:'10px', borderBottom:'1px solid #f0f0f0'}}>
+                          <button 
+                            className="btn small" 
+                            style={{marginRight:'5px', background: b.status === 'visited' ? '#28a745' : '#eee', color: b.status === 'visited' ? 'white' : '#333'}}
+                            onClick={() => updateBookingStatus(b.id, 'visited')}
+                            title="Mark as Visited"
+                          >
+                            <i className="fa-solid fa-check"></i>
+                          </button>
+                          <button 
+                            className="btn small"
+                            style={{background: b.status === 'cancelled' ? '#dc3545' : '#eee', color: b.status === 'cancelled' ? 'white' : '#333'}}
+                            onClick={() => updateBookingStatus(b.id, 'cancelled')}
+                            title="Mark as Cancelled"
+                          >
+                            <i className="fa-solid fa-xmark"></i>
+                          </button>
                         </td>
                       </tr>
                     ))}
                   {bookings.length === 0 && (
                     <tr>
-                      <td colSpan="7" style={{padding:'20px', textAlign:'center', color:'#666'}}>No tour requests yet</td>
+                      <td colSpan="8" style={{padding:'20px', textAlign:'center', color:'#666'}}>No tour requests yet</td>
                     </tr>
                   )}
                 </tbody>

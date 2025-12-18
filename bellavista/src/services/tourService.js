@@ -50,3 +50,14 @@ export async function fetchScheduledTours() {
     return [];
   }
 }
+
+export async function updateBookingInAPI(id, data) {
+  if (!API_BASE) return null;
+  const res = await fetch(`${API_BASE}/scheduled-tours/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) throw new Error('API error');
+  return await res.json();
+}

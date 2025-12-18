@@ -209,6 +209,19 @@ def list_scheduled_tours():
         "status": i.status
     } for i in items])
 
+@api_bp.put('/scheduled-tours/<tour_id>')
+def update_scheduled_tour(tour_id):
+    data = request.get_json(force=True)
+    tour = ScheduledTour.query.get(tour_id)
+    if not tour:
+        return jsonify({"error": "Tour not found"}), 404
+    
+    if 'status' in data:
+        tour.status = data['status']
+    
+    db.session.commit()
+    return jsonify({"ok": True, "id": tour.id}), 200
+
 @api_bp.post('/care-enquiries')
 def create_care_enquiry():
     data = request.get_json(force=True)
