@@ -56,6 +56,56 @@ const AdminConsole = () => {
 
   const [bookings, setBookings] = useState([]);
   const [bookingSearch, setBookingSearch] = useState('');
+  const [showDownloadModal, setShowDownloadModal] = useState(false);
+
+  const downloadCSV = (data, filename) => {
+    if (!data.length) {
+      alert('No data to download');
+      return;
+    }
+    
+    // Define headers
+    const headers = ['Name', 'Phone', 'Email', 'Location', 'Preferred Date', 'Preferred Time', 'Created At', 'Status', 'Message'];
+    
+    // Convert data to CSV rows
+    const csvContent = [
+      headers.join(','),
+      ...data.map(row => [
+        `"${row.name || ''}"`,
+        `"${row.phone || ''}"`,
+        `"${row.email || ''}"`,
+        `"${row.location || ''}"`,
+        `"${row.preferredDate || ''}"`,
+        `"${row.preferredTime || ''}"`,
+        `"${new Date(row.createdAt).toLocaleString()}"`,
+        `"${row.status || 'requested'}"`,
+        `"${(row.message || '').replace(/"/g, '""')}"` // Escape quotes in message
+      ].join(','))
+    ].join('\n');
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', filename);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
+  const handleDownload = (type) => {
+    if (type === 'all') {
+      downloadCSV(bookings, `all_bookings_${new Date().toISOString().split('T')[0]}.csv`);
+    } else if (type === 'visited') {
+      const visited = bookings.filter(b => b.status === 'visited');
+      downloadCSV(visited, `visited_bookings_${new Date().toISOString().split('T')[0]}.csv`);
+    }
+    setShowDownloadModal(false);
+  };
   
   const loadBookings = async () => {
     try {
@@ -594,8 +644,34 @@ const AdminConsole = () => {
             <h2>Scheduled Tours</h2>
             <div className="toolbar">
               <input placeholder="Search by name, location, phone..." style={{flex:1}} value={bookingSearch} onChange={e=>setBookingSearch(e.target.value)}/>
+              <button className="btn small" onClick={() => setShowDownloadModal(true)} style={{marginRight:'8px'}}>
+                <i className="fa-solid fa-download"></i>&nbsp;Download Excel
+              </button>
               <button className="btn ghost small" onClick={loadBookings}><i className="fa-solid fa-rotate"></i>&nbsp;Refresh</button>
             </div>
+            
+            {showDownloadModal && (
+              <div style={{
+                position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+              }}>
+                <div style={{background: 'white', padding: '20px', borderRadius: '8px', width: '300px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)'}}>
+                  <h3 style={{marginTop: 0, marginBottom: '20px'}}>Download Bookings</h3>
+                  <div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
+                    <button className="btn" onClick={() => handleDownload('all')}>
+                      <i className="fa-solid fa-file-csv"></i>&nbsp;Download All Requests
+                    </button>
+                    <button className="btn" style={{background: '#28a745', color: 'white', border: 'none'}} onClick={() => handleDownload('visited')}>
+                      <i className="fa-solid fa-check-double"></i>&nbsp;Download Visited Only
+                    </button>
+                    <button className="btn ghost" onClick={() => setShowDownloadModal(false)} style={{marginTop: '10px'}}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div style={{marginTop:'16px', overflowX:'auto'}}>
               <table style={{width:'100%', borderCollapse:'collapse'}}>
                 <thead>
