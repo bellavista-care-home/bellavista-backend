@@ -8,7 +8,9 @@ import { fetchScheduledTours, updateBookingInAPI } from '../services/tourService
 import { fetchCareEnquiries } from '../services/enquiryService';
 import { fetchHomes, updateHome } from '../services/homeService';
 import { fetchFaqs, createFaq, deleteFaq } from '../services/faqService';
+import { fetchVacancies, createVacancy, updateVacancy, deleteVacancy } from '../services/vacancyService';
 import HomeForm from './components/HomeForm';
+import VacancyForm from './components/VacancyForm';
 import './AdminConsole.css';
 
 const AdminConsole = () => {
@@ -38,6 +40,9 @@ const AdminConsole = () => {
   const [faqQuestion, setFaqQuestion] = useState('');
   const [faqAnswer, setFaqAnswer] = useState('');
   const [faqs, setFaqs] = useState([]);
+  const [vacancies, setVacancies] = useState([]);
+  const [selectedVacancy, setSelectedVacancy] = useState(null);
+  const [isAddingVacancy, setIsAddingVacancy] = useState(false);
 
   const loadHomes = async () => {
     const data = await fetchHomes();
@@ -359,6 +364,59 @@ const AdminConsole = () => {
     }
   };
 
+  const loadVacancies = async () => {
+    try {
+      const data = await fetchVacancies();
+      setVacancies(Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.error(e);
+      setVacancies([]);
+    }
+  };
+
+  useEffect(() => {
+    if (activeView === 'manage-vacancies') loadVacancies();
+  }, [activeView]);
+
+  const handleSaveVacancy = async (data) => {
+    try {
+      const formData = new FormData();
+      Object.keys(data).forEach(key => {
+        if (data[key] !== null) {
+          formData.append(key, data[key]);
+        }
+      });
+
+      if (selectedVacancy) {
+        await updateVacancy(selectedVacancy.id, formData);
+        alert('Vacancy updated successfully!');
+      } else {
+        await createVacancy(formData);
+        alert('Vacancy created successfully!');
+      }
+      setSelectedVacancy(null);
+      setIsAddingVacancy(false);
+      loadVacancies();
+    } catch (e) {
+      console.error(e);
+      alert('Failed to save vacancy');
+    }
+  };
+
+  const handleDeleteVacancy = async () => {
+    if (!selectedVacancy) return;
+    if (!window.confirm('Are you sure you want to delete this vacancy?')) return;
+    try {
+      await deleteVacancy(selectedVacancy.id);
+      alert('Vacancy deleted successfully!');
+      setSelectedVacancy(null);
+      loadVacancies();
+    } catch (e) {
+      console.error(e);
+      alert('Failed to delete vacancy');
+    }
+  };
+
   const logout = () => {
     if (window.confirm('Are you sure you want to logout?')) {
       localStorage.removeItem('isAuthenticated');
@@ -444,6 +502,12 @@ const AdminConsole = () => {
             onClick={() => setActiveView('manage-faqs')}
           >
             <i className="fa-solid fa-circle-question"></i><span>Manage FAQs</span>
+          </button>
+          <button 
+            className={activeView === 'manage-vacancies' ? 'active' : ''}
+            onClick={() => setActiveView('manage-vacancies')}
+          >
+            <i className="fa-solid fa-briefcase"></i><span>Manage Vacancies</span>
           </button>
           <div className="group-title">Users</div>
           <button 
@@ -645,6 +709,77 @@ const AdminConsole = () => {
               ))}
               {faqs.length === 0 && <p className="muted">No FAQs found.</p>}
             </div>
+          </section>
+        )}
+
+        {activeView === 'manage-vacancies' && (
+          <section className="panel">
+            <h2>Manage Vacancies</h2>
+            
+            {(selectedVacancy || isAddingVacancy) ? (
+              <VacancyForm
+                mode={selectedVacancy ? 'edit' : 'add'}
+                initialData={selectedVacancy}
+                onSave={handleSaveVacancy}
+                onCancel={() => {
+                  setSelectedVacancy(null);
+                  setIsAddingVacancy(false);
+                }}
+                onDelete={handleDeleteVacancy}
+              />
+            ) : (
+              <>
+                <div className="toolbar">
+                  <button className="btn primary" onClick={() => setIsAddingVacancy(true)}>
+                    <i className="fa-solid fa-plus"></i> Add New Vacancy
+                  </button>
+                  <button className="btn ghost small" onClick={loadVacancies}>
+                    <i className="fa-solid fa-rotate"></i> Refresh
+                  </button>
+                </div>
+
+                <div className="list-container" style={{ marginTop: '20px' }}>
+                  {vacancies.map(vacancy => (
+                    <div key={vacancy.id} className="list-item" style={{
+                      padding: '15px', 
+                      background: '#f8f9fa', 
+                      borderRadius: '8px', 
+                      marginBottom: '10px',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      border: '1px solid #e9ecef'
+                    }}>
+                      <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+                        {vacancy.image && (
+                          <img 
+                            src={vacancy.image} 
+                            alt={vacancy.title} 
+                            style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '4px' }}
+                          />
+                        )}
+                        <div>
+                          <h3 style={{ margin: '0 0 5px 0', fontSize: '1.1rem' }}>{vacancy.title}</h3>
+                          <div style={{ color: '#6c757d', fontSize: '0.9rem' }}>
+                            {vacancy.location && <span style={{ marginRight: '15px' }}><i className="fa-solid fa-map-marker-alt"></i> {vacancy.location}</span>}
+                            {vacancy.type && <span><i className="fa-solid fa-clock"></i> {vacancy.type}</span>}
+                          </div>
+                        </div>
+                      </div>
+                      <button className="btn small" onClick={() => setSelectedVacancy(vacancy)}>
+                        <i className="fa-solid fa-pen"></i> Edit
+                      </button>
+                    </div>
+                  ))}
+                  
+                  {vacancies.length === 0 && (
+                    <div style={{ textAlign: 'center', padding: '40px', color: '#6c757d' }}>
+                      <p>No vacancies found. Click "Add New Vacancy" to create one.</p>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
           </section>
         )}
 

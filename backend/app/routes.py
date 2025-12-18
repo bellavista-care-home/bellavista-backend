@@ -7,7 +7,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from flask import Blueprint, request, jsonify, current_app
 from . import db
-from .models import ScheduledTour, CareEnquiry, NewsItem, Home, FAQ
+from .models import ScheduledTour, CareEnquiry, NewsItem, Home, FAQ, Vacancy, JobApplication
 from .image_processor import ImageProcessor
 
 api_bp = Blueprint('api', __name__)
@@ -543,6 +543,154 @@ def delete_news(id):
     db.session.delete(item)
     db.session.commit()
     return jsonify({"ok": True})
+
+# VACANCIES ROUTES
+
+@api_bp.get('/vacancies')
+def list_vacancies():
+    items = Vacancy.query.order_by(Vacancy.createdAt.desc()).all()
+    return jsonify([{
+        "id": i.id,
+        "title": i.title,
+        "image": i.image,
+        "shortDescription": i.shortDescription,
+        "detailedDescription": i.detailedDescription,
+        "location": i.location,
+        "salary": i.salary,
+        "type": i.type,
+        "createdAt": i.createdAt.isoformat()
+    } for i in items])
+
+@api_bp.post('/vacancies')
+def create_vacancy():
+    # Support both JSON and multipart/form-data
+    if request.content_type and 'multipart/form-data' in request.content_type:
+        data = request.form.to_dict()
+        files = request.files
+    else:
+        data = request.get_json(force=True)
+        files = {}
+    
+    vid = str(uuid.uuid4())
+    image_url = data.get('image', '')
+    
+    if 'image' in files:
+        f = files['image']
+        filename = f"vacancy-{vid}-{uuid.uuid4().hex}.jpg"
+        uploaded_url = upload_file_helper(f, filename)
+        if uploaded_url:
+            image_url = uploaded_url
+    
+    vacancy = Vacancy(
+        id=vid,
+        title=data.get('title'),
+        shortDescription=data.get('shortDescription'),
+        detailedDescription=data.get('detailedDescription'),
+        location=data.get('location'),
+        salary=data.get('salary'),
+        type=data.get('type'),
+        image=image_url
+    )
+    db.session.add(vacancy)
+    db.session.commit()
+    return jsonify({"ok": True, "id": vid}), 201
+
+@api_bp.put('/vacancies/<vid>')
+def update_vacancy(vid):
+    vacancy = Vacancy.query.get(vid)
+    if not vacancy:
+        return jsonify({"error": "Not found"}), 404
+
+    if request.content_type and 'multipart/form-data' in request.content_type:
+        data = request.form.to_dict()
+        files = request.files
+    else:
+        data = request.get_json(force=True)
+        files = {}
+
+    if 'title' in data:
+        vacancy.title = data['title']
+    if 'shortDescription' in data:
+        vacancy.shortDescription = data['shortDescription']
+    if 'detailedDescription' in data:
+        vacancy.detailedDescription = data['detailedDescription']
+    if 'location' in data:
+        vacancy.location = data['location']
+    if 'salary' in data:
+        vacancy.salary = data['salary']
+    if 'type' in data:
+        vacancy.type = data['type']
+    
+    if 'image' in files:
+        f = files['image']
+        filename = f"vacancy-{vid}-{uuid.uuid4().hex}.jpg"
+        uploaded_url = upload_file_helper(f, filename)
+        if uploaded_url:
+            vacancy.image = uploaded_url
+    elif 'image' in data and data['image'] == '':
+         # Optional: Handle image removal if sent as empty string
+         pass
+
+    db.session.commit()
+    return jsonify({"ok": True, "id": vid})
+
+@api_bp.delete('/vacancies/<vid>')
+def delete_vacancy(vid):
+    vacancy = Vacancy.query.get(vid)
+    if not vacancy:
+        return jsonify({"error": "Not found"}), 404
+    db.session.delete(vacancy)
+    db.session.commit()
+    return jsonify({"ok": True})
+
+# JOB APPLICATION ROUTE
+
+@api_bp.post('/apply')
+def apply_job():
+    data = request.form.to_dict()
+    files = request.files
+    
+    aid = str(uuid.uuid4())
+    cv_url = ""
+    
+    if 'cv' in files:
+        f = files['cv']
+        ext = f.filename.rsplit('.', 1)[1].lower() if '.' in f.filename else 'pdf'
+        filename = f"cv-{aid}-{uuid.uuid4().hex}.{ext}"
+        uploaded_url = upload_file_helper(f, filename, content_type=f.content_type)
+        if uploaded_url:
+            cv_url = uploaded_url
+            
+    application = JobApplication(
+        id=aid,
+        vacancyId=data.get('vacancyId'),
+        firstName=data.get('firstName'),
+        lastName=data.get('lastName'),
+        email=data.get('email'),
+        jobRole=data.get('jobRole'),
+        cvUrl=cv_url,
+        marketingConsent=data.get('marketingConsent') == 'true',
+        privacyConsent=data.get('privacyConsent') == 'true'
+    )
+    db.session.add(application)
+    db.session.commit()
+    
+    # Send Email Notification
+    try:
+        subject = f"New Job Application: {application.jobRole}"
+        body = f"""New Job Application Received:
+
+Name: {application.firstName} {application.lastName}
+Email: {application.email}
+Role: {application.jobRole}
+Vacancy ID: {application.vacancyId}
+CV Link: {cv_url}
+"""
+        send_email(["bellavistacarehomegit@gmail.com"], subject, body)
+    except Exception as e:
+        print(f"Error in application email: {e}")
+        
+    return jsonify({"ok": True, "id": aid}), 201
 
 def to_dict_home(h):
     def parse_json(field):

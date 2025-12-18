@@ -83,3 +83,26 @@ class FAQ(db.Model):
     answer = db.Column(db.Text, nullable=False)
     order = db.Column(db.Integer, default=0)
     createdAt = db.Column(db.DateTime, default=datetime.utcnow)
+
+class Vacancy(db.Model):
+    id = db.Column(db.String, primary_key=True)
+    title = db.Column(db.String(255), nullable=False)
+    image = db.Column(db.Text)
+    shortDescription = db.Column(db.Text)
+    detailedDescription = db.Column(db.Text)
+    location = db.Column(db.String(255))
+    salary = db.Column(db.String(128))
+    type = db.Column(db.String(128))
+    createdAt = db.Column(db.DateTime, default=datetime.utcnow)
+
+class JobApplication(db.Model):
+    id = db.Column(db.String, primary_key=True)
+    vacancyId = db.Column(db.String, db.ForeignKey('vacancy.id'))
+    firstName = db.Column(db.String(128), nullable=False)
+    lastName = db.Column(db.String(128), nullable=False)
+    email = db.Column(db.String(255), nullable=False)
+    jobRole = db.Column(db.String(255))
+    cvUrl = db.Column(db.Text)
+    marketingConsent = db.Column(db.Boolean, default=False)
+    privacyConsent = db.Column(db.Boolean, default=False)
+    createdAt = db.Column(db.DateTime, default=datetime.utcnow)
