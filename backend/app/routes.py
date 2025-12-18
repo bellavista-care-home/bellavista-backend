@@ -225,12 +225,19 @@ def create_scheduled_tour():
     # Send Email Notification
     try:
         # Find home to get admin email
+        print(f"DEBUG: Processing tour for location: {tour.location}")
         home = Home.query.filter(Home.name == tour.location).first()
+        
+        # If not found, try fuzzy match (e.g. "Barry" matches "Bellavista Barry")
+        if not home and tour.location:
+            home = Home.query.filter(Home.name.ilike(f"%{tour.location}%")).first()
+            
         admin_email = home.adminEmail if home else None
+        print(f"DEBUG: Found home: {home.name if home else 'None'}, Admin Email: {admin_email}")
         
         recipients = ["bellavistacarehomegit@gmail.com"]
-        if admin_email and admin_email not in recipients:
-            recipients.append(admin_email)
+        if admin_email and admin_email.strip() and admin_email not in recipients:
+            recipients.append(admin_email.strip())
             
         subject = f"New Tour Request for {tour.location}"
         body = f"""New Tour Request Received:
