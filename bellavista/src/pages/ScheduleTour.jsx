@@ -38,14 +38,21 @@ const ScheduleTour = () => {
       status: 'requested'
     };
     
-    // 1. Send to API (which handles email)
+    // 1. Send Email via EmailJS (Frontend) - reliable fallback
+    try {
+      await sendBookingEmail(booking);
+    } catch (err) {
+      console.error("EmailJS Error", err);
+    }
+
+    // 2. Send to API (Stores in DB, attempts backend email but might fail if SMTP bad)
     try {
       await saveBookingToAPI(booking);
     } catch (err) {
       console.error("API Error", err);
     }
 
-    // 2. Fallback: Save locally if needed
+    // 3. Save locally as backup
     try {
       saveBookingLocal(booking);
     } catch {}
