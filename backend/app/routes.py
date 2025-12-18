@@ -14,8 +14,12 @@ api_bp = Blueprint('api', __name__)
 s3_bucket = os.environ.get('S3_BUCKET')
 
 def send_email(to_emails, subject, body):
-    sender_email = "bellavistacarehomegit@gmail.com"
-    sender_password = "naitwsniavalleb"
+    sender_email = os.environ.get('MAIL_USERNAME')
+    sender_password = os.environ.get('MAIL_PASSWORD')
+    
+    if not sender_email or not sender_password:
+        print("Email configuration missing (MAIL_USERNAME or MAIL_PASSWORD)")
+        return False
     
     if not isinstance(to_emails, list):
         to_emails = [to_emails]
@@ -223,8 +227,6 @@ def create_scheduled_tour():
     db.session.commit()
 
     # Send Email Notification
-    # Note: We are currently relying on Frontend EmailJS for reliability.
-    # The backend email logic below is kept as a future enhancement but requires valid SMTP credentials.
     try:
         # Find home to get admin email
         print(f"DEBUG: Processing tour for location: {tour.location}")
@@ -237,16 +239,24 @@ def create_scheduled_tour():
         admin_email = home.adminEmail if home else None
         print(f"DEBUG: Found home: {home.name if home else 'None'}, Admin Email: {admin_email}")
         
-        # Uncomment below lines to enable backend email when SMTP credentials are fixed
-        # recipients = ["bellavistacarehomegit@gmail.com"]
-        # if admin_email and admin_email.strip() and admin_email not in recipients:
-        #     recipients.append(admin_email.strip())
+        recipients = ["bellavistacarehomegit@gmail.com"]
+        if admin_email and admin_email.strip() and admin_email not in recipients:
+            recipients.append(admin_email.strip())
             
-        # subject = f"New Tour Request for {tour.location}"
-        # body = f"""New Tour Request Received:
-# ... (rest of body) ...
-        # """
-        # send_email(recipients, subject, body)
+        subject = f"New Tour Request for {tour.location}"
+        body = f"""New Tour Request Received:
+
+Name: {tour.name}
+Phone: {tour.phone}
+Email: {tour.email}
+Location: {tour.location}
+Preferred Date: {tour.preferredDate}
+Preferred Time: {tour.preferredTime}
+Message: {tour.message}
+
+Please log in to the admin console to view details.
+"""
+        send_email(recipients, subject, body)
     except Exception as e:
         print(f"Error in email notification: {e}")
 
@@ -297,6 +307,34 @@ def create_care_enquiry():
     )
     db.session.add(enquiry)
     db.session.commit()
+
+    # Send Email Notification
+    try:
+        # Determine Admin Email based on location
+        admin_email = None
+        if enquiry.location:
+             home = Home.query.filter(Home.name.ilike(f"%{enquiry.location}%")).first()
+             if home:
+                 admin_email = home.adminEmail
+
+        recipients = ["bellavistacarehomegit@gmail.com"]
+        if admin_email and admin_email.strip() and admin_email not in recipients:
+            recipients.append(admin_email.strip())
+
+        subject = f"New Care Enquiry: {enquiry.enquiryType}"
+        body = f"""New Care Enquiry Received:
+
+Name: {enquiry.name}
+Email: {enquiry.email}
+Phone: {enquiry.phone}
+Type: {enquiry.enquiryType}
+Location: {enquiry.location}
+Message: {enquiry.message}
+"""
+        send_email(recipients, subject, body)
+    except Exception as e:
+        print(f"Error in enquiry email notification: {e}")
+
     return jsonify({"ok": True, "id": eid}), 201
 
 @api_bp.get('/care-enquiries')
