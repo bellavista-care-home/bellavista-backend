@@ -54,7 +54,7 @@ const ReceptionKiosk = () => {
       setTimeout(() => {
         setSubmitted(false);
         setFormData({ name: '', email: '', phone: '', message: '' });
-      }, 5000);
+      }, 2000);
     } catch (error) {
       alert('Error registering visit. Please try again.');
     }
