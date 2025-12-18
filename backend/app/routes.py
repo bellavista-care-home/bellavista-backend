@@ -7,7 +7,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from flask import Blueprint, request, jsonify, current_app
 from . import db
-from .models import ScheduledTour, CareEnquiry, NewsItem, Home
+from .models import ScheduledTour, CareEnquiry, NewsItem, Home, FAQ
 from .image_processor import ImageProcessor
 
 api_bp = Blueprint('api', __name__)
@@ -644,6 +644,40 @@ def delete_home(id):
     if not home:
         return jsonify({"error": "Not found"}), 404
     db.session.delete(home)
+    db.session.commit()
+    return jsonify({"ok": True})
+
+@api_bp.get('/faqs')
+def list_faqs():
+    items = FAQ.query.order_by(FAQ.order.asc(), FAQ.createdAt.asc()).all()
+    return jsonify([{
+        "id": i.id,
+        "question": i.question,
+        "answer": i.answer,
+        "order": i.order,
+        "createdAt": i.createdAt.isoformat()
+    } for i in items])
+
+@api_bp.post('/faqs')
+def create_faq():
+    data = request.get_json(force=True)
+    fid = data.get('id') or str(uuid.uuid4())
+    faq = FAQ(
+        id=fid,
+        question=data.get('question', ''),
+        answer=data.get('answer', ''),
+        order=data.get('order', 0)
+    )
+    db.session.add(faq)
+    db.session.commit()
+    return jsonify({"ok": True, "id": fid}), 201
+
+@api_bp.delete('/faqs/<id>')
+def delete_faq(id):
+    item = FAQ.query.get(id)
+    if not item:
+        return jsonify({"error": "Not found"}), 404
+    db.session.delete(item)
     db.session.commit()
     return jsonify({"ok": True})
 

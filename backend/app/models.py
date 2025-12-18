@@ -76,3 +76,10 @@ class NewsItem(db.Model):
     videoUrl = db.Column(db.Text)
     videoDescription = db.Column(db.Text)
     createdAt = db.Column(db.DateTime, default=datetime.utcnow)
+
+class FAQ(db.Model):
+    id = db.Column(db.String, primary_key=True)
+    question = db.Column(db.Text, nullable=False)
+    answer = db.Column(db.Text, nullable=False)
+    order = db.Column(db.Integer, default=0)
+    createdAt = db.Column(db.DateTime, default=datetime.utcnow)

@@ -5,6 +5,7 @@ const HomeForm = ({ mode = 'add', initialData = null, onCancel, onSave }) => {
   const [formData, setFormData] = useState({
     homeName: '',
     homeLocation: '',
+    adminEmail: '',
     homeImage: '',
     homeBadge: '',
     homeDesc: '',
@@ -251,6 +252,15 @@ const HomeForm = ({ mode = 'add', initialData = null, onCancel, onSave }) => {
             disabled
             type="text"
             style={{background: '#f5f5f5', color: '#666'}}
+          />
+        </div>
+        <div className="field" style={{gridColumn: '1 / -1'}}>
+          <label>Admin Email (Receives Tour Booking Notifications)</label>
+          <input 
+            value={formData.adminEmail} 
+            onChange={(e) => handleChange('adminEmail', e.target.value)}
+            type="email"
+            placeholder="Enter admin email address"
           />
         </div>
       </div>
