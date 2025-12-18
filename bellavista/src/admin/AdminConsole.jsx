@@ -335,7 +335,8 @@ const AdminConsole = () => {
 
   const logout = () => {
     if (window.confirm('Are you sure you want to logout?')) {
-      navigate('/');
+      localStorage.removeItem('isAuthenticated');
+      navigate('/login');
     }
   };
   const [userForm, setUserForm] = useState({ name: '', email: '', role: 'Admin' });

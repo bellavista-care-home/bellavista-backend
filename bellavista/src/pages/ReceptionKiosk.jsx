@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { saveBookingToAPI } from '../services/tourService';
 
 const ReceptionKiosk = () => {
   const { locationId } = useParams();
+  const navigate = useNavigate();
   const [submitted, setSubmitted] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -69,6 +70,9 @@ const ReceptionKiosk = () => {
           <p>Your visit has been registered.</p>
           <p>A staff member will be with you shortly.</p>
         </div>
+        <button onClick={() => navigate('/')} style={styles.exitButton}>
+          <i className="fas fa-sign-out-alt"></i> Exit Kiosk
+        </button>
       </div>
     );
   }
@@ -125,6 +129,9 @@ const ReceptionKiosk = () => {
           </button>
         </form>
       </div>
+      <button onClick={() => navigate('/')} style={styles.exitButton}>
+        <i className="fas fa-sign-out-alt"></i> Exit Kiosk
+      </button>
     </div>
   );
 };
@@ -194,6 +201,20 @@ const styles = {
     cursor: 'pointer',
     marginTop: '10px',
     transition: 'background 0.3s'
+  },
+  exitButton: {
+    position: 'fixed',
+    bottom: '20px',
+    right: '20px',
+    background: 'rgba(255,255,255,0.2)',
+    color: 'white',
+    border: '1px solid rgba(255,255,255,0.4)',
+    padding: '10px 20px',
+    borderRadius: '30px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    backdropFilter: 'blur(5px)',
+    transition: 'all 0.3s'
   }
 };
 

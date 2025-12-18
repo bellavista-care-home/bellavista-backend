@@ -9,6 +9,7 @@ import Footer from './components/Footer';
 import BackToTop from './components/BackToTop';
 import ScrollToTop from './components/ScrollToTop';
 import ChatWidget from './components/ChatWidget';
+import ProtectedRoute from './components/ProtectedRoute';
 
 // =============================================================================
 // LAZY LOADED COMPONENTS FOR PERFORMANCE
@@ -59,7 +60,7 @@ const DementiaEnvironment = lazy(() => import('./pages/DementiaEnvironment'));
 // Admin Pages
 const AdminConsole = lazy(() => import('./admin/AdminConsole'));
 const ReceptionKiosk = lazy(() => import('./pages/ReceptionKiosk'));
-const Login = ComingSoon;
+const Login = lazy(() => import('./pages/Login'));
 
 // =============================================================================
 // LOADING AND ERROR COMPONENTS
@@ -113,8 +114,16 @@ const AppContent = () => {
       <div className="App">
         <Suspense fallback={<LoadingSpinner />}>
           <Routes>
-            <Route path="/admin" element={<AdminConsole />} />
-            <Route path="/admin-console" element={<AdminConsole />} />
+            <Route path="/admin" element={
+              <ProtectedRoute>
+                <AdminConsole />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin-console" element={
+              <ProtectedRoute>
+                <AdminConsole />
+              </ProtectedRoute>
+            } />
             <Route path="/admin/login" element={<Login />} />
             <Route path="/login" element={<Login />} />
             <Route path="/kiosk/:locationId" element={<ReceptionKiosk />} />
