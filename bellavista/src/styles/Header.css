@@ -442,8 +442,8 @@ nav a:hover::after {
 header.christmas-theme {
   background: linear-gradient(180deg, #2b1055 0%, #7597de 100%);
   position: sticky;
-  overflow: hidden;
   border-bottom: 1px solid rgba(255,255,255,0.1);
+  /* Removed overflow: hidden to allow dropdowns to show */
 }
 
 .christmas-bg {
@@ -454,12 +454,19 @@ header.christmas-theme {
   height: 100%;
   z-index: 0;
   pointer-events: none;
+  overflow: hidden; /* Moved overflow hidden here to clip santa/snow */
+}
+
+.header-container {
+  position: relative;
+  z-index: 10; /* Ensure header content is above background */
 }
 
 .santa-claus {
   width: 80px;
   height: 80px;
-  background-image: url('https://media.giphy.com/media/xTk9ZP2IP75KDQA0M0/giphy.gif');
+  /* Using a reliable Tenor GIF for pixel art Santa */
+  background-image: url('https://media.tenor.com/On7KVX2qQ4AAAAAi/santa-claus.gif'); 
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center bottom;
@@ -539,4 +546,15 @@ header.christmas-theme .left-menu-toggle {
 
 header.christmas-theme .left-menu-toggle:hover {
   background: rgba(255, 255, 255, 0.2);
+}
+
+/* Fix dropdown menu colors in Christmas theme */
+header.christmas-theme .dropdown-menu a {
+  color: var(--text-dark);
+  text-shadow: none;
+}
+
+header.christmas-theme .dropdown-menu a:hover {
+  color: var(--primary-blue);
+  background: linear-gradient(90deg, rgba(0,102,204,0.1), rgba(0,180,216,0.1));
 }
