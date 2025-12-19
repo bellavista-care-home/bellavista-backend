@@ -457,16 +457,16 @@ header.christmas-theme {
 }
 
 .santa-claus {
-  width: 120px;
+  width: 80px;
   height: 80px;
-  background-image: url('https://media.giphy.com/media/l1AvyLFyJjf6pum9a/giphy.gif');
+  background-image: url('https://media.giphy.com/media/xTk9ZP2IP75KDQA0M0/giphy.gif');
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center bottom;
   position: absolute;
-  bottom: 5px;
+  bottom: 0px;
   left: -150px;
-  animation: santaWalk 20s linear infinite;
+  animation: santaWalk 30s linear infinite;
   z-index: 2;
   filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
 }
