@@ -33,7 +33,12 @@ const Header = () => {
   }, [sideMenuOpen]);
 
   return (
-    <header>
+    <header className="christmas-theme">
+      <div className="christmas-bg">
+        <div className="snow-layer layer1"></div>
+        <div className="snow-layer layer2"></div>
+        <div className="santa-claus"></div>
+      </div>
       <div className="header-container">
         <div className="left-menu-wrapper">
           <div className="left-menu-toggle" onClick={toggleSideMenu}>
