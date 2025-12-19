@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import '../styles/Header.css';
+import santaGif from '../assets/santa.gif';
 
 const Header = () => {
   const [sideMenuOpen, setSideMenuOpen] = useState(false);
@@ -37,7 +38,11 @@ const Header = () => {
       <div className="christmas-bg">
         <div className="snow-layer layer1"></div>
         <div className="snow-layer layer2"></div>
-        <div className="santa-claus"></div>
+        <img 
+          className="santa-claus-img" 
+          src={santaGif} 
+          alt="Walking Santa"
+        />
       </div>
       <div className="header-container">
         <div className="left-menu-wrapper">

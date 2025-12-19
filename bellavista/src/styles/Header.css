@@ -462,25 +462,31 @@ header.christmas-theme {
   z-index: 10; /* Ensure header content is above background */
 }
 
-.santa-claus {
-  width: 80px;
-  height: 80px;
-  /* Using a reliable Tenor GIF for pixel art Santa */
-  background-image: url('https://media.tenor.com/On7KVX2qQ4AAAAAi/santa-claus.gif'); 
-  background-size: contain;
-  background-repeat: no-repeat;
-  background-position: center bottom;
+.santa-claus-img {
+  width: 50px; /* Small size */
+  height: auto;
   position: absolute;
-  bottom: 0px;
-  left: -150px;
-  animation: santaWalk 30s linear infinite;
+  bottom: 0;
+  left: 0;
+  animation: santaWalk 20s linear infinite;
   z-index: 2;
   filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
+  pointer-events: none;
+}
+
+/* Ensure dropdowns are always on top */
+.dropdown-menu {
+  z-index: 10005 !important;
+}
+
+header.christmas-theme .dropdown-menu {
+  z-index: 10005 !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
 }
 
 @keyframes santaWalk {
-  0% { transform: translateX(-150px); }
-  100% { transform: translateX(100vw); }
+  from { transform: translateX(-100px) scaleX(-1); }
+  to { transform: translateX(100vw) scaleX(-1); }
 }
 
 /* Snow Effect */
