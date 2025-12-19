@@ -981,9 +981,9 @@ const AdminConsole = () => {
                 <thead>
                   <tr style={{background:'#f7f9fc'}}>
                     <th style={{textAlign:'left', padding:'10px', borderBottom:'1px solid #e0e0e0'}}>Name</th>
-                    <th style={{textAlign:'left', padding:'10px', borderBottom:'1px solid #e0e0e0'}}>Phone</th>
+                    <th style={{textAlign:'left', padding:'10px', borderBottom:'1px solid #e0e0e0'}}>Email</th>
                     <th style={{textAlign:'left', padding:'10px', borderBottom:'1px solid #e0e0e0'}}>Position</th>
-                    <th style={{textAlign:'left', padding:'10px', borderBottom:'1px solid #e0e0e0'}}>Message</th>
+                    <th style={{textAlign:'left', padding:'10px', borderBottom:'1px solid #e0e0e0'}}>CV</th>
                     <th style={{textAlign:'left', padding:'10px', borderBottom:'1px solid #e0e0e0'}}>Created</th>
                     <th style={{textAlign:'left', padding:'10px', borderBottom:'1px solid #e0e0e0'}}>Status</th>
                   </tr>
@@ -993,17 +993,27 @@ const AdminConsole = () => {
                     .filter(a => {
                       const q = applicationSearch.trim().toLowerCase();
                       if (!q) return true;
-                      return [a.name, a.phone, a.position, a.message]
+                      return [a.firstName, a.lastName, a.email, a.jobRole, a.status]
                         .filter(Boolean).some(v => String(v).toLowerCase().includes(q));
                     })
                     .map(a => (
                       <tr key={a.id}>
-                        <td style={{padding:'10px', borderBottom:'1px solid #f0f0f0'}}>{a.name}</td>
-                        <td style={{padding:'10px', borderBottom:'1px solid #f0f0f0'}}>{a.phone}</td>
-                        <td style={{padding:'10px', borderBottom:'1px solid #f0f0f0'}}>{a.position}</td>
-                        <td style={{padding:'10px', borderBottom:'1px solid #f0f0f0'}}>{a.message}</td>
-                        <td style={{padding:'10px', borderBottom:'1px solid #f0f0f0'}}>{new Date(a.createdAt).toLocaleString()}</td>
-                        <td style={{padding:'10px', borderBottom:'1px solid #f0f0f0'}}><span style={{background:'#eaf6ff', color:'#0366d6', padding:'4px 8px', borderRadius:'12px', fontSize:'12px'}}>{a.status || 'submitted'}</span></td>
+                        <td style={{padding:'10px', borderBottom:'1px solid #f0f0f0'}}>{a.firstName} {a.lastName}</td>
+                        <td style={{padding:'10px', borderBottom:'1px solid #f0f0f0'}}>{a.email}</td>
+                        <td style={{padding:'10px', borderBottom:'1px solid #f0f0f0'}}>{a.jobRole}</td>
+                        <td style={{padding:'10px', borderBottom:'1px solid #f0f0f0'}}>
+                            {a.cvUrl ? (
+                                <a href={a.cvUrl} target="_blank" rel="noreferrer" style={{color:'var(--primary-blue)', textDecoration:'underline'}}>
+                                    <i className="fa-solid fa-file-pdf"></i> View CV
+                                </a>
+                            ) : <span className="muted">No CV</span>}
+                        </td>
+                        <td style={{padding:'10px', borderBottom:'1px solid #f0f0f0'}}>{a.createdAt ? new Date(a.createdAt).toLocaleString() : 'N/A'}</td>
+                        <td style={{padding:'10px', borderBottom:'1px solid #f0f0f0'}}>
+                            <span style={{background:'#e6f7ff', color:'#1890ff', padding:'4px 8px', borderRadius:'12px', fontSize:'12px'}}>
+                                {a.status || 'received'}
+                            </span>
+                        </td>
                       </tr>
                     ))}
                   {applications.length === 0 && (

@@ -35,9 +35,6 @@ const Enquiry = () => {
       createdAt: new Date().toISOString(),
       status: 'received'
     };
-    try {
-      await sendEnquiryEmail(enquiry);
-    } catch {}
     let savedLocal = false;
     try {
       saveEnquiryLocal(enquiry);

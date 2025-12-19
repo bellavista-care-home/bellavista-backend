@@ -3,6 +3,7 @@ import json
 import uuid
 import boto3
 import smtplib
+import threading
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from flask import Blueprint, request, jsonify, current_app
@@ -13,36 +14,68 @@ from .image_processor import ImageProcessor
 api_bp = Blueprint('api', __name__)
 s3_bucket = os.environ.get('S3_BUCKET')
 
-def send_email(to_emails, subject, body):
-    sender_email = os.environ.get('MAIL_USERNAME')
-    sender_password = os.environ.get('MAIL_PASSWORD')
-    
-    if not sender_email or not sender_password:
-        print("Email configuration missing (MAIL_USERNAME or MAIL_PASSWORD)")
-        return False
-    
+def send_email_sync(to_emails, subject, body):
     if not isinstance(to_emails, list):
         to_emails = [to_emails]
+
+    # 1. Try AWS SES
+    aws_access = os.environ.get('AWS_ACCESS_KEY_ID')
+    aws_secret = os.environ.get('AWS_SECRET_ACCESS_KEY')
+    sender_email = os.environ.get('MAIL_SENDER') or os.environ.get('MAIL_USERNAME')
+
+    if aws_access and aws_secret and sender_email and os.environ.get('USE_SES', 'false').lower() == 'true':
+        try:
+            client = boto3.client(
+                'ses',
+                aws_access_key_id=aws_access,
+                aws_secret_access_key=aws_secret,
+                region_name=os.environ.get('AWS_REGION', 'eu-west-2')
+            )
+            client.send_email(
+                Source=sender_email,
+                Destination={'ToAddresses': to_emails},
+                Message={
+                    'Subject': {'Data': subject},
+                    'Body': {'Text': {'Data': body}}
+                }
+            )
+            print(f"SES Email sent to {to_emails}")
+            return True
+        except Exception as e:
+            print(f"SES Failed: {e}")
+            # Fallback to SMTP below
+
+    # 2. Fallback to SMTP (Gmail/Others)
+    smtp_user = os.environ.get('MAIL_USERNAME')
+    smtp_pass = os.environ.get('MAIL_PASSWORD')
+    
+    if not smtp_user or not smtp_pass:
+        print("SMTP configuration missing")
+        return False
         
     msg = MIMEMultipart()
-    msg['From'] = sender_email
+    msg['From'] = smtp_user
     msg['To'] = ", ".join(to_emails)
     msg['Subject'] = subject
-    
     msg.attach(MIMEText(body, 'plain'))
     
     try:
         server = smtplib.SMTP('smtp.gmail.com', 587)
         server.starttls()
-        server.login(sender_email, sender_password)
-        text = msg.as_string()
-        server.sendmail(sender_email, to_emails, text)
+        server.login(smtp_user, smtp_pass)
+        server.sendmail(smtp_user, to_emails, msg.as_string())
         server.quit()
-        print(f"Email sent to {to_emails}")
+        print(f"SMTP Email sent to {to_emails}")
         return True
     except Exception as e:
-        print(f"Failed to send email: {e}")
+        print(f"SMTP Failed: {e}")
         return False
+
+def send_email(to_emails, subject, body):
+    # Run email sending in a background thread to not block the API
+    thread = threading.Thread(target=send_email_sync, args=(to_emails, subject, body))
+    thread.start()
+    return True
 
 def upload_file_helper(file_or_path, filename, content_type=None):
     if not s3_bucket:
@@ -670,7 +703,8 @@ def apply_job():
         jobRole=data.get('jobRole'),
         cvUrl=cv_url,
         marketingConsent=data.get('marketingConsent') == 'true',
-        privacyConsent=data.get('privacyConsent') == 'true'
+        privacyConsent=data.get('privacyConsent') == 'true',
+        status='received'
     )
     db.session.add(application)
     db.session.commit()
@@ -691,6 +725,21 @@ CV Link: {cv_url}
         print(f"Error in application email: {e}")
         
     return jsonify({"ok": True, "id": aid}), 201
+
+@api_bp.get('/applications')
+def get_applications():
+    apps = JobApplication.query.order_by(JobApplication.createdAt.desc()).all()
+    return jsonify([{
+        "id": a.id,
+        "vacancyId": a.vacancyId,
+        "firstName": a.firstName,
+        "lastName": a.lastName,
+        "email": a.email,
+        "jobRole": a.jobRole,
+        "cvUrl": a.cvUrl,
+        "status": a.status,
+        "createdAt": a.createdAt.isoformat() if a.createdAt else None
+    } for a in apps])
 
 def to_dict_home(h):
     def parse_json(field):

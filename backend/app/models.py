@@ -105,4 +105,5 @@ class JobApplication(db.Model):
     cvUrl = db.Column(db.Text)
     marketingConsent = db.Column(db.Boolean, default=False)
     privacyConsent = db.Column(db.Boolean, default=False)
+    status = db.Column(db.String(64), default='received')
     createdAt = db.Column(db.DateTime, default=datetime.utcnow)

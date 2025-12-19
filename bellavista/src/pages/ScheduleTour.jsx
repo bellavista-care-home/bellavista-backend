@@ -38,50 +38,18 @@ const ScheduleTour = () => {
       status: 'requested'
     };
     
-    // 1. Send Email via EmailJS (Frontend) - reliable fallback
-    try {
-      await sendBookingEmail(booking);
-    } catch (err) {
-      console.error("EmailJS Error", err);
-    }
-
-    // 2. Send to API (Stores in DB, attempts backend email but might fail if SMTP bad)
+    // 1. Send to API (Stores in DB, attempts backend email)
     try {
       await saveBookingToAPI(booking);
     } catch (err) {
       console.error("API Error", err);
     }
 
-    // 3. Save locally as backup
+    // 2. Save locally as backup
     try {
       saveBookingLocal(booking);
     } catch {}
 
-    // 3. Optional: Direct EmailJS fallback if API fails? 
-    // For now we rely on API for email to ensure admin gets it.
-    // But existing code called sendBookingEmail(booking) which is frontend-based.
-    // The user said "when i booked a tour i got mail...". 
-    // If the frontend was sending it, it would go to whatever is in sendBookingEmail.
-    // Let's check sendBookingEmail in tourService.js.
-    
-    // Wait, the previous code had:
-    // await sendBookingEmail(booking);
-    // saveBookingLocal(booking);
-    // await saveBookingToAPI(booking);
-    
-    // The user's issue is about the API-sent email (since I implemented backend email recently).
-    // If I keep sendBookingEmail(booking), it uses EmailJS from frontend.
-    // Does sendBookingEmail send to both?
-    // In tourService.js: to_email: 'bellavistacarehomegit@gmail.com'. 
-    // It does NOT send to the location admin.
-    
-    // So the email the user received at bellavistacarehomegit@gmail.com might have come from the Frontend EmailJS OR the Backend.
-    // I should probably remove the frontend EmailJS call if the backend is doing it, to avoid duplicates.
-    // OR, if the user relies on EmailJS for the global admin, I should keep it but I need to fix the backend one for the location admin.
-    // BUT, the backend code I wrote DOES send to bellavistacarehomegit@gmail.com too.
-    // So if both run, the global admin gets 2 emails.
-    // I will comment out the frontend email to rely on the backend one, ensuring a single source of truth.
-    
     setLoading(false);
     alert('Tour request submitted. Our team will contact you to confirm your visit.');
     

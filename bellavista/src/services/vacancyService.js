@@ -41,6 +41,18 @@ export async function deleteVacancy(id) {
   return await res.json();
 }
 
+export async function fetchApplications() {
+  if (!API_BASE) return [];
+  try {
+    const res = await fetch(`${API_BASE}/applications`);
+    if (!res.ok) throw new Error('Failed to fetch applications');
+    return await res.json();
+  } catch (err) {
+    console.error(err);
+    return [];
+  }
+}
+
 export async function applyForJob(formData) {
   if (!API_BASE) return null;
   const res = await fetch(`${API_BASE}/apply`, {
