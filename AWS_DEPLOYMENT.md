@@ -96,7 +96,7 @@ Amplify is the easiest way to deploy React apps.
     *   Output directory: `dist`.
 
 3.  **Environment Variables**:
-    *   Add `VITE_API_URL` pointing to your Elastic Beanstalk URL (e.g., `https://bellavista-env.eba-xyz.region.elasticbeanstalk.com`).
+    *   Add `VITE_API_BASE_URL` pointing to your Elastic Beanstalk URL (e.g., `http://bellavista-backend-env.eba-7zhec9xm.eu-west-2.elasticbeanstalk.com/api`).
 
 4.  **Deploy**:
     *   Click "Save and Deploy".
