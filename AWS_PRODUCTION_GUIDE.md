@@ -154,19 +154,39 @@ Before deploying, we need to tell Elastic Beanstalk how to run our app.
     *   *Best Method for you:* Let's use **"Sample application"** first to create the environment. Then we will connect GitHub.
     *   Select **Sample application**.
 5.  **Presets:** Select **Single instance (free tier eligible)**. *Crucial step to avoid costs!*
-6.  **Next** -> **Skip to Review** -> **Submit**.
+6.  **Next**.
+
+**Step 4a: Configure Service Access (First-Time Only)**
+If this is your first time, you will see a screen asking for "Service Role" and "EC2 Instance Profile".
+1.  **Service Role:**
+    *   Select **"Create and use new service role"**.
+    *   (If not available, click **Create role**, follow the defaults, and name it `aws-elasticbeanstalk-service-role`).
+2.  **EC2 Instance Profile:**
+    *   This is the permissions for the server itself.
+    *   Click the **Create role** link next to it (opens a new tab).
+    *   Select **AWS Service** -> **EC2** -> **Next**.
+    *   **Permissions:** Search for and check these 3 boxes:
+        *   `AWSElasticBeanstalkWebTier`
+        *   `AWSElasticBeanstalkWorkerTier`
+        *   `AWSElasticBeanstalkMulticontainerDocker`
+    *   **Next** -> Name it `aws-elasticbeanstalk-ec2-role` -> **Create role**.
+    *   **Go back** to the Elastic Beanstalk tab.
+    *   Click the **Refresh icon** (arrows) next to the dropdown.
+    *   Select your new `aws-elasticbeanstalk-ec2-role`.
+3.  **Next** -> **Skip to Review** -> **Submit**.
     *   *Wait:* This takes about 5-10 minutes. It will turn "Green" (Ok).
 
-**Connect GitHub (Once Environment is Ready):**
-1.  Go to your new Environment (e.g., `Bellavistabackend-env`).
-2.  Click **Upload and deploy**.
-3.  (If available) Click **Deploy** button or configure **CodePipeline** to connect GitHub.
-    *   *Actually, the easiest way with GitHub is AWS CodePipeline.*
-    *   **Let's stick to the simplest manual upload for now:**
-        1.  Zip your project folder.
-        2.  Click **Upload and deploy**.
-        3.  Upload the zip.
-        4.  Deploy.
+### Step 5: Create Deployment Package (Windows Fix)
+**Important:** Windows zip tools often create files that Linux cannot read (backslash issue). Use the provided Python script to create a valid zip file.
+
+1.  Run the script `create_deploy_zip.py`:
+    ```powershell
+    python create_deploy_zip.py
+    ```
+2.  This will create `bellavista_backend_v3_linux.zip`.
+3.  Upload this file to Elastic Beanstalk.
+
+*(Do not use the standard "Send to > Compressed folder" on Windows for Elastic Beanstalk)*
 
 **Setting Environment Variables (CRITICAL):**
 1.  Go to **Configuration** (left menu) -> **Updates, monitoring, and logging**.
@@ -177,9 +197,10 @@ Before deploying, we need to tell Elastic Beanstalk how to run our app.
     *   `DATABASE_URL` = *(Your RDS URL)*
     *   `AWS_ACCESS_KEY_ID` = ...
     *   `AWS_SECRET_ACCESS_KEY` = ...
-    *   `AWS_REGION_NAME` = `us-east-1`
-    *   `S3_BUCKET_NAME` = ...
-    *   `SENDER_EMAIL` = ...
+    *   `AWS_REGION` = `us-east-1`
+    *   `S3_BUCKET` = ...
+    *   `MAIL_SENDER` = ...
+    *   `USE_SES` = `true`
 5.  Click **Apply**.
 
 **The URL:**
@@ -187,39 +208,63 @@ Once green, look for the **Domain** link at the top (e.g., `bellavista.us-east-1
 
 ---
 
-## Phase 6: Deploy Frontend (AWS Amplify)
+### Step 6: Verify Backend Deployment
+1.  In the Elastic Beanstalk dashboard, click the **URL** (it looks like `http://Bellavista-backend-env...elasticbeanstalk.com`).
+    *   Visiting the root `/` might show "Not Found" (this is normal as we only have `/api` routes).
+2.  Add `/api/news` to the end of the URL in your browser.
+    *   Example: `http://Bellavista-backend-env...elasticbeanstalk.com/api/news`
+    *   If you see `[]` or a JSON list, **Congratulations! Your backend is live.**
 
-1.  Go to **AWS Amplify**.
-2.  **Create new app** > **Gen 1** (or Gen 2) > **GitHub**.
-3.  Select your repository and `main` branch.
-4.  **Build settings:**
-    *   Base directory: `bellavista` (IMPORTANT: Amplify needs to know the frontend is in a subfolder).
-    *   Edit the `amplify.yml`:
-        ```yaml
-        version: 1
-        applications:
-          - appRoot: bellavista
-            frontend:
-              phases:
-                preBuild:
-                  commands:
-                    - npm ci
-                build:
-                  commands:
-                    - npm run build
-              artifacts:
-                baseDirectory: dist
-                files:
-                  - '**/*'
-              cache:
-                paths:
-                  - node_modules/**/*
-        ```
-5.  **Environment Variables:**
-    *   `VITE_API_BASE_URL`: The URL from Phase 5 (e.g., `https://xyz.awsapprunner.com/api`).
-    *   (Remove any `VITE_EMAILJS_*` variables as we don't use them anymore).
+### Step 7: Connect Frontend to Backend
+1.  Open `bellavista/.env` in your project.
+2.  Update `VITE_API_BASE_URL` with your new Elastic Beanstalk URL.
+    ```env
+    VITE_API_BASE_URL=http://Bellavista-backend-env.eba-7zhec9xm.eu-west-2.elasticbeanstalk.com/api
+    ```
+    *(Make sure to include `/api` at the end)*
+3.  Restart your local frontend (`npm run dev`) to test it.
 
-6.  **Save and Deploy**.
+### Step 8: Deploy Frontend (AWS Amplify)
+For the best experience, deploy your React frontend to AWS Amplify (it's the "Vercel of AWS").
+
+1.  **Push your code to GitHub** (if not already done).
+2.  Go to **AWS Console** -> Search for **AWS Amplify**.
+3.  Click **Create new app** -> **Host web app** (or "Get Started").
+4.  Select **GitHub** and click **Continue**.
+5.  Authorize AWS to access your GitHub account.
+6.  Select your repository (`production_bellavista_app`) and branch (`main`).
+7.  **IMPORTANT: Build Settings for Subfolder**
+    *   Since your frontend is in the `bellavista` folder, you need to edit the build settings.
+    *   Click **Edit** on the Build settings card.
+    *   Replace the `amplify.yml` with this:
+    ```yaml
+    version: 1
+    applications:
+      - appRoot: bellavista
+        frontend:
+          phases:
+            preBuild:
+              commands:
+                - npm ci
+            build:
+              commands:
+                - npm run build
+          artifacts:
+            baseDirectory: dist
+            files:
+              - '**/*'
+          cache:
+            paths:
+              - node_modules/**/*
+    ```
+8.  **Environment Variables:**
+    *   Click "Advanced settings".
+    *   Add Key: `VITE_API_BASE_URL`
+    *   Value: `http://your-beanstalk-url.eu-west-2.elasticbeanstalk.com/api` (The URL from Step 6).
+9.  Click **Save and Deploy**.
+10. Wait for it to deploy. You will get a public URL (e.g., `https://main.d2...amplifyapp.com`).
+
+**Done! Your full stack app is now on AWS.**
 
 ---
 
