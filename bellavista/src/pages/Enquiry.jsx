@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import '../styles/ScheduleTour.css';
-import { sendEnquiryEmail, saveEnquiryLocal, saveEnquiryToAPI } from '../services/enquiryService';
+import { saveEnquiryLocal, saveEnquiryToAPI } from '../services/enquiryService';
 
 const Enquiry = () => {
   const [formData, setFormData] = useState({

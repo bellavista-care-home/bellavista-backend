@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { sendBookingEmail, saveBookingLocal, saveBookingToAPI } from '../services/tourService';
+import { saveBookingLocal, saveBookingToAPI } from '../services/tourService';
 import '../styles/ScheduleTour.css';
 
 const ScheduleTour = () => {
