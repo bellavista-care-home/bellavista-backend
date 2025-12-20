@@ -1,19 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import emailjs from '@emailjs/browser';
-
-// EmailJS Setup Instructions:
-// 1. Sign up at https://www.emailjs.com/
-// 2. Create an email service (Gmail, Outlook, etc.)
-// 3. Create an email template with variables: {{from_name}}, {{from_email}}, {{phone}}, {{tour_date}}, {{tour_time}}, {{location}}, {{notes}}
-// 4. Replace the serviceId, templateId, and publicKey below with your actual EmailJS credentials
-// 5. For production: Move these to environment variables (see .env.example)
+import { saveBookingToAPI } from '../services/tourService';
 
 const ScheduleTour = () => {
-  // EmailJS configuration - Replace with your actual service details or environment variables
-  const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID || 'your_service_id';
-  const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID || 'your_template_id';
-  const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || 'your_public_key';
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     firstName: '',
@@ -44,33 +33,24 @@ const ScheduleTour = () => {
     setIsSubmitting(true);
 
     try {
-      // EmailJS configuration - Using environment variables for production
-      const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID;
-      const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
-      const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
-
-      if (!serviceId || !templateId || !publicKey) {
-        throw new Error('EmailJS configuration missing. Please check environment variables.');
-      }
-
-      // Prepare email data
-      const emailData = {
-        from_name: `${formData.firstName} ${formData.lastName}`,
-        from_email: formData.email,
+      // Prepare tour data for API
+      const tourData = {
+        name: `${formData.firstName} ${formData.lastName}`,
+        email: formData.email,
         phone: formData.phone,
-        tour_date: formData.tourDate,
-        tour_time: formData.tourTime,
+        preferredDate: formData.tourDate,
+        preferredTime: formData.tourTime,
         location: formData.homeLocation,
-        notes: formData.notes || 'No additional notes',
-        to_email: 'bellavistacarehomegit@gmail.com'
+        message: formData.notes || 'No additional notes',
+        status: 'requested'
       };
 
-      // Send email using EmailJS
-      await emailjs.send(serviceId, templateId, emailData, publicKey);
+      // Send to backend API
+      await saveBookingToAPI(tourData);
 
       setShowSuccess(true);
     } catch (error) {
-      console.error('Email sending failed:', error);
+      console.error('Booking failed:', error);
       alert('Failed to send booking request. Please try again or contact us directly.');
     } finally {
       setIsSubmitting(false);
