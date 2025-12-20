@@ -232,8 +232,10 @@ For the best experience, deploy your React frontend to AWS Amplify (it's the "Ve
 3.  Click **Create new app** -> **Host web app** (or "Get Started").
 4.  Select **GitHub** and click **Continue**.
 5.  Authorize AWS to access your GitHub account.
-6.  Select your repository (`production_bellavista_app`) and branch (`main`).
-7.  **IMPORTANT: Build Settings for Subfolder**
+6.  Select your repository: **`bellavista-backend`** (Important: Select the one we are working on).
+    *   *Note: If you see `bellavista-carehome`, that might be an old repository. Ensure you pick `bellavista-backend`.*
+7.  Select branch: **`master`** (or `dev` if you prefer, I have updated both).
+8.  **IMPORTANT: Build Settings for Subfolder**
     *   Since your frontend is in the `bellavista` folder, you need to edit the build settings.
     *   Click **Edit** on the Build settings card.
     *   Replace the `amplify.yml` with this:
