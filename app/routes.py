@@ -14,6 +14,11 @@ from .image_processor import ImageProcessor
 api_bp = Blueprint('api', __name__)
 s3_bucket = os.environ.get('S3_BUCKET')
 
+@api_bp.route('/', methods=['GET'])
+def health_check():
+    """Health check endpoint for load balancer"""
+    return jsonify({'status': 'ok'}), 200
+
 def send_email_sync(to_emails, subject, body):
     if not isinstance(to_emails, list):
         to_emails = [to_emails]
