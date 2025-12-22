@@ -32,6 +32,13 @@ def create_app(config_name=None):
         db.create_all()
         from .routes import api_bp
         app.register_blueprint(api_bp, url_prefix='/api')
+    
+    @app.route('/', methods=['GET'])
+    def health_check():
+        """Health check endpoint for load balancer"""
+        from flask import jsonify
+        return jsonify({'status': 'ok'}), 200
+    
     @app.route('/uploads/<path:filename>')
     def uploads(filename):
         return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
