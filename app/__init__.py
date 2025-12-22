@@ -18,7 +18,11 @@ def create_app(config_name=None):
 
     allowed_origins = app.config.get('ALLOWED_ORIGINS', '*')
     if isinstance(allowed_origins, str):
-        allowed_origins = allowed_origins.split(',')
+        allowed_origins = [o.strip() for o in allowed_origins.split(',') if o.strip()]
+
+    # Safety: disallow wildcard origins in production unless explicitly overridden
+    if config_name == 'production' and allowed_origins == ['*'] and os.getenv('ALLOW_ANY_ORIGIN', 'false').lower() != 'true':
+        raise RuntimeError('ALLOWED_ORIGINS is set to wildcard in production. Set ALLOWED_ORIGINS env var to the specific allowed origins (comma separated), or set ALLOW_ANY_ORIGIN=true to override.')
 
     CORS(app, resources={r"/api/*": {"origins": allowed_origins}})
     
