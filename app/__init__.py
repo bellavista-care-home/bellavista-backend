@@ -20,11 +20,25 @@ def create_app(config_name=None):
     if isinstance(allowed_origins, str):
         allowed_origins = [o.strip() for o in allowed_origins.split(',') if o.strip()]
 
-    # Relaxed CORS for production to ensure Amplify works immediately
-    if allowed_origins == ['*']:
-        print("Warning: ALLOWED_ORIGINS is set to wildcard (*). This is allowed for public APIs.")
+    # Security: Restrict CORS to production domain and local development
+    # In production, we strictly allow the Amplify domain.
+    allowed_origins = [
+        "https://master.dxv4enxpqrrf6.amplifyapp.com",  # Production Frontend
+        "http://localhost:5173",                       # Local Development
+        "http://127.0.0.1:5173"                        # Local Development IP
+    ]
+    
+    CORS(app, resources={r"/api/*": {"origins": allowed_origins}}, supports_credentials=True)
 
-    CORS(app, resources={r"/api/*": {"origins": "*"}})
+    # Security Headers
+    @app.after_request
+    def add_security_headers(response):
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+        response.headers['X-XSS-Protection'] = '1; mode=block'
+        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+        response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+        return response
     
     db.init_app(app)
     with app.app_context():
