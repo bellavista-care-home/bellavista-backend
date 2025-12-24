@@ -389,7 +389,14 @@ def list_care_enquiries():
 def create_news():
     data = request.form.to_dict()
     files = request.files
-    nid = data.get('id') or data.get('title','').lower().replace(' ','-')[:50] or str(uuid.uuid4())
+    
+    # Generate ID: Use provided ID, or slugify title + random suffix to ensure uniqueness
+    nid = data.get('id')
+    if not nid:
+        base_slug = data.get('title','').lower().replace(' ','-')[:50]
+        # Append random hex to ensure uniqueness (e.g. test-a1b2)
+        nid = f"{base_slug}-{uuid.uuid4().hex[:6]}" if base_slug else str(uuid.uuid4())
+
     main_image_url = data.get('image','')
     if 'image' in files:
         f = files['image']
