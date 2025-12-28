@@ -384,6 +384,25 @@ Location: {enquiry.location}
 Message: {enquiry.message}
 """
         send_email(recipients, subject, body)
+
+        # Send Auto-reply to User
+        if enquiry.email:
+            user_subject = "Enquiry Confirmation - Bellavista Nursing Home"
+            user_body = f"""Dear {enquiry.name},
+
+Thank you for your enquiry regarding {enquiry.location if enquiry.location and enquiry.location != 'Any' else 'our services'}.
+
+We have received your message and our team will get back to you shortly.
+
+Enquiry Details:
+Type: {enquiry.enquiryType}
+Message: {enquiry.message}
+
+Best regards,
+Bellavista Nursing Home Team
+"""
+            send_email([enquiry.email], user_subject, user_body)
+
     except Exception as e:
         print(f"Error in enquiry email notification: {e}")
 
