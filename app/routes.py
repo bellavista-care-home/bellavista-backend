@@ -969,7 +969,7 @@ def seed_homes_route():
             {
                 "id": "bellavista-cardiff",
                 "name": "Bellavista Cardiff",
-                "location": "Cardiff Bay",
+                "location": "",
                 "image": "/HomeImages/preview_cfnh10-1_425x300_acf_cropped.jpg",
                 "badge": "Featured",
                 "description": "A homely and friendly purpose-built Nursing Home with overlooking views of Cardiff Bay waterfront. Situated in a sought-after area, it offers a chic, cosmopolitan atmosphere where residents can enjoy the vibrant surroundings.",
@@ -994,7 +994,7 @@ def seed_homes_route():
             {
                 "id": "bellavista-barry",
                 "name": "Bellavista Barry",
-                "location": "Barry",
+                "location": "",
                 "image": "/HomeImages/preview_b-1_425x300_acf_cropped-2.jpg",
                 "badge": "",
                 "description": "A long-established quality Nursing Home situated in the seaside town of Barry with spectacular views over the Bristol Channel. Running since 2007, we enable elderly people to live as independently as possible.",
@@ -1014,7 +1014,7 @@ def seed_homes_route():
             {
                 "id": "waverley-care-centre",
                 "name": "Waverley Care Centre",
-                "location": "Penarth",
+                "location": "",
                 "image": "/HomeImages/preview_wcc-1_425x300_acf_cropped.jpg",
                 "badge": "",
                 "description": "A family-owned nursing home overlooking the sea and open countryside. We offer a warm, friendly, and professional environment where 'little things make all the difference'.",
@@ -1034,7 +1034,7 @@ def seed_homes_route():
             {
                 "id": "college-fields",
                 "name": "College Fields Nursing Home",
-                "location": "Barry",
+                "location": "",
                 "image": "/HomeImages/preview_cf-1_425x300_acf_cropped.jpg",
                 "badge": "",
                 "description": "Priding ourselves on a homely environment where residents truly feel at home. We combine technically correct nursing care with genuine social interaction and a warm, welcoming atmosphere.",
@@ -1054,7 +1054,7 @@ def seed_homes_route():
             {
                 "id": "baltimore-care-home",
                 "name": "Baltimore Care Home",
-                "location": "Barry",
+                "location": "",
                 "image": "/HomeImages/preview_bch-1_425x300_acf_cropped.jpg",
                 "badge": "",
                 "description": "A \"home from home\" style Young Onset Dementia Nursing 24-hour Care provision. Designed for younger dementia registered persons with stunning views of the Vale of Glamorgan.",
@@ -1074,7 +1074,7 @@ def seed_homes_route():
             {
                 "id": "meadow-vale-cwtch",
                 "name": "Meadow Vale Cwtch",
-                "location": "Cardiff",
+                "location": "",
                 "image": "/HomeImages/preview_mvc-1_425x300_acf_cropped.jpg",
                 "badge": "New",
                 "description": "A specialized dementia care facility providing a safe, supportive, and home-like environment. Our dedicated team focuses on person-centered care to enhance the quality of life for all residents.",
@@ -1089,6 +1089,24 @@ def seed_homes_route():
                 ],
                 "activities": [],
                 "facilitiesList": [{"title": "Dementia Care"}, {"title": "Safe Environment"}, {"title": "Person-Centered"}],
+                "featured": False
+            },
+            {
+                "id": "bellavista-pontypridd",
+                "name": "Bellavista Pontypridd",
+                "location": "",
+                "image": "https://placehold.co/400x300?text=Bellavista+Pontypridd",
+                "badge": "Coming Soon",
+                "description": "Our newest location coming soon to Pontypridd. We are excited to bring our high standards of care to this community.",
+                "heroTitle": "Welcome to Bellavista Pontypridd",
+                "heroSubtitle": "Coming Soon to Pontypridd",
+                "heroBgImage": "https://placehold.co/1300x400?text=Coming+Soon",
+                "heroExpandedDesc": "We are working hard to prepare our new home...",
+                "statsBedrooms": "0",
+                "statsPremier": "0",
+                "teamMembers": [],
+                "activities": [],
+                "facilitiesList": [{"title": "Coming Soon"}, {"title": "Nursing Care"}, {"title": "Dementia Care"}],
                 "featured": False
             }
         ]
