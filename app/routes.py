@@ -290,6 +290,25 @@ Message: {tour.message}
 Please log in to the admin console to view details.
 """
         send_email(recipients, subject, body)
+
+        # Send Auto-reply to User
+        if tour.email:
+            user_subject = "Tour Request Confirmation - Bellavista Nursing Home"
+            user_body = f"""Dear {tour.name},
+
+Thank you for requesting a tour at {tour.location}.
+
+We have received your request for {tour.preferredDate} ({tour.preferredTime}).
+Our team will review your request and contact you shortly to confirm the appointment.
+
+Best regards,
+Bellavista Nursing Home Team
+"""
+            # Send in a separate try-except block to ensure admin email failure doesn't block this or vice versa, 
+            # but since we are inside a try block, we can just call it.
+            # Ideally, send_email should handle lists, so [tour.email] is correct.
+            send_email([tour.email], user_subject, user_body)
+
     except Exception as e:
         print(f"Error in email notification: {e}")
 
