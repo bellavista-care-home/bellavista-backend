@@ -859,7 +859,7 @@ def create_home():
 
 @api_bp.get('/homes')
 def list_homes():
-    homes = Home.query.order_by(Home.createdAt.desc()).all()
+    homes = Home.query.order_by(Home.createdAt.asc()).all()
     return jsonify([to_dict_home(h) for h in homes])
 
 @api_bp.get('/homes/<id>')
@@ -972,7 +972,7 @@ def seed_homes_route():
                 "location": "Cardiff Bay",
                 "image": "/HomeImages/preview_cfnh10-1_425x300_acf_cropped.jpg",
                 "badge": "Featured",
-                "description": "A chic, cosmopolitan atmosphere with views of Cardiff Bay.",
+                "description": "A homely and friendly purpose-built Nursing Home with overlooking views of Cardiff Bay waterfront. Situated in a sought-after area, it offers a chic, cosmopolitan atmosphere where residents can enjoy the vibrant surroundings.",
                 "heroTitle": "Welcome to Bellavista Cardiff",
                 "heroSubtitle": "A chic, cosmopolitan atmosphere with views of Cardiff Bay.",
                 "heroBgImage": "/FrontPageBanner/preview_Home_Banner1_1300x400_acf_cropped.png",
@@ -988,7 +988,7 @@ def seed_homes_route():
                     { "name": "Tania", "role": "Housekeeping In charge", "image": "" }
                 ],
                 "activities": ["Bingo", "Trips out", "Gardening"],
-                "facilitiesList": [{"icon": "fas fa-wifi", "title": "Smart TVs & Wifi"}],
+                "facilitiesList": [{"title": "62 Bedrooms"}, {"title": "Ensuite Facilities"}, {"title": "Cinema/Sensory Room"}],
                 "featured": True
             },
             {
@@ -997,7 +997,7 @@ def seed_homes_route():
                 "location": "Barry",
                 "image": "/HomeImages/preview_b-1_425x300_acf_cropped-2.jpg",
                 "badge": "",
-                "description": "Stunning views of Barry Island and the Bristol Channel.",
+                "description": "A long-established quality Nursing Home situated in the seaside town of Barry with spectacular views over the Bristol Channel. Running since 2007, we enable elderly people to live as independently as possible.",
                 "heroTitle": "Welcome to Bellavista Barry",
                 "heroSubtitle": "Stunning views of Barry Island and the Bristol Channel.",
                 "heroBgImage": "/FrontPageBanner/preview_Home_Banner2_1300x400_acf_cropped.png",
@@ -1008,7 +1008,7 @@ def seed_homes_route():
                     { "name": "Jacob George", "role": "Home Manager", "image": "" }
                 ],
                 "activities": ["Arts & Crafts", "Music Therapy"],
-                "facilitiesList": [{"icon": "fas fa-utensils", "title": "Fine Dining"}],
+                "facilitiesList": [{"title": "39 Bedded Home"}, {"title": "Seaside Views"}, {"title": "Cinema Lounge"}],
                 "featured": False
             },
             {
@@ -1017,7 +1017,7 @@ def seed_homes_route():
                 "location": "Penarth",
                 "image": "/HomeImages/preview_wcc-1_425x300_acf_cropped.jpg",
                 "badge": "",
-                "description": "A Victorian property with character and charm.",
+                "description": "A family-owned nursing home overlooking the sea and open countryside. We offer a warm, friendly, and professional environment where 'little things make all the difference'.",
                 "heroTitle": "Welcome to Waverley Care Centre",
                 "heroSubtitle": "A Victorian property with character and charm.",
                 "heroBgImage": "/FrontPageBanner/preview_Home_Banner3_1300x400_acf_cropped.png",
@@ -1028,7 +1028,7 @@ def seed_homes_route():
                     { "name": "Home Manager", "role": "Home Manager", "image": "" }
                 ],
                 "activities": [],
-                "facilitiesList": [],
+                "facilitiesList": [{"title": "129 Registered Places"}, {"title": "General Nursing"}, {"title": "EMI & FMI Care"}],
                 "featured": False
             },
             {
@@ -1037,7 +1037,7 @@ def seed_homes_route():
                 "location": "Barry",
                 "image": "/HomeImages/preview_cf-1_425x300_acf_cropped.jpg",
                 "badge": "",
-                "description": "Surrounded by beautiful gardens and countryside.",
+                "description": "Priding ourselves on a homely environment where residents truly feel at home. We combine technically correct nursing care with genuine social interaction and a warm, welcoming atmosphere.",
                 "heroTitle": "Welcome to College Fields",
                 "heroSubtitle": "Surrounded by beautiful gardens and countryside.",
                 "heroBgImage": "/FrontPageBanner/preview_Home_Banner4_1300x400_acf_cropped.png",
@@ -1048,7 +1048,7 @@ def seed_homes_route():
                     { "name": "Home Manager", "role": "Home Manager", "image": "" }
                 ],
                 "activities": [],
-                "facilitiesList": [],
+                "facilitiesList": [{"title": "Home-cooked Meals"}, {"title": "Personalized Care"}, {"title": "In-house Laundry"}],
                 "featured": False
             },
             {
@@ -1057,7 +1057,7 @@ def seed_homes_route():
                 "location": "Barry",
                 "image": "/HomeImages/preview_bch-1_425x300_acf_cropped.jpg",
                 "badge": "",
-                "description": "A warm, community-focused home in Barry.",
+                "description": "A \"home from home\" style Young Onset Dementia Nursing 24-hour Care provision. Designed for younger dementia registered persons with stunning views of the Vale of Glamorgan.",
                 "heroTitle": "Welcome to Baltimore Care Home",
                 "heroSubtitle": "A warm, community-focused home in Barry.",
                 "heroBgImage": "/FrontPageBanner/preview_Home_Banner5_1300x400_acf_cropped.png",
@@ -1068,7 +1068,7 @@ def seed_homes_route():
                     { "name": "Home Manager", "role": "Home Manager", "image": "" }
                 ],
                 "activities": [],
-                "facilitiesList": [],
+                "facilitiesList": [{"title": "Young Onset Dementia"}, {"title": "9 Bed Capacity"}, {"title": "Nurse-Led Service"}, {"title": "Rural Country Setting"}, {"title": "Respite Service"}],
                 "featured": False
             },
             {
@@ -1077,7 +1077,7 @@ def seed_homes_route():
                 "location": "Cardiff",
                 "image": "/HomeImages/preview_mvc-1_425x300_acf_cropped.jpg",
                 "badge": "New",
-                "description": "Specialized dementia care in a home-like setting.",
+                "description": "A specialized dementia care facility providing a safe, supportive, and home-like environment. Our dedicated team focuses on person-centered care to enhance the quality of life for all residents.",
                 "heroTitle": "Welcome to Meadow Vale Cwtch",
                 "heroSubtitle": "Specialized dementia care in a home-like setting.",
                 "heroBgImage": "/FrontPageBanner/preview_Home_Banner6_1300x400_acf_cropped.png",
@@ -1088,7 +1088,7 @@ def seed_homes_route():
                     { "name": "Home Manager", "role": "Home Manager", "image": "" }
                 ],
                 "activities": [],
-                "facilitiesList": [],
+                "facilitiesList": [{"title": "Dementia Care"}, {"title": "Safe Environment"}, {"title": "Person-Centered"}],
                 "featured": False
             }
         ]
