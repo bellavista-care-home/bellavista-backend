@@ -20,6 +20,10 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     MAX_CONTENT_LENGTH = int(os.getenv('MAX_CONTENT_LENGTH_MB', '20')) * 1024 * 1024
     UPLOAD_FOLDER = os.getenv('UPLOAD_FOLDER', os.path.join(basedir, 'uploads'))
+    
+    # Timeout settings for long-running operations (in seconds)
+    REQUEST_TIMEOUT = int(os.getenv('REQUEST_TIMEOUT', '300'))  # 5 minutes for bulk image uploads
+    GUNICORN_TIMEOUT = int(os.getenv('GUNICORN_TIMEOUT', '300'))
 
 class DevelopmentConfig(Config):
     DEBUG = True

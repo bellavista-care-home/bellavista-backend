@@ -871,53 +871,73 @@ def get_home(id):
 
 @api_bp.put('/homes/<id>')
 def update_home(id):
-    home = Home.query.get(id)
-    if not home:
-        return jsonify({"error": "Not found"}), 404
+    try:
+        print(f"[UPDATE HOME] Starting update for home ID: {id}")
+        home = Home.query.get(id)
+        if not home:
+            return jsonify({"error": "Not found"}), 404
+            
+        data = request.get_json(force=True)
         
-    data = request.get_json(force=True)
-    
-    # Update fields
-    home.name = data.get('homeName', home.name)
-    home.location = data.get('homeLocation', home.location)
-    home.adminEmail = data.get('adminEmail', home.adminEmail)
-    home.image = data.get('homeImage', home.image)
-    home.badge = data.get('homeBadge', home.badge)
-    home.description = data.get('homeDesc', home.description)
-    
-    home.heroTitle = data.get('heroTitle', home.heroTitle)
-    home.heroSubtitle = data.get('heroSubtitle', home.heroSubtitle)
-    home.heroBgImage = data.get('heroBgImage', home.heroBgImage)
-    home.heroExpandedDesc = data.get('heroExpandedDesc', home.heroExpandedDesc)
-    
-    home.statsBedrooms = data.get('statsBedrooms', home.statsBedrooms)
-    home.statsPremier = data.get('statsPremier', home.statsPremier)
-    
-    if 'teamMembers' in data:
-        home.teamMembersJson = json.dumps(data['teamMembers'])
-    if 'teamGalleryImages' in data:
-        home.teamGalleryJson = json.dumps(data['teamGalleryImages'])
+        # Update basic fields
+        print(f"[UPDATE HOME] Updating basic fields...")
+        home.name = data.get('homeName', home.name)
+        home.location = data.get('homeLocation', home.location)
+        home.adminEmail = data.get('adminEmail', home.adminEmail)
+        home.image = data.get('homeImage', home.image)
+        home.badge = data.get('homeBadge', home.badge)
+        home.description = data.get('homeDesc', home.description)
         
-    home.activitiesIntro = data.get('activitiesIntro', home.activitiesIntro)
-    if 'activities' in data:
-        home.activitiesJson = json.dumps(data['activities'])
-    if 'activityImages' in data:
-        home.activityImagesJson = json.dumps(data['activityImages'])
-    home.activitiesModalDesc = data.get('activitiesModalDesc', home.activitiesModalDesc)
-    
-    home.facilitiesIntro = data.get('facilitiesIntro', home.facilitiesIntro)
-    if 'facilitiesList' in data:
-        home.facilitiesListJson = json.dumps(data['facilitiesList'])
-    if 'detailedFacilities' in data:
-        home.detailedFacilitiesJson = json.dumps(data['detailedFacilities'])
-    if 'facilitiesGalleryImages' in data:
-        home.facilitiesGalleryJson = json.dumps(data['facilitiesGalleryImages'])
+        home.heroTitle = data.get('heroTitle', home.heroTitle)
+        home.heroSubtitle = data.get('heroSubtitle', home.heroSubtitle)
+        home.heroBgImage = data.get('heroBgImage', home.heroBgImage)
+        home.heroExpandedDesc = data.get('heroExpandedDesc', home.heroExpandedDesc)
         
-    if 'homeFeatured' in data:
-        home.featured = data['homeFeatured']
+        home.statsBedrooms = data.get('statsBedrooms', home.statsBedrooms)
+        home.statsPremier = data.get('statsPremier', home.statsPremier)
         
-    db.session.commit()
-    return jsonify(to_dict_home(home))
+        # Update team members
+        if 'teamMembers' in data:
+            print(f"[UPDATE HOME] Updating {len(data['teamMembers'])} team members...")
+            home.teamMembersJson = json.dumps(data['teamMembers'])
+        if 'teamGalleryImages' in data:
+            print(f"[UPDATE HOME] Updating {len(data['teamGalleryImages'])} team gallery images...")
+            home.teamGalleryJson = json.dumps(data['teamGalleryImages'])
+            
+        # Update activities
+        home.activitiesIntro = data.get('activitiesIntro', home.activitiesIntro)
+        if 'activities' in data:
+            print(f"[UPDATE HOME] Updating {len(data['activities'])} activities...")
+            home.activitiesJson = json.dumps(data['activities'])
+        if 'activityImages' in data:
+            print(f"[UPDATE HOME] Updating {len(data['activityImages'])} activity images...")
+            home.activityImagesJson = json.dumps(data['activityImages'])
+        home.activitiesModalDesc = data.get('activitiesModalDesc', home.activitiesModalDesc)
+        
+        # Update facilities
+        home.facilitiesIntro = data.get('facilitiesIntro', home.facilitiesIntro)
+        if 'facilitiesList' in data:
+            print(f"[UPDATE HOME] Updating {len(data['facilitiesList'])} facilities list items...")
+            home.facilitiesListJson = json.dumps(data['facilitiesList'])
+        if 'detailedFacilities' in data:
+            print(f"[UPDATE HOME] Updating {len(data['detailedFacilities'])} detailed facilities...")
+            home.detailedFacilitiesJson = json.dumps(data['detailedFacilities'])
+        if 'facilitiesGalleryImages' in data:
+            gallery_count = len(data['facilitiesGalleryImages'])
+            print(f"[UPDATE HOME] Updating {gallery_count} facilities gallery images...")
+            home.facilitiesGalleryJson = json.dumps(data['facilitiesGalleryImages'])
+            
+        if 'homeFeatured' in data:
+            home.featured = data['homeFeatured']
+        
+        print(f"[UPDATE HOME] Committing changes to database...")
+        db.session.commit()
+        print(f"[UPDATE HOME] Successfully updated home ID: {id}")
+        return jsonify(to_dict_home(home))
+    except Exception as e:
+        print(f"[UPDATE HOME ERROR] Failed to update home {id}: {str(e)}")
+        db.session.rollback()
+        return jsonify({"error": f"Failed to update home: {str(e)}"}), 500
 
 @api_bp.delete('/homes/<id>')
 def delete_home(id):
