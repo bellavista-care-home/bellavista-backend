@@ -18,7 +18,8 @@ class Config:
     SECRET_KEY = os.getenv('SECRET_KEY', 'change-me')
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    MAX_CONTENT_LENGTH = int(os.getenv('MAX_CONTENT_LENGTH_MB', '20')) * 1024 * 1024
+    # Increase max content length to 50MB to handle multiple large images
+    MAX_CONTENT_LENGTH = int(os.getenv('MAX_CONTENT_LENGTH_MB', '50')) * 1024 * 1024
     UPLOAD_FOLDER = os.getenv('UPLOAD_FOLDER', os.path.join(basedir, 'uploads'))
     
     # Timeout settings for long-running operations (in seconds)

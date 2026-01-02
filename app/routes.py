@@ -871,16 +871,28 @@ def get_home(id):
 
 @api_bp.put('/homes/<id>')
 def update_home(id):
+    import sys
     try:
-        print(f"[UPDATE HOME] Starting update for home ID: {id}")
+        print(f"[UPDATE HOME] ===== Starting update for home ID: {id} =====", flush=True)
+        
+        # Check request size
+        content_length = request.content_length
+        print(f"[UPDATE HOME] Request size: {content_length} bytes ({content_length / 1024 / 1024:.2f} MB)", flush=True)
+        
         home = Home.query.get(id)
         if not home:
+            print(f"[UPDATE HOME] ERROR: Home not found with ID: {id}", flush=True)
             return jsonify({"error": "Not found"}), 404
-            
+        
+        print(f"[UPDATE HOME] Parsing JSON data...", flush=True)
         data = request.get_json(force=True)
         
+        # Log data size
+        data_keys = list(data.keys())
+        print(f"[UPDATE HOME] Received {len(data_keys)} fields: {', '.join(data_keys)}", flush=True)
+        
         # Update basic fields
-        print(f"[UPDATE HOME] Updating basic fields...")
+        print(f"[UPDATE HOME] Updating basic fields...", flush=True)
         home.name = data.get('homeName', home.name)
         home.location = data.get('homeLocation', home.location)
         home.adminEmail = data.get('adminEmail', home.adminEmail)
@@ -898,46 +910,76 @@ def update_home(id):
         
         # Update team members
         if 'teamMembers' in data:
-            print(f"[UPDATE HOME] Updating {len(data['teamMembers'])} team members...")
+            team_count = len(data['teamMembers'])
+            print(f"[UPDATE HOME] Updating {team_count} team members...", flush=True)
             home.teamMembersJson = json.dumps(data['teamMembers'])
         if 'teamGalleryImages' in data:
-            print(f"[UPDATE HOME] Updating {len(data['teamGalleryImages'])} team gallery images...")
+            gallery_count = len(data['teamGalleryImages'])
+            print(f"[UPDATE HOME] Updating {gallery_count} team gallery images...", flush=True)
             home.teamGalleryJson = json.dumps(data['teamGalleryImages'])
             
         # Update activities
         home.activitiesIntro = data.get('activitiesIntro', home.activitiesIntro)
         if 'activities' in data:
-            print(f"[UPDATE HOME] Updating {len(data['activities'])} activities...")
+            activity_count = len(data['activities'])
+            print(f"[UPDATE HOME] Updating {activity_count} activities...", flush=True)
             home.activitiesJson = json.dumps(data['activities'])
         if 'activityImages' in data:
-            print(f"[UPDATE HOME] Updating {len(data['activityImages'])} activity images...")
+            activity_img_count = len(data['activityImages'])
+            print(f"[UPDATE HOME] Updating {activity_img_count} activity images...", flush=True)
             home.activityImagesJson = json.dumps(data['activityImages'])
         home.activitiesModalDesc = data.get('activitiesModalDesc', home.activitiesModalDesc)
         
         # Update facilities
         home.facilitiesIntro = data.get('facilitiesIntro', home.facilitiesIntro)
         if 'facilitiesList' in data:
-            print(f"[UPDATE HOME] Updating {len(data['facilitiesList'])} facilities list items...")
+            facilities_count = len(data['facilitiesList'])
+            print(f"[UPDATE HOME] Updating {facilities_count} facilities list items...", flush=True)
             home.facilitiesListJson = json.dumps(data['facilitiesList'])
         if 'detailedFacilities' in data:
-            print(f"[UPDATE HOME] Updating {len(data['detailedFacilities'])} detailed facilities...")
+            detailed_count = len(data['detailedFacilities'])
+            print(f"[UPDATE HOME] Updating {detailed_count} detailed facilities...", flush=True)
             home.detailedFacilitiesJson = json.dumps(data['detailedFacilities'])
         if 'facilitiesGalleryImages' in data:
             gallery_count = len(data['facilitiesGalleryImages'])
-            print(f"[UPDATE HOME] Updating {gallery_count} facilities gallery images...")
+            print(f"[UPDATE HOME] Processing {gallery_count} facilities gallery images...", flush=True)
+            
+            # Check if images are too large (base64 encoded)
+            total_size = 0
+            for idx, img in enumerate(data['facilitiesGalleryImages']):
+                if isinstance(img, str):
+                    img_size = len(img)
+                    total_size += img_size
+                    if img_size > 500000:  # > 500KB
+                        print(f"[UPDATE HOME] WARNING: Image {idx+1} is large: {img_size / 1024:.1f}KB", flush=True)
+            
+            print(f"[UPDATE HOME] Total gallery images data size: {total_size / 1024 / 1024:.2f}MB", flush=True)
             home.facilitiesGalleryJson = json.dumps(data['facilitiesGalleryImages'])
+            print(f"[UPDATE HOME] Successfully serialized facilities gallery", flush=True)
             
         if 'homeFeatured' in data:
             home.featured = data['homeFeatured']
         
-        print(f"[UPDATE HOME] Committing changes to database...")
+        print(f"[UPDATE HOME] Committing changes to database...", flush=True)
+        sys.stdout.flush()  # Force flush
         db.session.commit()
-        print(f"[UPDATE HOME] Successfully updated home ID: {id}")
-        return jsonify(to_dict_home(home))
+        print(f"[UPDATE HOME] ===== Successfully updated home ID: {id} =====", flush=True)
+        
+        result = to_dict_home(home)
+        print(f"[UPDATE HOME] Returning response (size: {sys.getsizeof(result)} bytes)", flush=True)
+        return jsonify(result)
+        
     except Exception as e:
-        print(f"[UPDATE HOME ERROR] Failed to update home {id}: {str(e)}")
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"[UPDATE HOME ERROR] ===== FAILED to update home {id} =====", flush=True)
+        print(f"[UPDATE HOME ERROR] Error type: {type(e).__name__}", flush=True)
+        print(f"[UPDATE HOME ERROR] Error message: {str(e)}", flush=True)
+        print(f"[UPDATE HOME ERROR] Full traceback:\n{error_trace}", flush=True)
+        sys.stdout.flush()
+        
         db.session.rollback()
-        return jsonify({"error": f"Failed to update home: {str(e)}"}), 500
+        return jsonify({"error": f"Failed to update home: {str(e)}", "type": type(e).__name__}), 500
 
 @api_bp.delete('/homes/<id>')
 def delete_home(id):
