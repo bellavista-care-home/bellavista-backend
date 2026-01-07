@@ -30,10 +30,6 @@ def create_app(config_name=None):
     from .security_headers import setup_security_headers
     setup_security_headers(app)
 
-    allowed_origins = app.config.get('ALLOWED_ORIGINS', '*')
-    if isinstance(allowed_origins, str):
-        allowed_origins = [o.strip() for o in allowed_origins.split(',') if o.strip()]
-
     # Security: Restrict CORS to production domain and local development
     # In production, we strictly allow the Amplify domain.
     allowed_origins = [
@@ -49,20 +45,25 @@ def create_app(config_name=None):
              "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
              "allow_headers": ["Content-Type", "Authorization"],
              "expose_headers": ["Content-Type"],
+             "supports_credentials": True,
              "max_age": 3600  # Cache preflight for 1 hour
-         }}, 
-         supports_credentials=True)
+         }})
 
-    # Security Headers
+    # Security Headers (applied AFTER CORS to avoid conflicts)
     @app.after_request
     def add_security_headers(response):
-        # Add CORS headers explicitly for error responses
+        # Don't override CORS headers that were already set
         origin = request.headers.get('Origin')
         if origin in allowed_origins:
-            response.headers['Access-Control-Allow-Origin'] = origin
-            response.headers['Access-Control-Allow-Credentials'] = 'true'
-            response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
-            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+            # Ensure CORS headers are present
+            if 'Access-Control-Allow-Origin' not in response.headers:
+                response.headers['Access-Control-Allow-Origin'] = origin
+            if 'Access-Control-Allow-Credentials' not in response.headers:
+                response.headers['Access-Control-Allow-Credentials'] = 'true'
+            if 'Access-Control-Allow-Methods' not in response.headers:
+                response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+            if 'Access-Control-Allow-Headers' not in response.headers:
+                response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
         
         response.headers['X-Content-Type-Options'] = 'nosniff'
         response.headers['X-Frame-Options'] = 'SAMEORIGIN'
