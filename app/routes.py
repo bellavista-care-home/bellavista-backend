@@ -8,7 +8,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from flask import Blueprint, request, jsonify, current_app
 from . import db
-from .models import ScheduledTour, CareEnquiry, NewsItem, Home, FAQ, Vacancy, JobApplication
+from .models import ScheduledTour, CareEnquiry, NewsItem, Home, FAQ, Vacancy, JobApplication, KioskCheckIn
 from .image_processor import ImageProcessor
 from .auth import login_user, require_auth, require_admin
 from .validators import validate_and_sanitize, validate_news, validate_home, validate_faq, validate_vacancy, create_error_response
@@ -342,6 +342,158 @@ P.S. We look forward to welcoming you!
         traceback.print_exc()
 
     return jsonify({"ok": True, "id": tid}), 201
+
+# ============ KIOSK CHECK-IN ENDPOINTS ============
+
+@api_bp.post('/kiosk/check-in')
+def kiosk_check_in():
+    """
+    Visitor check-in via kiosk
+    Sends confirmation email to visitor and notification to home staff
+    """
+    data = request.get_json(force=True)
+    check_in_id = str(uuid.uuid4())
+    
+    check_in = KioskCheckIn(
+        id=check_in_id,
+        name=data.get('name', ''),
+        email=data.get('email', ''),
+        phone=data.get('phone', ''),
+        location=data.get('location', ''),
+        visitPurpose=data.get('visitPurpose', ''),
+        personVisiting=data.get('personVisiting', ''),
+        notes=data.get('notes', '')
+    )
+    
+    db.session.add(check_in)
+    db.session.commit()
+    
+    # Send Email Notifications
+    try:
+        # Find home to get admin email
+        location = data.get('location', '')
+        home = Home.query.filter(Home.name == location).first()
+        
+        # If not found, try fuzzy match
+        if not home and location:
+            home = Home.query.filter(Home.name.ilike(f"%{location}%")).first()
+        
+        home_admin_email = home.adminEmail if home else None
+        print(f"[KIOSK] Check-in at: {location}, Admin Email: {home_admin_email}")
+        
+        # Build recipient list for staff notification
+        main_office_email = "bellavistacarehomegit@gmail.com"
+        staff_recipients = [main_office_email]
+        if home_admin_email and home_admin_email.strip() and home_admin_email != main_office_email:
+            staff_recipients.append(home_admin_email.strip())
+        
+        # Email to staff (Main Office + Home Admin)
+        from datetime import datetime
+        check_in_time = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+        
+        staff_subject = f"🔔 Visitor Check-In - {location}"
+        staff_body = f"""
+=== VISITOR CHECK-IN NOTIFICATION ===
+
+Visitor Information:
+  Name: {check_in.name}
+  Email: {check_in.email}
+  Phone: {check_in.phone}
+
+Check-In Details:
+  Location: {location}
+  Check-In Time: {check_in_time}
+  Purpose of Visit: {check_in.visitPurpose if check_in.visitPurpose else '(Not specified)'}
+  Visiting: {check_in.personVisiting if check_in.personVisiting else '(Not specified)'}
+
+Additional Notes: {check_in.notes if check_in.notes else '(None)'}
+
+---
+Check-In ID: {check_in_id}
+Status: Checked In
+"""
+        send_email_sync(staff_recipients, staff_subject, staff_body)
+        print(f"[KIOSK] Staff notification sent to: {staff_recipients}")
+        
+        # Email to visitor (Thank You)
+        if check_in.email:
+            visitor_subject = "Welcome to Bellavista Care Homes - Check-In Confirmation"
+            visitor_body = f"""
+Dear {check_in.name},
+
+Thank you for visiting Bellavista Care Homes at {location}!
+
+Check-In Confirmation:
+  Date & Time: {check_in_time}
+  Location: {location}
+
+We have registered your check-in. Our staff will ensure you have a wonderful visit.
+
+If you need any assistance during your visit, please don't hesitate to ask our team members.
+
+Thank you for choosing Bellavista Care Homes!
+
+Best regards,
+Bellavista Care Homes Team
+www.bellavistacarehomes.co.uk
+"""
+            send_email_sync([check_in.email], visitor_subject, visitor_body)
+            print(f"[KIOSK] Visitor confirmation sent to: {check_in.email}")
+    
+    except Exception as e:
+        print(f"[ERROR] Kiosk check-in email failed: {e}")
+        import traceback
+        traceback.print_exc()
+    
+    return jsonify({
+        "ok": True,
+        "id": check_in_id,
+        "message": f"Welcome! You have successfully checked in at {data.get('location', 'Bellavista')}.",
+        "checkInTime": check_in.checkInTime.isoformat() if check_in.checkInTime else None
+    }), 201
+
+@api_bp.get('/kiosk/check-ins')
+@require_admin
+def list_kiosk_check_ins():
+    """Get all kiosk check-ins (admin only)"""
+    location = request.args.get('location')
+    
+    query = KioskCheckIn.query
+    if location:
+        query = query.filter(KioskCheckIn.location.ilike(f"%{location}%"))
+    
+    items = query.order_by(KioskCheckIn.checkInTime.desc()).all()
+    return jsonify([{
+        "id": i.id,
+        "name": i.name,
+        "email": i.email,
+        "phone": i.phone,
+        "location": i.location,
+        "visitPurpose": i.visitPurpose,
+        "personVisiting": i.personVisiting,
+        "checkInTime": i.checkInTime.isoformat(),
+        "status": i.status,
+        "notes": i.notes
+    } for i in items])
+
+@api_bp.post('/kiosk/check-out/<check_in_id>')
+def kiosk_check_out(check_in_id):
+    """Mark visitor as checked out"""
+    from datetime import datetime
+    
+    check_in = KioskCheckIn.query.get(check_in_id)
+    if not check_in:
+        return jsonify({"error": "Check-in record not found"}), 404
+    
+    check_in.checkOutTime = datetime.utcnow()
+    check_in.status = 'checked-out'
+    db.session.commit()
+    
+    return jsonify({
+        "ok": True,
+        "message": "Thank you for visiting! Safe travels.",
+        "checkOutTime": check_in.checkOutTime.isoformat()
+    }), 200
 
 @api_bp.get('/scheduled-tours')
 def list_scheduled_tours():
