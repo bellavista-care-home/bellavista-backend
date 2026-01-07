@@ -965,6 +965,9 @@ def update_home(id):
         db.session.commit()
         print(f"[UPDATE HOME] ===== Successfully updated home ID: {id} =====", flush=True)
         
+        # Invalidate cache after successful update
+        invalidate_homes_cache()
+        
         result = to_dict_home(home)
         print(f"[UPDATE HOME] Returning response (size: {sys.getsizeof(result)} bytes)", flush=True)
         return jsonify(result)
@@ -988,7 +991,13 @@ def delete_home(id):
         return jsonify({"error": "Not found"}), 404
     db.session.delete(home)
     db.session.commit()
+    # Invalidate cache after deletion
+    invalidate_homes_cache()
     return jsonify({"ok": True})
+
+def invalidate_homes_cache():
+    """Invalidate homes cache (frontend will auto-refresh on next request)"""
+    print("[CACHE] Homes cache invalidated - frontend will fetch fresh data", flush=True)
 
 @api_bp.get('/faqs')
 def list_faqs():
