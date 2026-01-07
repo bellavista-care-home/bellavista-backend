@@ -19,7 +19,7 @@ api_bp = Blueprint('api', __name__)
 s3_bucket = os.environ.get('S3_BUCKET')
 
 # Handle CORS preflight requests
-@api_bp.options('/<path:path>')
+@api_bp.route('/<path:path>', methods=['OPTIONS'])
 def handle_preflight(path):
     """Handle CORS preflight requests"""
     return '', 204
