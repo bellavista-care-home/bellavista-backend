@@ -263,7 +263,7 @@ def create_scheduled_tour():
     db.session.add(tour)
     db.session.commit()
 
-    # Send Email Notification
+    # Send Email Notifications
     try:
         # Find home to get admin email
         print(f"DEBUG: Processing tour for location: {tour.location}")
@@ -273,48 +273,73 @@ def create_scheduled_tour():
         if not home and tour.location:
             home = Home.query.filter(Home.name.ilike(f"%{tour.location}%")).first()
             
-        admin_email = home.adminEmail if home else None
-        print(f"DEBUG: Found home: {home.name if home else 'None'}, Admin Email: {admin_email}")
+        home_admin_email = home.adminEmail if home else None
+        print(f"DEBUG: Found home: {home.name if home else 'None'}, Admin Email: {home_admin_email}")
         
-        recipients = ["bellavistacarehomegit@gmail.com"]
-        if admin_email and admin_email.strip() and admin_email not in recipients:
-            recipients.append(admin_email.strip())
+        # Build recipient list for admin notifications
+        # Main office email + respective home email
+        main_office_email = "bellavistacarehomegit@gmail.com"
+        admin_recipients = [main_office_email]
+        if home_admin_email and home_admin_email.strip() and home_admin_email != main_office_email:
+            admin_recipients.append(home_admin_email.strip())
             
-        subject = f"New Tour Request for {tour.location}"
-        body = f"""New Tour Request Received:
+        # Subject and body for admin notification
+        subject = f"New Tour Booking Request - {tour.location}"
+        admin_body = f"""
+=== NEW TOUR BOOKING REQUEST ===
 
-Name: {tour.name}
-Phone: {tour.phone}
-Email: {tour.email}
-Location: {tour.location}
-Preferred Date: {tour.preferredDate}
-Preferred Time: {tour.preferredTime}
-Message: {tour.message}
+Visitor Information:
+  Name: {tour.name}
+  Email: {tour.email}
+  Phone: {tour.phone}
 
-Please log in to the admin console to view details.
+Tour Details:
+  Location: {tour.location}
+  Preferred Date: {tour.preferredDate}
+  Preferred Time: {tour.preferredTime}
+
+Message from Visitor:
+  {tour.message if tour.message else '(No message provided)'}
+
+---
+Please log in to the admin console to view and manage this booking.
+Confirmation Status: {tour.status}
+Booking ID: {tid}
 """
-        send_email(recipients, subject, body)
+        # Send email to admin(s)
+        send_email_sync(admin_recipients, subject, admin_body)
+        print(f"Admin notification sent to: {admin_recipients}")
 
-        # Send Auto-reply to User
+        # Send Thank You Email to Visitor
         if tour.email:
-            user_subject = "Tour Request Confirmation - Bellavista Nursing Home"
-            user_body = f"""Dear {tour.name},
+            visitor_subject = "Thank You for Your Visit Request - Bellavista Care Homes"
+            visitor_body = f"""
+Dear {tour.name},
 
-Thank you for requesting a tour at {tour.location}.
+Thank you for your interest in visiting Bellavista Care Homes at {tour.location}!
 
-We have received your request for {tour.preferredDate} ({tour.preferredTime}).
-Our team will review your request and contact you shortly to confirm the appointment.
+We have received your tour booking request for:
+  📅 Date: {tour.preferredDate}
+  🕐 Time: {tour.preferredTime}
+
+Our team will review your request and contact you shortly at {tour.phone} to confirm your appointment.
+
+In the meantime, if you have any questions, feel free to reach out to us.
 
 Best regards,
-Bellavista Nursing Home Team
+Bellavista Care Homes Team
+www.bellavistacarehomes.co.uk
+
+P.S. We look forward to welcoming you!
 """
-            # Send in a separate try-except block to ensure admin email failure doesn't block this or vice versa, 
-            # but since we are inside a try block, we can just call it.
-            # Ideally, send_email should handle lists, so [tour.email] is correct.
-            send_email([tour.email], user_subject, user_body)
+            send_email_sync([tour.email], visitor_subject, visitor_body)
+            print(f"Thank you email sent to visitor: {tour.email}")
 
     except Exception as e:
-        print(f"Error in email notification: {e}")
+        print(f"[ERROR] Failed to send booking notification emails: {e}")
+        # Don't fail the request if email fails - booking should still be saved
+        import traceback
+        traceback.print_exc()
 
     return jsonify({"ok": True, "id": tid}), 201
 
