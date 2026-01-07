@@ -35,36 +35,26 @@ def create_app(config_name=None):
     allowed_origins = [
         "https://master.dxv4enxpqrrf6.amplifyapp.com",  # Production Frontend
         "http://localhost:5173",                       # Local Development
-        "http://127.0.0.1:5173"                        # Local Development IP
+        "http://127.0.0.1:5173",                       # Local Development IP
+        "http://localhost:3000",                       # Fallback localhost
+        "http://127.0.0.1:3000"                        # Fallback localhost IP
     ]
     
-    # Enable CORS with support for credentials and preflight caching
+    # Enable CORS FIRST before registering routes
+    # Flask-CORS will automatically handle OPTIONS preflight requests
     CORS(app, 
-         resources={r"/api/*": {
-             "origins": allowed_origins,
-             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-             "allow_headers": ["Content-Type", "Authorization"],
-             "expose_headers": ["Content-Type"],
-             "supports_credentials": True,
-             "max_age": 3600  # Cache preflight for 1 hour
-         }})
+         origins=allowed_origins,
+         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+         allow_headers=["Content-Type", "Authorization"],
+         expose_headers=["Content-Type"],
+         supports_credentials=True,
+         max_age=3600)
 
     # Security Headers (applied AFTER CORS to avoid conflicts)
     @app.after_request
     def add_security_headers(response):
-        # Don't override CORS headers that were already set
-        origin = request.headers.get('Origin')
-        if origin in allowed_origins:
-            # Ensure CORS headers are present
-            if 'Access-Control-Allow-Origin' not in response.headers:
-                response.headers['Access-Control-Allow-Origin'] = origin
-            if 'Access-Control-Allow-Credentials' not in response.headers:
-                response.headers['Access-Control-Allow-Credentials'] = 'true'
-            if 'Access-Control-Allow-Methods' not in response.headers:
-                response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
-            if 'Access-Control-Allow-Headers' not in response.headers:
-                response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
-        
+        # Don't override CORS headers that Flask-CORS has already set
+        # Just add the security headers
         response.headers['X-Content-Type-Options'] = 'nosniff'
         response.headers['X-Frame-Options'] = 'SAMEORIGIN'
         response.headers['X-XSS-Protection'] = '1; mode=block'

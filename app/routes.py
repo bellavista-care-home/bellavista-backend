@@ -18,12 +18,6 @@ from .audit_log import log_action, log_login_attempt, log_unauthorized_access, s
 api_bp = Blueprint('api', __name__)
 s3_bucket = os.environ.get('S3_BUCKET')
 
-# Handle CORS preflight requests
-@api_bp.route('/<path:path>', methods=['OPTIONS'])
-def handle_preflight(path):
-    """Handle CORS preflight requests"""
-    return '', 204
-
 def send_email_sync(to_emails, subject, body):
     if not isinstance(to_emails, list):
         to_emails = [to_emails]
