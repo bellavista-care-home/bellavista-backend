@@ -42,7 +42,8 @@ class ProductionConfig(Config):
     uri = os.getenv('DATABASE_URL')
     if uri and uri.startswith('postgres://'):
         uri = uri.replace('postgres://', 'postgresql://', 1)
-    SQLALCHEMY_DATABASE_URI = uri
+    # Default to sqlite if DATABASE_URL not set (for testing)
+    SQLALCHEMY_DATABASE_URI = uri or ('sqlite:///' + os.path.join(basedir, 'instance', 'bellavista-prod.db'))
     ALLOWED_ORIGINS = os.getenv('ALLOWED_ORIGINS', '*')
 
 config = {

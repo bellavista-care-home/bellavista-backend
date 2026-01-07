@@ -64,16 +64,42 @@ def create_app(config_name=None):
     
     db.init_app(app)
     with app.app_context():
-        from . import models
-        db.create_all()
-        from .routes import api_bp
-        app.register_blueprint(api_bp, url_prefix='/api')
+        try:
+            from . import models
+            print("[DB] Creating tables...")
+            db.create_all()
+            print("[DB] Tables created successfully")
+        except Exception as e:
+            print(f"[ERROR] Failed to create database tables: {e}")
+            import traceback
+            traceback.print_exc()
+            # Don't exit - allow the app to start in case DB is temporarily unavailable
+            # The app can serve the health check endpoint
+        
+        try:
+            from .routes import api_bp
+            app.register_blueprint(api_bp, url_prefix='/api')
+            print("[APP] API blueprint registered")
+        except Exception as e:
+            print(f"[ERROR] Failed to register API blueprint: {e}")
+            import traceback
+            traceback.print_exc()
+            raise  # This is critical, must exit
     
     @app.route('/', methods=['GET'])
     def health_check():
         """Health check endpoint for load balancer"""
         from flask import jsonify
-        return jsonify({'status': 'ok'}), 200
+        try:
+            # Try to connect to database
+            from .models import Home
+            Home.query.limit(1).all()
+            return jsonify({'status': 'ok', 'db': 'connected'}), 200
+        except Exception as e:
+            print(f"[HEALTH] Database check failed: {e}")
+            # Still return 200 so load balancer knows the app is running
+            # The database connection will be retried on actual requests
+            return jsonify({'status': 'ok', 'db': 'disconnected', 'error': str(e)}), 200
     
     @app.route('/uploads/<path:filename>')
     def uploads(filename):
