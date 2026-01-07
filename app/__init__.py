@@ -1,5 +1,5 @@
 import os
-from flask import Flask, send_from_directory, request
+from flask import Flask, send_from_directory, request, session
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from config import config
@@ -13,8 +13,22 @@ def create_app(config_name=None):
     app = Flask(__name__)
     app.config.from_object(config[config_name])
     
+    # Set secret key for session management
+    app.config['SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'dev-secret-key-change-in-production')
+    app.config['SESSION_COOKIE_SECURE'] = True  # Only send over HTTPS in production
+    app.config['SESSION_COOKIE_HTTPONLY'] = True  # No JS access to session cookie
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # CSRF protection
+    
     # Ensure upload folder exists
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+    
+    # Setup audit logging
+    from .audit_log import setup_audit_logging
+    setup_audit_logging(app)
+    
+    # Setup security headers
+    from .security_headers import setup_security_headers
+    setup_security_headers(app)
 
     allowed_origins = app.config.get('ALLOWED_ORIGINS', '*')
     if isinstance(allowed_origins, str):

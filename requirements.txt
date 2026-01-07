@@ -3,7 +3,6 @@ flask-cors==4.0.0
 flask-sqlalchemy==3.1.1
 psycopg2-binary
 gunicorn==21.2.0
-gevent==23.9.1
 python-dotenv==1.0.1
 boto3==1.34.0
 Pillow

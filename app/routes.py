@@ -10,6 +10,10 @@ from flask import Blueprint, request, jsonify, current_app
 from . import db
 from .models import ScheduledTour, CareEnquiry, NewsItem, Home, FAQ, Vacancy, JobApplication
 from .image_processor import ImageProcessor
+from .auth import login_user, require_auth, require_admin
+from .validators import validate_and_sanitize, validate_news, validate_home, validate_faq, validate_vacancy, create_error_response
+from .rate_limiter import rate_limit
+from .audit_log import log_action, log_login_attempt, log_unauthorized_access, setup_audit_logging
 
 api_bp = Blueprint('api', __name__)
 s3_bucket = os.environ.get('S3_BUCKET')
@@ -423,15 +427,109 @@ def list_care_enquiries():
         "status": i.status
     } for i in items])
 
+# ============================================================================
+# AUTHENTICATION ENDPOINTS
+# ============================================================================
+
+@api_bp.post('/auth/login')
+@rate_limit(max_attempts=5, window_seconds=900)  # 5 attempts per 15 minutes
+def login():
+    """
+    Authenticate admin user and return JWT token.
+    Rate limited to 5 attempts per 15 minutes per IP.
+    
+    Request body:
+    {
+        "username": "admin",
+        "password": "password"
+    }
+    
+    Response:
+    {
+        "status": "success",
+        "message": "Login successful",
+        "token": "eyJ0eXAiOiJKV1QiLCJhbGc...",
+        "user": {
+            "username": "admin",
+            "role": "admin"
+        }
+    }
+    """
+    try:
+        data = request.get_json()
+        
+        if not data or not data.get('username') or not data.get('password'):
+            log_login_attempt(False, 'missing_credentials')
+            return jsonify({
+                'status': 'error',
+                'message': 'Username and password required'
+            }), 400
+        
+        # Sanitize input
+        username = data['username'].strip() if isinstance(data['username'], str) else ''
+        password = data['password'] if isinstance(data['password'], str) else ''
+        
+        if not username or not password:
+            log_login_attempt(False, 'empty_credentials')
+            return jsonify({
+                'status': 'error',
+                'message': 'Username and password required'
+            }), 400
+        
+        # Authenticate user and get token
+        result = login_user(username, password)
+        
+        if result['status'] == 'error':
+            log_login_attempt(False, 'invalid_credentials')
+            return jsonify(result), 401
+        
+        log_login_attempt(True)
+        return jsonify(result), 200
+    
+    except Exception as e:
+        print(f"[ERROR] Login endpoint error: {str(e)}")
+        log_login_attempt(False, str(e))
+        return jsonify({
+            'status': 'error',
+            'message': 'Login failed'
+        }), 500
+
+@api_bp.post('/auth/logout')
+def logout():
+    """
+    Logout endpoint (client-side token deletion is sufficient).
+    Returns confirmation message.
+    """
+    return jsonify({
+        'status': 'success',
+        'message': 'Logged out successfully'
+    }), 200
+
 @api_bp.post('/news')
+@require_auth
 def create_news():
     data = request.form.to_dict()
     files = request.files
     
+    # Validate required fields
+    validation_data = {
+        'title': data.get('title', ''),
+        'content': data.get('fullDescription', ''),
+        'author': data.get('author', '')
+    }
+    
+    result = validate_and_sanitize(validation_data, validate_news)
+    if not result['valid']:
+        return create_error_response(result['errors'], 400)
+    
+    # Get validated data
+    validated = result['data']
+
+    
     # Generate ID: Use provided ID, or slugify title + random suffix to ensure uniqueness
     nid = data.get('id')
     if not nid:
-        base_slug = data.get('title','').lower().replace(' ','-')[:50]
+        base_slug = validated['title'].lower().replace(' ','-')[:50]
         # Append random hex to ensure uniqueness (e.g. test-a1b2)
         nid = f"{base_slug}-{uuid.uuid4().hex[:6]}" if base_slug else str(uuid.uuid4())
 
@@ -506,6 +604,7 @@ def create_news():
     return jsonify({"ok": True, "id": nid}), 201
 
 @api_bp.put('/news/<id>')
+@require_auth
 def update_news(id):
     item = NewsItem.query.get(id)
     if not item:
@@ -614,6 +713,7 @@ def get_news(id):
     return jsonify(to_dict_news(item))
 
 @api_bp.delete('/news/<id>')
+@require_auth
 def delete_news(id):
     item = NewsItem.query.get(id)
     if not item:
@@ -640,6 +740,7 @@ def list_vacancies():
     } for i in items])
 
 @api_bp.post('/vacancies')
+@require_auth
 def create_vacancy():
     # Support both JSON and multipart/form-data
     if request.content_type and 'multipart/form-data' in request.content_type:
@@ -674,6 +775,7 @@ def create_vacancy():
     return jsonify({"ok": True, "id": vid}), 201
 
 @api_bp.put('/vacancies/<vid>')
+@require_auth
 def update_vacancy(vid):
     vacancy = Vacancy.query.get(vid)
     if not vacancy:
@@ -713,6 +815,7 @@ def update_vacancy(vid):
     return jsonify({"ok": True, "id": vid})
 
 @api_bp.delete('/vacancies/<vid>')
+@require_auth
 def delete_vacancy(vid):
     vacancy = Vacancy.query.get(vid)
     if not vacancy:
@@ -822,6 +925,7 @@ def to_dict_home(h):
     }
 
 @api_bp.post('/homes')
+@require_auth
 def create_home():
     data = request.get_json(force=True)
     hid = data.get('id') or str(uuid.uuid4())
@@ -870,6 +974,7 @@ def get_home(id):
     return jsonify(to_dict_home(home))
 
 @api_bp.put('/homes/<id>')
+@require_auth
 def update_home(id):
     import sys
     try:
@@ -985,6 +1090,7 @@ def update_home(id):
         return jsonify({"error": f"Failed to update home: {str(e)}", "type": type(e).__name__}), 500
 
 @api_bp.delete('/homes/<id>')
+@require_auth
 def delete_home(id):
     home = Home.query.get(id)
     if not home:
@@ -1011,6 +1117,7 @@ def list_faqs():
     } for i in items])
 
 @api_bp.post('/faqs')
+@require_auth
 def create_faq():
     data = request.get_json(force=True)
     fid = data.get('id') or str(uuid.uuid4())
@@ -1025,6 +1132,7 @@ def create_faq():
     return jsonify({"ok": True, "id": fid}), 201
 
 @api_bp.delete('/faqs/<id>')
+@require_auth
 def delete_faq(id):
     item = FAQ.query.get(id)
     if not item:
