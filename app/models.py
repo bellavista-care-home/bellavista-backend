@@ -107,3 +107,15 @@ class JobApplication(db.Model):
     privacyConsent = db.Column(db.Boolean, default=False)
     status = db.Column(db.String(64), default='received')
     createdAt = db.Column(db.DateTime, default=datetime.utcnow)
+class KioskCheckIn(db.Model):
+    id = db.Column(db.String, primary_key=True)
+    name = db.Column(db.String(255), nullable=False)
+    email = db.Column(db.String(255), nullable=False)
+    phone = db.Column(db.String(64))
+    location = db.Column(db.String(128), nullable=False)  # Which home/location
+    visitPurpose = db.Column(db.String(255))  # Why visiting
+    personVisiting = db.Column(db.String(255))  # Who they're visiting
+    checkInTime = db.Column(db.DateTime, default=datetime.utcnow)
+    checkOutTime = db.Column(db.DateTime)
+    status = db.Column(db.String(64), default='checked-in')  # checked-in, checked-out
+    notes = db.Column(db.Text)
