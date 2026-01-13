@@ -18,8 +18,8 @@ class Config:
     SECRET_KEY = os.getenv('SECRET_KEY', 'change-me')
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    # Increase max content length to 50MB to handle multiple large images
-    MAX_CONTENT_LENGTH = int(os.getenv('MAX_CONTENT_LENGTH_MB', '50')) * 1024 * 1024
+    # Max upload size (default 500MB)
+    MAX_CONTENT_LENGTH = int(os.getenv('MAX_CONTENT_LENGTH_MB', '500')) * 1024 * 1024
     UPLOAD_FOLDER = os.getenv('UPLOAD_FOLDER', os.path.join(basedir, 'uploads'))
     
     # Timeout settings for long-running operations (in seconds)
@@ -42,7 +42,15 @@ class ProductionConfig(Config):
     uri = os.getenv('DATABASE_URL')
     if uri and uri.startswith('postgres://'):
         uri = uri.replace('postgres://', 'postgresql://', 1)
-    # Default to sqlite if DATABASE_URL not set (for testing)
+    
+    # In production, require a real database URL and secret key
+    if os.environ.get('FLASK_CONFIG') == 'production':
+        if not uri:
+            raise ValueError("DATABASE_URL is not set in production environment")
+        if os.getenv('SECRET_KEY', 'change-me') == 'change-me':
+             raise ValueError("SECRET_KEY is not set or is default in production environment")
+             
+    # Default to sqlite if DATABASE_URL not set (for testing/dev fallbacks if config name isn't strictly 'production')
     SQLALCHEMY_DATABASE_URI = uri or ('sqlite:///' + os.path.join(basedir, 'instance', 'bellavista-prod.db'))
     ALLOWED_ORIGINS = os.getenv('ALLOWED_ORIGINS', '*')
 

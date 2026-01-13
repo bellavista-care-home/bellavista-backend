@@ -7,7 +7,7 @@ build:
       - pip install -r requirements.txt
 run:
   runtime-version: 3.8
-  command: gunicorn wsgi:app --bind 0.0.0.0:8000 --timeout 300 --workers 2 --threads 4 --worker-class gthread --max-requests 1000 --max-requests-jitter 50 --log-level info
+  command: gunicorn wsgi:app --bind 0.0.0.0:8000 --timeout 900 --workers 2 --threads 4 --worker-class gthread --max-requests 1000 --max-requests-jitter 50 --log-level info
   network:
     port: 8000
   env:

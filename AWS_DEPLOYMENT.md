@@ -72,11 +72,16 @@ Elastic Beanstalk (EB) manages the infrastructure for you.
     *   Install EB CLI (`pip install awsebcli`).
     *   Run `eb init` inside `backend/` folder.
     *   Run `eb create bellavista-env`.
-    *   Set Environment Variables in EB Console (Software configuration):
-        *   `DATABASE_URL`
-        *   `AWS_ACCESS_KEY_ID`
-        *   `AWS_SECRET_ACCESS_KEY`
-        *   `S3_BUCKET_NAME`
+    *   Set Environment Variables in EB Console (Software configuration) OR App Runner Configuration:
+        *   `FLASK_CONFIG`: `production`
+        *   `DATABASE_URL`: `postgresql://...`
+        *   `SECRET_KEY`: [SECURE_RANDOM_STRING]
+        *   `JWT_SECRET_KEY`: [ANOTHER_SECURE_RANDOM_STRING]
+        *   `ADMIN_USERNAME`: [YOUR_ADMIN_USER]
+        *   `ADMIN_PASSWORD`: [YOUR_STRONG_PASSWORD]
+        *   `AWS_ACCESS_KEY_ID`: [YOUR_AWS_KEY]
+        *   `AWS_SECRET_ACCESS_KEY`: [YOUR_AWS_SECRET]
+        *   `S3_BUCKET`: [YOUR_BUCKET_NAME]
 
 ---
 

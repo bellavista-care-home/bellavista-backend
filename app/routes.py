@@ -132,6 +132,16 @@ def upload_file_route():
         if file.filename == '':
             return jsonify({'error': 'No file selected'}), 400
             
+        # Strict File Type Validation (Security)
+        # We must prevent uploading of executable files or scripts
+        ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+        ALLOWED_VIDEO_EXTENSIONS = {'mp4', 'mov', 'webm'}
+        ALLOWED_EXTENSIONS = ALLOWED_IMAGE_EXTENSIONS | ALLOWED_VIDEO_EXTENSIONS
+        
+        ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else ''
+        if ext not in ALLOWED_EXTENSIONS:
+            return jsonify({'error': 'File type not allowed. Only images and videos (mp4, mov, webm) are accepted.'}), 400
+            
         # Use existing helper or save locally
         filename = generate_unique_filename(file.filename)
         upload_folder = current_app.config['UPLOAD_FOLDER']
@@ -141,7 +151,50 @@ def upload_file_route():
         
         filepath = os.path.join(upload_folder, filename)
         file.save(filepath)
+
+        # CRITICAL SECURITY: Verify content type
+        if ext in ALLOWED_IMAGE_EXTENSIONS:
+            # Image Magic Bytes Check
+            try:
+                from PIL import Image
+                with Image.open(filepath) as img:
+                    img.verify() # Verify it's an image
+                    if img.format.lower() not in ['jpeg', 'jpg', 'png', 'gif', 'webp']:
+                         os.remove(filepath)
+                         return jsonify({'error': 'Invalid image format detected (Content Mismatch)'}), 400
+            except Exception as e:
+                os.remove(filepath)
+                print(f"Security Check Failed: {e}")
+                return jsonify({'error': 'Invalid file content. Not a valid image.'}), 400
         
+        elif ext in ALLOWED_VIDEO_EXTENSIONS:
+            # Basic Video Header Check (Magic Bytes)
+            # We check the first few bytes to ensure it matches common video signatures
+            try:
+                with open(filepath, 'rb') as f:
+                    header = f.read(12)
+                    valid_video = False
+                    
+                    # MP4/MOV usually start with ftyp at offset 4
+                    # Common signatures: ....ftypisom, ....ftypmp42, ....ftypqt  
+                    if ext in ['mp4', 'mov']:
+                        if len(header) >= 12 and header[4:8] == b'ftyp':
+                            valid_video = True
+                            
+                    # WebM (Matroska) starts with 1A 45 DF A3
+                    elif ext == 'webm':
+                        if len(header) >= 4 and header[0:4] == b'\x1A\x45\xDF\xA3':
+                            valid_video = True
+                            
+                    if not valid_video:
+                         os.remove(filepath)
+                         return jsonify({'error': 'Invalid video format detected (Content Mismatch)'}), 400
+                         
+            except Exception as e:
+                os.remove(filepath)
+                print(f"Video Security Check Failed: {e}")
+                return jsonify({'error': 'Invalid file content. Not a valid video.'}), 400
+
         # Process if requested
         process_type = request.form.get('process_type', 'none')
         final_filepath = filepath

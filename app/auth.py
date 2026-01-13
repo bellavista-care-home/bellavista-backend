@@ -22,6 +22,14 @@ JWT_EXPIRATION_HOURS = int(os.getenv('JWT_EXPIRATION_HOURS', 1))
 ADMIN_USERNAME = os.getenv('ADMIN_USERNAME', 'admin')
 ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'password')
 
+# Security check: Ensure we don't use defaults in production
+if os.environ.get('FLASK_CONFIG') == 'production':
+    if ADMIN_USERNAME == 'admin' and ADMIN_PASSWORD == 'password':
+        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        print("!! CRITICAL SECURITY WARNING: DEFAULT ADMIN CREDENTIALS IN PRODUCTION !!")
+        print("!! Set ADMIN_USERNAME and ADMIN_PASSWORD environment variables immediately !!")
+        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+
 def generate_token(user_id, username, role='admin', expires_in_hours=JWT_EXPIRATION_HOURS):
     """
     Generate a JWT token for authenticated user.

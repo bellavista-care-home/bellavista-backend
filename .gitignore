@@ -9,6 +9,11 @@ venv/
 .env.*
 !.env.example
 
+# Database
+*.db
+*.sqlite3
+instance/
+
 # Uploads
 uploads/
 

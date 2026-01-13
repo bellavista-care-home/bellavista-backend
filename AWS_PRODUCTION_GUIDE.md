@@ -92,7 +92,26 @@ We will use **Amazon S3** to store uploaded images.
 
 ---
 
-## Phase 4: Email Service (SES)
+## Phase 4.5: App Runner Environment Configuration (CRITICAL SECURITY)
+
+Your application has **strict security enforcement** in production. You **MUST** set the following environment variables in your App Runner service configuration, or the app will **crash on startup** (this is intentional to prevent insecure deployments).
+
+Go to **App Runner** > **Services** > Your Service > **Configuration** > **Configure** > **Environment variables**:
+
+1.  **FLASK_CONFIG**: `production`
+2.  **SECRET_KEY**: Generate a long, random string (e.g., use `openssl rand -hex 32` or a password manager). **DO NOT** use "change-me".
+3.  **JWT_SECRET_KEY**: Generate a *different* long, random string.
+4.  **DATABASE_URL**: `postgresql://username:password@endpoint:5432/dbname` (from RDS Phase).
+5.  **ADMIN_USERNAME**: Your desired admin username (e.g., "bellavista_admin").
+6.  **ADMIN_PASSWORD**: A strong, unique password. **DO NOT** use "password" or "admin".
+7.  **S3_BUCKET**: `bellavista-uploads-prod` (or your bucket name).
+8.  **AWS_ACCESS_KEY_ID**: From IAM setup.
+9.  **AWS_SECRET_ACCESS_KEY**: From IAM setup.
+10. **ALLOWED_ORIGINS**: `https://master.dxv4enxpqrrf6.amplifyapp.com,https://www.bellavistanursinghomes.com` (Comma separated list of your frontend URLs).
+
+**If you fail to set these, the application will refuse to start.**
+
+## Phase 5: Email Service (SES)
 
 We will use **Amazon SES** to send emails reliably.
 
@@ -142,7 +161,7 @@ Ensure your latest code (with the `Dockerfile`) is pushed to your GitHub reposit
 ### **Step 3: Configure Build**
 1.  **Runtime:** Python 3.
 2.  **Build command:** `pip install -r requirements.txt`
-3.  **Start command:** `gunicorn -b 0.0.0.0:8000 wsgi:app`
+3.  **Start command:** `gunicorn wsgi:app --bind 0.0.0.0:8000 --timeout 900 --workers 2 --threads 4 --worker-class gthread`
 4.  **Port:** `8000`.
 5.  **Next**.
 

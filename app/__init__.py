@@ -14,7 +14,14 @@ def create_app(config_name=None):
     app.config.from_object(config[config_name])
     
     # Set secret key for session management
-    app.config['SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'dev-secret-key-change-in-production')
+    # Note: Config object might have already set SECRET_KEY
+    if not app.config.get('SECRET_KEY') or app.config['SECRET_KEY'] == 'change-me':
+        app.config['SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'dev-secret-key-change-in-production')
+    
+    if config_name == 'production':
+        if app.config['SECRET_KEY'] in ['change-me', 'dev-secret-key-change-in-production']:
+             raise ValueError("CRITICAL SECURITY ERROR: Weak SECRET_KEY in production. Set JWT_SECRET_KEY or SECRET_KEY env var.")
+
     app.config['SESSION_COOKIE_SECURE'] = True  # Only send over HTTPS in production
     app.config['SESSION_COOKIE_HTTPONLY'] = True  # No JS access to session cookie
     app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # CSRF protection
