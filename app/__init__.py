@@ -45,6 +45,8 @@ def create_app(config_name=None):
     # Security: Restrict CORS to production domain and local development
     # In production, we strictly allow the Amplify domain.
     allowed_origins = [
+        "https://www.bellavistanursinghomes.com",      # Custom Domain
+        "https://bellavistanursinghomes.com",          # Custom Domain (no-www)
         "https://master.dxv4enxpqrrf6.amplifyapp.com",  # Production Frontend
         "http://localhost:5173",                       # Local Development
         "http://127.0.0.1:5173",                       # Local Development IP
