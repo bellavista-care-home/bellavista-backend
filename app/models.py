@@ -119,3 +119,13 @@ class KioskCheckIn(db.Model):
     checkOutTime = db.Column(db.DateTime)
     status = db.Column(db.String(64), default='checked-in')  # checked-in, checked-out
     notes = db.Column(db.Text)
+
+class Review(db.Model):
+    id = db.Column(db.String, primary_key=True)
+    location = db.Column(db.String(255), nullable=False)  # Home name or 'Bellavista Nursing Homes'
+    name = db.Column(db.String(255), nullable=False)
+    email = db.Column(db.String(255), nullable=False)
+    rating = db.Column(db.Integer, nullable=False)
+    reviewText = db.Column(db.Text, nullable=False)
+    source = db.Column(db.String(64), default='website')  # website, kiosk, imported, etc.
+    createdAt = db.Column(db.DateTime, default=datetime.utcnow)

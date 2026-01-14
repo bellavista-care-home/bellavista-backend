@@ -159,6 +159,38 @@ def validate_vacancy(data):
     
     return errors
 
+def validate_review(data):
+    errors = []
+
+    if not data.get('name') or not isinstance(data.get('name'), str):
+        errors.append('Name is required and must be a string')
+    elif len(data['name']) > MAX_NAME_LENGTH or len(data['name']) < 2:
+        errors.append(f'Name must be between 2 and {MAX_NAME_LENGTH} characters')
+
+    if not data.get('email') or not isinstance(data.get('email'), str):
+        errors.append('Email is required and must be a string')
+    elif not is_valid_email(data['email']):
+        errors.append('Invalid email format')
+
+    if not data.get('location') or not isinstance(data.get('location'), str):
+        errors.append('Location is required and must be a string')
+    elif len(data['location']) > MAX_NAME_LENGTH or len(data['location']) < 2:
+        errors.append(f'Location must be between 2 and {MAX_NAME_LENGTH} characters')
+
+    try:
+        rating = int(data.get('rating', 0))
+    except (TypeError, ValueError):
+        rating = 0
+    if rating < 1 or rating > 5:
+        errors.append('Rating must be an integer between 1 and 5')
+
+    if not data.get('review') or not isinstance(data.get('review'), str):
+        errors.append('Review is required and must be a string')
+    elif len(data['review']) > MAX_TEXT_LENGTH or len(data['review']) < 10:
+        errors.append(f'Review must be between 10 and {MAX_TEXT_LENGTH} characters')
+
+    return errors
+
 def validate_and_sanitize(data, validator_func):
     """Validate and sanitize data"""
     if not isinstance(data, dict):

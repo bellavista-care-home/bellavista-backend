@@ -8,10 +8,10 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from flask import Blueprint, request, jsonify, current_app
 from . import db
-from .models import ScheduledTour, CareEnquiry, NewsItem, Home, FAQ, Vacancy, JobApplication, KioskCheckIn
+from .models import ScheduledTour, CareEnquiry, NewsItem, Home, FAQ, Vacancy, JobApplication, KioskCheckIn, Review
 from .image_processor import ImageProcessor
 from .auth import login_user, require_auth, require_admin
-from .validators import validate_and_sanitize, validate_news, validate_home, validate_faq, validate_vacancy, create_error_response
+from .validators import validate_and_sanitize, validate_news, validate_home, validate_faq, validate_vacancy, validate_review, create_error_response
 from .rate_limiter import rate_limit
 from .audit_log import log_action, log_login_attempt, log_unauthorized_access, setup_audit_logging
 
@@ -197,6 +197,7 @@ def upload_file_route():
 
         # Process if requested
         process_type = request.form.get('process_type', 'none')
+
         final_filepath = filepath
         final_filename = filename
         processed = False
@@ -272,6 +273,67 @@ def upload_file_route():
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+def to_dict_review(r):
+    return {
+        "id": r.id,
+        "location": r.location,
+        "name": r.name,
+        "rating": r.rating,
+        "review": r.reviewText,
+        "source": r.source,
+        "createdAt": r.createdAt.isoformat() if r.createdAt else None
+    }
+
+@api_bp.post('/reviews')
+@rate_limit(max_requests=10, window_seconds=3600)
+def create_review():
+    data = request.get_json(force=True)
+    result = validate_and_sanitize(data, validate_review)
+    if not result['valid']:
+        return create_error_response(result['errors'], 400)
+
+    cleaned = result['data']
+    rid = str(uuid.uuid4())
+
+    review = Review(
+        id=rid,
+        location=cleaned.get('location'),
+        name=cleaned.get('name'),
+        email=cleaned.get('email'),
+        rating=int(cleaned.get('rating')),
+        reviewText=cleaned.get('review'),
+        source=cleaned.get('source') or 'website'
+    )
+
+    db.session.add(review)
+    db.session.commit()
+
+    log_action('create_review', details={'id': rid, 'location': review.location})
+
+    return jsonify({"ok": True, "id": rid}), 201
+
+@api_bp.get('/reviews')
+@require_admin
+def list_reviews():
+    location = request.args.get('location')
+    query = Review.query
+    if location:
+        query = query.filter(Review.location.ilike(f"%{location}%"))
+
+    items = query.order_by(Review.createdAt.desc()).limit(200).all()
+    return jsonify([to_dict_review(r) for r in items])
+
+@api_bp.delete('/reviews/<id>')
+@require_admin
+def delete_review(id):
+    review = Review.query.get(id)
+    if not review:
+        return jsonify({"error": "Not found"}), 404
+    db.session.delete(review)
+    db.session.commit()
+    log_action('delete_review', details={'id': id, 'location': review.location})
+    return jsonify({"ok": True})
 
 def to_dict_news(n):
     gallery = []
