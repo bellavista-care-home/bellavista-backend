@@ -107,9 +107,13 @@ def create_app(config_name=None):
             raise
         
         try:
-            print("[DB] Creating tables...", flush=True)
-            db.create_all()
-            print("[DB] Tables created successfully", flush=True)
+            db_uri = app.config.get('SQLALCHEMY_DATABASE_URI', '')
+            if db_uri.startswith('sqlite:'):
+                print("[DB] Creating tables for SQLite database...", flush=True)
+                db.create_all()
+                print("[DB] Tables created successfully", flush=True)
+            else:
+                print("[DB] Skipping db.create_all() for non-SQLite database", flush=True)
         except Exception as e:
             print(f"[ERROR] Failed to create database tables: {e}", flush=True)
             import traceback

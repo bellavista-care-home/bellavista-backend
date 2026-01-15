@@ -286,7 +286,7 @@ def to_dict_review(r):
     }
 
 @api_bp.post('/reviews')
-@rate_limit(max_requests=10, window_seconds=3600)
+@rate_limit(max_attempts=10, window_seconds=3600)
 def create_review():
     data = request.get_json(force=True)
     result = validate_and_sanitize(data, validate_review)
