@@ -314,7 +314,6 @@ def create_review():
     return jsonify({"ok": True, "id": rid}), 201
 
 @api_bp.get('/reviews')
-@require_admin
 def list_reviews():
     location = request.args.get('location')
     query = Review.query
@@ -323,6 +322,71 @@ def list_reviews():
 
     items = query.order_by(Review.createdAt.desc()).limit(200).all()
     return jsonify([to_dict_review(r) for r in items])
+
+@api_bp.post('/reviews/import-google')
+@require_admin
+def import_google_reviews():
+    """
+    Import reviews from Google Places API.
+    Requires 'place_id' in body.
+    """
+    data = request.get_json(force=True)
+    place_id = data.get('place_id')
+    location_name = data.get('location_name', 'Bellavista Nursing Homes')
+    
+    if not place_id:
+        return jsonify({"error": "place_id is required"}), 400
+        
+    api_key = os.environ.get('GOOGLE_PLACES_API_KEY')
+    if not api_key:
+        return jsonify({"error": "Google Places API Key not configured"}), 500
+        
+    # Google Places Details API URL
+    url = f"https://maps.googleapis.com/maps/api/place/details/json?place_id={place_id}&fields=reviews&key={api_key}"
+    
+    try:
+        import urllib.request
+        with urllib.request.urlopen(url) as response:
+            result = json.loads(response.read().decode())
+            
+        if result.get('status') != 'OK':
+            return jsonify({"error": f"Google API Error: {result.get('status')}", "details": result.get('error_message')}), 400
+            
+        google_reviews = result.get('result', {}).get('reviews', [])
+        imported_count = 0
+        
+        for g_review in google_reviews:
+            # Check if review already exists (naive check by author and text snippet)
+            # A better way would be to store Google's review ID if we updated the model
+            existing = Review.query.filter(
+                Review.name == g_review.get('author_name'),
+                Review.reviewText == g_review.get('text')
+            ).first()
+            
+            if not existing:
+                # Convert Google timestamp (epoch) to datetime
+                import datetime
+                created_at = datetime.datetime.fromtimestamp(g_review.get('time')) if g_review.get('time') else datetime.datetime.utcnow()
+                
+                new_review = Review(
+                    id=str(uuid.uuid4()),
+                    location=location_name,
+                    name=g_review.get('author_name'),
+                    email="google-import@bellavista.com", # Placeholder email
+                    rating=g_review.get('rating'),
+                    reviewText=g_review.get('text'),
+                    source='google',
+                    createdAt=created_at
+                )
+                db.session.add(new_review)
+                imported_count += 1
+                
+        db.session.commit()
+        return jsonify({"ok": True, "imported": imported_count, "total_found": len(google_reviews)})
+        
+    except Exception as e:
+        print(f"Import Error: {e}")
+        return jsonify({"error": str(e)}), 500
 
 @api_bp.delete('/reviews/<id>')
 @require_admin
