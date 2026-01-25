@@ -288,30 +288,32 @@ def to_dict_review(r):
 @api_bp.post('/reviews')
 @rate_limit(max_attempts=10, window_seconds=3600)
 def create_review():
-    data = request.get_json(force=True)
-    result = validate_and_sanitize(data, validate_review)
-    if not result['valid']:
-        return create_error_response(result['errors'], 400)
+    return jsonify({"error": "Direct review submission is disabled"}), 403
 
-    cleaned = result['data']
-    rid = str(uuid.uuid4())
+    # data = request.get_json(force=True)
+    # result = validate_and_sanitize(data, validate_review)
+    # if not result['valid']:
+    #     return create_error_response(result['errors'], 400)
 
-    review = Review(
-        id=rid,
-        location=cleaned.get('location'),
-        name=cleaned.get('name'),
-        email=cleaned.get('email'),
-        rating=int(cleaned.get('rating')),
-        reviewText=cleaned.get('review'),
-        source=cleaned.get('source') or 'website'
-    )
+    # cleaned = result['data']
+    # rid = str(uuid.uuid4())
 
-    db.session.add(review)
-    db.session.commit()
+    # review = Review(
+    #     id=rid,
+    #     location=cleaned.get('location'),
+    #     name=cleaned.get('name'),
+    #     email=cleaned.get('email'),
+    #     rating=int(cleaned.get('rating')),
+    #     reviewText=cleaned.get('review'),
+    #     source=cleaned.get('source') or 'website'
+    # )
 
-    log_action('create_review', details={'id': rid, 'location': review.location})
+    # db.session.add(review)
+    # db.session.commit()
 
-    return jsonify({"ok": True, "id": rid}), 201
+    # log_action('create_review', details={'id': rid, 'location': review.location})
+
+    # return jsonify({"ok": True, "id": rid}), 201
 
 @api_bp.get('/reviews')
 def list_reviews():
@@ -323,16 +325,27 @@ def list_reviews():
     items = query.order_by(Review.createdAt.desc()).limit(200).all()
     return jsonify([to_dict_review(r) for r in items])
 
+from .tasks import LOCATIONS
+
 @api_bp.post('/reviews/import-google')
 @require_admin
 def import_google_reviews():
     """
     Import reviews from Google Places API.
-    Requires 'place_id' in body.
+    Requires 'place_id' OR 'location_name' in body.
     """
     data = request.get_json(force=True)
     place_id = data.get('place_id')
     location_name = data.get('location_name', 'Bellavista Nursing Homes')
+    
+    # If place_id is not provided, look it up from LOCATIONS
+    if not place_id:
+        found_loc = next((loc for loc in LOCATIONS if loc["name"] == location_name), None)
+        if found_loc:
+            place_id = found_loc["place_id"]
+            print(f"DEBUG: Found Place ID for {location_name}: {place_id}")
+        else:
+            return jsonify({"error": f"No Place ID configured for '{location_name}'. Please enter one manually."}), 400
     
     if not place_id:
         return jsonify({"error": "place_id is required"}), 400
@@ -1266,6 +1279,7 @@ def to_dict_home(h):
         "heroExpandedDesc": h.heroExpandedDesc,
         "statsBedrooms": h.statsBedrooms,
         "statsPremier": h.statsPremier,
+        "bannerImages": parse_json(h.bannerImagesJson),
         "teamMembers": parse_json(h.teamMembersJson),
         "teamGalleryImages": parse_json(h.teamGalleryJson),
         "activitiesIntro": h.activitiesIntro,
@@ -1368,6 +1382,11 @@ def update_home(id):
         
         home.statsBedrooms = data.get('statsBedrooms', home.statsBedrooms)
         home.statsPremier = data.get('statsPremier', home.statsPremier)
+        
+        # Update banner images
+        if 'bannerImages' in data:
+            print(f"[UPDATE HOME] Updating {len(data['bannerImages'])} banner images...", flush=True)
+            home.bannerImagesJson = json.dumps(data['bannerImages'])
         
         # Update team members
         if 'teamMembers' in data:

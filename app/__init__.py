@@ -152,6 +152,13 @@ def create_app(config_name=None):
     def uploads(filename):
         return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
     
+    # Initialize Scheduler
+    try:
+        from .tasks import init_scheduler
+        init_scheduler(app)
+    except Exception as e:
+        print(f"[ERROR] Scheduler initialization failed: {e}", flush=True)
+
     print("[APP] Application initialization complete!", flush=True)
     return app
 

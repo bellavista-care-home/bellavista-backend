@@ -28,6 +28,9 @@ class Home(db.Model):
     heroBgImage = db.Column(db.Text)
     heroExpandedDesc = db.Column(db.Text)
     
+    # Scrolling Banner
+    bannerImagesJson = db.Column(db.Text) # List of {url, showOnMain}
+    
     # Stats
     statsBedrooms = db.Column(db.String(64))
     statsPremier = db.Column(db.String(64))
