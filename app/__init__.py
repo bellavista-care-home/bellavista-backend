@@ -112,6 +112,66 @@ def create_app(config_name=None):
             # In a proper production setup, use Flask-Migrate (Alembic)
             # For this setup, we use create_all() which is safe (doesn't overwrite)
             db.create_all()
+            
+            # --- AUTO MIGRATION FOR PRODUCTION ---
+            # Check for missing columns in existing tables and add them
+            # This handles the case where tables exist but are missing newer columns
+            try:
+                from sqlalchemy import text
+                print("[DB] Checking for schema updates...", flush=True)
+                
+                # Check 'home' table for 'bannerImagesJson'
+                with db.engine.connect() as conn:
+                    # Helper to check if column exists
+                    def check_column(table, column):
+                        try:
+                            # Postgres/MySQL compatible check
+                            query = text(f"SELECT column_name FROM information_schema.columns WHERE table_name='{table}' AND column_name='{column}'")
+                            result = conn.execute(query).fetchone()
+                            return result is not None
+                        except Exception:
+                            # Fallback or SQLite
+                            return False
+
+                    # Helper to add column
+                    def add_column(table, column, type_def):
+                        try:
+                            print(f"[DB] Adding missing column {column} to {table}...", flush=True)
+                            conn.execute(text(f'ALTER TABLE "{table}" ADD COLUMN "{column}" {type_def}'))
+                            conn.commit()
+                            print(f"[DB] Added {column} to {table}", flush=True)
+                        except Exception as e:
+                            print(f"[DB] Failed to add column {column}: {e}", flush=True)
+
+                    # List of columns to check/add [table, column, type]
+                    columns_to_check = [
+                        ('home', 'bannerImagesJson', 'TEXT'),
+                        ('home', 'heroExpandedDesc', 'TEXT'),
+                        ('home', 'teamGalleryJson', 'TEXT'),
+                        ('home', 'activityImagesJson', 'TEXT'),
+                        ('home', 'activitiesModalDesc', 'TEXT'),
+                        ('home', 'detailedFacilitiesJson', 'TEXT'),
+                        ('home', 'facilitiesGalleryJson', 'TEXT'),
+                        ('review', 'source', 'VARCHAR(64)')
+                    ]
+
+                    for table, col, dtype in columns_to_check:
+                        # For Postgres (App Runner), we can inspect information_schema
+                        # Note: This is a basic check. For SQLite local dev, create_all handles it if table missing.
+                        # If table exists in SQLite but missing column, this specific query might fail or return False.
+                        # We focus on the Postgres production fix here.
+                        if not check_column(table, col):
+                            # Double check by trying to select it (robust cross-db way)
+                            try:
+                                conn.execute(text(f'SELECT "{col}" FROM "{table}" LIMIT 1'))
+                            except Exception:
+                                # Column likely missing
+                                add_column(table, col, dtype)
+                                
+                print("[DB] Schema update check complete", flush=True)
+            except Exception as e:
+                print(f"[WARNING] Schema migration failed (safely ignored if tables fresh): {e}", flush=True)
+            
             print("[DB] Tables verified/created successfully", flush=True)
         except Exception as e:
             print(f"[ERROR] Failed to create database tables: {e}", flush=True)
