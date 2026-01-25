@@ -646,6 +646,7 @@ www.bellavistacarehomes.co.uk
     }), 201
 
 @api_bp.get('/kiosk/check-ins')
+@require_auth
 @require_admin
 def list_kiosk_check_ins():
     """Get all kiosk check-ins (admin only)"""
