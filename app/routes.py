@@ -1333,8 +1333,12 @@ def create_home():
 
 @api_bp.get('/homes')
 def list_homes():
-    homes = Home.query.order_by(Home.createdAt.asc()).all()
-    return jsonify([to_dict_home(h) for h in homes])
+    try:
+        homes = Home.query.order_by(Home.createdAt.asc()).all()
+        return jsonify([to_dict_home(h) for h in homes])
+    except Exception as e:
+        print(f"[ERROR] list_homes failed: {e}")
+        return jsonify({"error": str(e)}), 500
 
 @api_bp.get('/homes/<id>')
 def get_home(id):
