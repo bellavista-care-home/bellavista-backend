@@ -403,6 +403,7 @@ def import_google_reviews():
         return jsonify({"error": str(e)}), 500
 
 @api_bp.delete('/reviews/<id>')
+@require_auth
 @require_admin
 def delete_review(id):
     review = Review.query.get(id)
@@ -410,7 +411,7 @@ def delete_review(id):
         return jsonify({"error": "Not found"}), 404
     db.session.delete(review)
     db.session.commit()
-    log_action('delete_review', details={'id': id, 'location': review.location})
+    log_action('delete', 'review', id)
     return jsonify({"ok": True})
 
 def to_dict_news(n):
