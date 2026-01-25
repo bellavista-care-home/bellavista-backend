@@ -328,6 +328,7 @@ def list_reviews():
 from .tasks import LOCATIONS
 
 @api_bp.post('/reviews/import-google')
+@require_auth
 @require_admin
 def import_google_reviews():
     """
