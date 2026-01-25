@@ -1291,7 +1291,7 @@ def to_dict_home(h):
         "detailedFacilities": parse_json(h.detailedFacilitiesJson),
         "facilitiesGalleryImages": parse_json(h.facilitiesGalleryJson),
         "homeFeatured": h.featured,
-        "createdAt": h.createdAt.isoformat()
+        "createdAt": h.createdAt.isoformat() if h.createdAt else None
     }
 
 @api_bp.post('/homes')
