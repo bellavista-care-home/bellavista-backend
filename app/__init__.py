@@ -107,13 +107,12 @@ def create_app(config_name=None):
             raise
         
         try:
-            db_uri = app.config.get('SQLALCHEMY_DATABASE_URI', '')
-            if db_uri.startswith('sqlite:'):
-                print("[DB] Creating tables for SQLite database...", flush=True)
-                db.create_all()
-                print("[DB] Tables created successfully", flush=True)
-            else:
-                print("[DB] Skipping db.create_all() for non-SQLite database", flush=True)
+            print("[DB] Checking database tables...", flush=True)
+            # Ensure tables exist for all database types
+            # In a proper production setup, use Flask-Migrate (Alembic)
+            # For this setup, we use create_all() which is safe (doesn't overwrite)
+            db.create_all()
+            print("[DB] Tables verified/created successfully", flush=True)
         except Exception as e:
             print(f"[ERROR] Failed to create database tables: {e}", flush=True)
             import traceback
