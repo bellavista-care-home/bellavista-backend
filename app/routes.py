@@ -351,9 +351,9 @@ def import_google_reviews():
     if not place_id:
         return jsonify({"error": "place_id is required"}), 400
         
-    api_key = os.environ.get('GOOGLE_PLACES_API_KEY')
+    api_key = os.environ.get('GOOGLE_PLACES_API_KEY') or data.get('api_key')
     if not api_key:
-        return jsonify({"error": "Google Places API Key not configured"}), 500
+        return jsonify({"error": "Google Places API Key not configured. Please contact administrator or provide 'api_key' in request."}), 500
         
     # Google Places Details API URL
     url = f"https://maps.googleapis.com/maps/api/place/details/json?place_id={place_id}&fields=reviews&key={api_key}"

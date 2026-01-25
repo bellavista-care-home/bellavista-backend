@@ -65,7 +65,7 @@ def verify_token(token):
         token: JWT token string
     
     Returns:
-        Decoded payload if valid, None otherwise
+        tuple: (payload, error_message)
     """
     try:
         # Remove 'Bearer ' prefix if present
@@ -73,16 +73,16 @@ def verify_token(token):
             token = token[7:]
         
         payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
-        return payload
+        return payload, None
     except jwt.ExpiredSignatureError:
         print("[ERROR] Token has expired")
-        return None
+        return None, "Token has expired"
     except jwt.InvalidTokenError as e:
         print(f"[ERROR] Invalid token: {str(e)}")
-        return None
+        return None, f"Invalid token: {str(e)}"
     except Exception as e:
         print(f"[ERROR] Token verification failed: {str(e)}")
-        return None
+        return None, f"Token verification failed: {str(e)}"
 
 def require_auth(f):
     """
@@ -108,14 +108,18 @@ def require_auth(f):
         
         try:
             # Extract token from "Bearer <token>"
-            token = auth_header.split(' ')[-1]
+            parts = auth_header.split(' ')
+            if len(parts) > 1:
+                token = parts[1]
+            else:
+                token = parts[0]
             
             # Verify token
-            payload = verify_token(token)
+            payload, error = verify_token(token)
             if not payload:
                 return jsonify({
                     'status': 'error',
-                    'message': 'Invalid or expired token'
+                    'message': error or 'Invalid or expired token'
                 }), 401
             
             # Store payload in request for use in route handler
