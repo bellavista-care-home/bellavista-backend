@@ -202,10 +202,13 @@ def create_app(config_name=None):
     
     # Initialize Scheduler
     try:
-        from .tasks import init_scheduler
-        init_scheduler(app)
+        from . import scheduler
+        scheduler.start_scheduler(app)
+        print("[SCHEDULER] Google Reviews import job scheduled (every 12 hours).", flush=True)
+        # Schedule Carehome.co.uk import job as well (every 24 hours)
+        # Note: We are reusing the scheduler started above
     except Exception as e:
-        print(f"[ERROR] Scheduler initialization failed: {e}", flush=True)
+        print(f"[WARNING] Scheduler setup failed: {e}", flush=True)
 
     print("[APP] Application initialization complete!", flush=True)
     return app

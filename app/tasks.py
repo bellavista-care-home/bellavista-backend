@@ -99,32 +99,122 @@ def fetch_and_store_google_reviews(app_context, place_id, location_name):
 
 def run_google_import_job(app):
     """
-    Job to be scheduled.
+    Job that runs periodically to fetch reviews for all locations.
     """
-    print(f"[TASK] Starting scheduled Google Reviews import at {datetime.datetime.utcnow()}")
+    print(f"[TASK] Starting scheduled Google Reviews import at {datetime.datetime.now()}...")
     with app.app_context():
         for loc in LOCATIONS:
-            fetch_and_store_google_reviews(app.app_context(), loc['place_id'], loc['name'])
-    print(f"[TASK] Completed Google Reviews import.")
+            fetch_and_store_google_reviews(app.app_context(), loc["place_id"], loc["name"])
+    print("[TASK] Google Reviews import job finished.")
+
+def run_carehome_import_job(app):
+    """
+    Job that runs periodically to fetch carehome.co.uk reviews for all locations.
+    """
+    print(f"[TASK] Starting scheduled Carehome.co.uk import at {datetime.datetime.now()}...")
+    
+    # Map location names to carehome.co.uk URLs (Same as in routes.py)
+    CAREHOME_URL_MAP = {
+        'Bellavista Barry': 'https://www.carehome.co.uk/carehome.cfm/searchazref/72849',
+        'Bellavista Cardiff': 'https://www.carehome.co.uk/carehome.cfm/searchazref/20006005BELLB',
+        'Waverley Care Centre': 'https://www.carehome.co.uk/carehome.cfm/searchazref/20006005WAVEA',
+        'College Fields Nursing Home': 'https://www.carehome.co.uk/carehome.cfm/searchazref/20006005COLLA',
+        'Baltimore Care Home': 'https://www.carehome.co.uk/carehome.cfm/searchazref/20006005BALTB',
+        'Meadow Vale Cwtch': 'https://www.carehome.co.uk/carehome.cfm/searchazref/20006005MEADF',
+        'Bellavista Nursing Homes': 'https://www.carehome.co.uk/care_search_results.cfm/searchgroup/36152005BELLZ'
+    }
+
+    import requests
+    from bs4 import BeautifulSoup
+    import re
+
+    with app.app_context():
+        for location_name, url in CAREHOME_URL_MAP.items():
+            try:
+                headers = {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                }
+                response = requests.get(url, headers=headers)
+                if response.status_code != 200:
+                    print(f"[TASK] Failed to fetch Carehome page for {location_name}: {response.status_code}")
+                    continue
+
+                soup = BeautifulSoup(response.text, 'html.parser')
+                review_cards = soup.find_all('div', class_='review-row')
+                if not review_cards:
+                    review_cards = soup.select('.review-item, .review-block, [itemprop="review"]')
+
+                imported_count = 0
+                for card in review_cards:
+                    try:
+                        author_tag = card.find(class_='review-author') or card.find(itemprop='author')
+                        author = author_tag.get_text(strip=True) if author_tag else "Anonymous"
+                        
+                        text_tag = card.find(class_='review-body') or card.find(itemprop='reviewBody') or card.find('p')
+                        text = text_tag.get_text(strip=True) if text_tag else ""
+                        
+                        rating = 5
+                        rating_tag = card.find(class_='overall-rating') or card.find(class_='rating-score')
+                        if rating_tag:
+                            try:
+                                rating_text = rating_tag.get_text(strip=True)
+                                rating_match = re.search(r'(\d+(\.\d+)?)', rating_text)
+                                if rating_match:
+                                    rating = float(rating_match.group(1))
+                            except:
+                                pass
+
+                        existing = Review.query.filter(
+                            Review.name == author,
+                            Review.reviewText == text
+                        ).first()
+                        
+                        if not existing and text:
+                            new_review = Review(
+                                id=str(uuid.uuid4()),
+                                location=location_name,
+                                name=author,
+                                email="carehome-import@bellavista.com",
+                                rating=int(round(rating)),
+                                reviewText=text,
+                                source='carehome.co.uk',
+                                createdAt=datetime.datetime.now()
+                            )
+                            db.session.add(new_review)
+                            imported_count += 1
+                    except Exception:
+                        continue
+                
+                if imported_count > 0:
+                    db.session.commit()
+                    print(f"[TASK] Imported {imported_count} Carehome reviews for {location_name}.")
+                else:
+                    print(f"[TASK] No new Carehome reviews for {location_name}.")
+
+            except Exception as e:
+                print(f"[TASK] Error importing Carehome reviews for {location_name}: {e}")
+
+    print("[TASK] Carehome.co.uk import job finished.")
 
 def init_scheduler(app):
-    """
-    Initialize the scheduler and add jobs.
-    """
-    if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
-        # Only start scheduler in production or in the reloader process (not the main process)
-        # This prevents running the job twice in dev mode
-        
+    if not scheduler.running:
         scheduler.init_app(app)
         scheduler.start()
         
-        # Add job to run every 12 hours
+        # Schedule Google Import: Runs every 12 hours
         scheduler.add_job(
             id='google_reviews_import',
             func=run_google_import_job,
             args=[app],
             trigger='interval',
-            hours=12,
-            replace_existing=True
+            hours=12
         )
-        print("[SCHEDULER] Google Reviews import job scheduled (every 12 hours).")
+
+        # Schedule Carehome Import: Runs every 24 hours
+        scheduler.add_job(
+            id='carehome_reviews_import',
+            func=run_carehome_import_job,
+            args=[app],
+            trigger='interval',
+            hours=24
+        )
