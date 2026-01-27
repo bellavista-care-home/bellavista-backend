@@ -137,9 +137,18 @@ def create_app(config_name=None):
                 columns_to_check = [
                     ('home', 'bannerImagesJson', 'TEXT'),
                     ('home', 'heroExpandedDesc', 'TEXT'),
+                    ('home', 'ciwReportUrl', 'TEXT'),
+                    ('home', 'newsletterUrl', 'TEXT'),
+                    ('home', 'statsBedrooms', 'VARCHAR(64)'),
+                    ('home', 'statsPremier', 'VARCHAR(64)'),
+                    ('home', 'teamMembersJson', 'TEXT'),
                     ('home', 'teamGalleryJson', 'TEXT'),
+                    ('home', 'activitiesIntro', 'TEXT'),
+                    ('home', 'activitiesJson', 'TEXT'),
                     ('home', 'activityImagesJson', 'TEXT'),
                     ('home', 'activitiesModalDesc', 'TEXT'),
+                    ('home', 'facilitiesIntro', 'TEXT'),
+                    ('home', 'facilitiesListJson', 'TEXT'),
                     ('home', 'detailedFacilitiesJson', 'TEXT'),
                     ('home', 'facilitiesGalleryJson', 'TEXT'),
                     ('review', 'source', 'VARCHAR(64)')
