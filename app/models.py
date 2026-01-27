@@ -95,7 +95,7 @@ class Event(db.Model):
     category = db.Column(db.String(128))
     createdAt = db.Column(db.DateTime, default=datetime.utcnow)
 
-class NewsItem(db.Model):
+class FAQ(db.Model):
     id = db.Column(db.String, primary_key=True)
     question = db.Column(db.Text, nullable=False)
     answer = db.Column(db.Text, nullable=False)
