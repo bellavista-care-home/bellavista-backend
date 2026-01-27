@@ -28,6 +28,10 @@ class Home(db.Model):
     heroBgImage = db.Column(db.Text)
     heroExpandedDesc = db.Column(db.Text)
     
+    # Documents
+    ciwReportUrl = db.Column(db.Text)
+    newsletterUrl = db.Column(db.Text)
+    
     # Scrolling Banner
     bannerImagesJson = db.Column(db.Text) # List of {url, showOnMain}
     
@@ -80,7 +84,18 @@ class NewsItem(db.Model):
     videoDescription = db.Column(db.Text)
     createdAt = db.Column(db.DateTime, default=datetime.utcnow)
 
-class FAQ(db.Model):
+class Event(db.Model):
+    id = db.Column(db.String, primary_key=True)
+    title = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.Text)
+    date = db.Column(db.String(64), nullable=False) # YYYY-MM-DD
+    time = db.Column(db.String(64))
+    location = db.Column(db.String(255))
+    image = db.Column(db.Text)
+    category = db.Column(db.String(128))
+    createdAt = db.Column(db.DateTime, default=datetime.utcnow)
+
+class NewsItem(db.Model):
     id = db.Column(db.String, primary_key=True)
     question = db.Column(db.Text, nullable=False)
     answer = db.Column(db.Text, nullable=False)

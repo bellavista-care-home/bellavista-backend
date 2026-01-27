@@ -8,7 +8,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from flask import Blueprint, request, jsonify, current_app
 from . import db
-from .models import ScheduledTour, CareEnquiry, NewsItem, Home, FAQ, Vacancy, JobApplication, KioskCheckIn, Review
+from .models import ScheduledTour, CareEnquiry, NewsItem, Home, FAQ, Vacancy, JobApplication, KioskCheckIn, Review, Event
 from .image_processor import ImageProcessor
 from .auth import login_user, require_auth, require_admin
 from .validators import validate_and_sanitize, validate_news, validate_home, validate_faq, validate_vacancy, validate_review, create_error_response
@@ -136,11 +136,12 @@ def upload_file_route():
         # We must prevent uploading of executable files or scripts
         ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
         ALLOWED_VIDEO_EXTENSIONS = {'mp4', 'mov', 'webm'}
-        ALLOWED_EXTENSIONS = ALLOWED_IMAGE_EXTENSIONS | ALLOWED_VIDEO_EXTENSIONS
+        ALLOWED_DOC_EXTENSIONS = {'pdf'}
+        ALLOWED_EXTENSIONS = ALLOWED_IMAGE_EXTENSIONS | ALLOWED_VIDEO_EXTENSIONS | ALLOWED_DOC_EXTENSIONS
         
         ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else ''
         if ext not in ALLOWED_EXTENSIONS:
-            return jsonify({'error': 'File type not allowed. Only images and videos (mp4, mov, webm) are accepted.'}), 400
+            return jsonify({'error': 'File type not allowed. Only images, videos (mp4, mov, webm), and PDFs are accepted.'}), 400
             
         # Use existing helper or save locally
         filename = generate_unique_filename(file.filename)
@@ -194,6 +195,19 @@ def upload_file_route():
                 os.remove(filepath)
                 print(f"Video Security Check Failed: {e}")
                 return jsonify({'error': 'Invalid file content. Not a valid video.'}), 400
+
+        elif ext in ALLOWED_DOC_EXTENSIONS:
+            # Basic PDF Check (Magic Bytes)
+            try:
+                with open(filepath, 'rb') as f:
+                    header = f.read(4)
+                    if header != b'%PDF':
+                         os.remove(filepath)
+                         return jsonify({'error': 'Invalid PDF format detected (Content Mismatch)'}), 400
+            except Exception as e:
+                os.remove(filepath)
+                print(f"PDF Security Check Failed: {e}")
+                return jsonify({'error': 'Invalid file content. Not a valid PDF.'}), 400
 
         # Process if requested
         process_type = request.form.get('process_type', 'none')
@@ -1282,6 +1296,8 @@ def to_dict_home(h):
         "heroSubtitle": h.heroSubtitle,
         "heroBgImage": h.heroBgImage,
         "heroExpandedDesc": h.heroExpandedDesc,
+        "ciwReportUrl": h.ciwReportUrl,
+        "newsletterUrl": h.newsletterUrl,
         "statsBedrooms": h.statsBedrooms,
         "statsPremier": h.statsPremier,
         "bannerImages": parse_json(h.bannerImagesJson),
@@ -1388,6 +1404,9 @@ def update_home(id):
         home.heroSubtitle = data.get('heroSubtitle', home.heroSubtitle)
         home.heroBgImage = data.get('heroBgImage', home.heroBgImage)
         home.heroExpandedDesc = data.get('heroExpandedDesc', home.heroExpandedDesc)
+        
+        home.ciwReportUrl = data.get('ciwReportUrl', home.ciwReportUrl)
+        home.newsletterUrl = data.get('newsletterUrl', home.newsletterUrl)
         
         home.statsBedrooms = data.get('statsBedrooms', home.statsBedrooms)
         home.statsPremier = data.get('statsPremier', home.statsPremier)
@@ -1524,6 +1543,75 @@ def delete_faq(id):
     db.session.delete(item)
     db.session.commit()
     return jsonify({"ok": True})
+
+def to_dict_event(e):
+    return {
+        "id": e.id,
+        "title": e.title,
+        "description": e.description,
+        "date": e.date,
+        "time": e.time,
+        "location": e.location,
+        "image": e.image,
+        "category": e.category,
+        "createdAt": e.createdAt.isoformat() if e.createdAt else None
+    }
+
+@api_bp.get('/events')
+def list_events():
+    events = Event.query.order_by(Event.date.asc()).all()
+    return jsonify([to_dict_event(e) for e in events])
+
+@api_bp.post('/events')
+@require_auth
+def create_event():
+    data = request.get_json(force=True)
+    eid = str(uuid.uuid4())
+    
+    event = Event(
+        id=eid,
+        title=data.get('title', ''),
+        description=data.get('description', ''),
+        date=data.get('date', ''),
+        time=data.get('time', ''),
+        location=data.get('location', ''),
+        image=data.get('image', ''),
+        category=data.get('category', '')
+    )
+    
+    db.session.add(event)
+    db.session.commit()
+    return jsonify({"ok": True, "id": eid}), 201
+
+@api_bp.put('/events/<id>')
+@require_auth
+def update_event(id):
+    event = Event.query.get(id)
+    if not event:
+        return jsonify({"error": "Not found"}), 404
+        
+    data = request.get_json(force=True)
+    event.title = data.get('title', event.title)
+    event.description = data.get('description', event.description)
+    event.date = data.get('date', event.date)
+    event.time = data.get('time', event.time)
+    event.location = data.get('location', event.location)
+    event.image = data.get('image', event.image)
+    event.category = data.get('category', event.category)
+    
+    db.session.commit()
+    return jsonify({"ok": True}), 200
+
+@api_bp.delete('/events/<id>')
+@require_auth
+def delete_event(id):
+    event = Event.query.get(id)
+    if not event:
+        return jsonify({"error": "Not found"}), 404
+        
+    db.session.delete(event)
+    db.session.commit()
+    return jsonify({"ok": True}), 200
 
 @api_bp.route('/seed-homes', methods=['POST', 'GET'])
 def seed_homes_route():
