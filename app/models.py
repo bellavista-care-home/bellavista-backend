@@ -147,3 +147,12 @@ class Review(db.Model):
     reviewText = db.Column(db.Text, nullable=False)
     source = db.Column(db.String(64), default='website')  # website, kiosk, imported, etc.
     createdAt = db.Column(db.DateTime, default=datetime.utcnow)
+
+class ManagementMember(db.Model):
+    id = db.Column(db.String, primary_key=True)
+    name = db.Column(db.String(255), nullable=False)
+    role = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.Text)
+    image = db.Column(db.Text)
+    order = db.Column(db.Integer, default=0)
+    createdAt = db.Column(db.DateTime, default=datetime.utcnow)

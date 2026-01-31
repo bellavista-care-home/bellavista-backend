@@ -8,7 +8,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from flask import Blueprint, request, jsonify, current_app
 from . import db
-from .models import ScheduledTour, CareEnquiry, NewsItem, Home, FAQ, Vacancy, JobApplication, KioskCheckIn, Review, Event
+from .models import ScheduledTour, CareEnquiry, NewsItem, Home, FAQ, Vacancy, JobApplication, KioskCheckIn, Review, Event, ManagementMember
 from .image_processor import ImageProcessor
 from .auth import login_user, require_auth, require_admin
 from .validators import validate_and_sanitize, validate_news, validate_home, validate_faq, validate_vacancy, validate_review, create_error_response
@@ -1814,6 +1814,134 @@ def seed_homes_route():
         db.session.commit()
         return jsonify({'message': f'Successfully seeded/updated {len(homes_data)} homes', 'created': count}), 200
 
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+# =============================================================================
+# MANAGEMENT TEAM ROUTES
+# =============================================================================
+
+@api_bp.route('/management-team', methods=['GET'])
+def get_management_team():
+    try:
+        members = ManagementMember.query.order_by(ManagementMember.order.asc(), ManagementMember.createdAt.desc()).all()
+        return jsonify([{
+            'id': m.id,
+            'name': m.name,
+            'role': m.role,
+            'description': m.description,
+            'image': m.image,
+            'order': m.order
+        } for m in members]), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@api_bp.route('/management-team', methods=['POST'])
+@require_admin
+def create_management_member():
+    try:
+        data = request.get_json()
+        if not data.get('name') or not data.get('role'):
+            return jsonify({'error': 'Name and Role are required'}), 400
+
+        member = ManagementMember(
+            id=str(uuid.uuid4()),
+            name=data['name'],
+            role=data['role'],
+            description=data.get('description', ''),
+            image=data.get('image', ''),
+            order=data.get('order', 0)
+        )
+        
+        db.session.add(member)
+        db.session.commit()
+        
+        return jsonify({'message': 'Member added successfully', 'id': member.id}), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@api_bp.route('/management-team/<id>', methods=['PUT'])
+@require_admin
+def update_management_member(id):
+    try:
+        member = ManagementMember.query.get(id)
+        if not member:
+            return jsonify({'error': 'Member not found'}), 404
+
+        data = request.get_json()
+        
+        if 'name' in data: member.name = data['name']
+        if 'role' in data: member.role = data['role']
+        if 'description' in data: member.description = data['description']
+        if 'image' in data: member.image = data['image']
+        if 'order' in data: member.order = data['order']
+        
+        db.session.commit()
+        return jsonify({'message': 'Member updated successfully'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@api_bp.route('/management-team/<id>', methods=['DELETE'])
+@require_admin
+def delete_management_member(id):
+    try:
+        member = ManagementMember.query.get(id)
+        if not member:
+            return jsonify({'error': 'Member not found'}), 404
+            
+        db.session.delete(member)
+        db.session.commit()
+        return jsonify({'message': 'Member deleted successfully'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@api_bp.route('/management-team/seed', methods=['POST'])
+def seed_management_team():
+    try:
+        # Check if any members exist
+        if ManagementMember.query.first():
+            return jsonify({'message': 'Management team already seeded'}), 200
+
+        team = [
+            {
+                "name": "Helen Randall",
+                "role": "Home Manager",
+                "description": "Dedicated to ensuring the highest standards of care and operational excellence across our homes.",
+                "order": 1
+            },
+            {
+                "name": "Emma Pinnell",
+                "role": "Deputy Manager",
+                "description": "Supporting the management team and staff to deliver person-centred care to all residents.",
+                "order": 2
+            },
+            {
+                "name": "Bellavista Directors",
+                "role": "Directors",
+                "description": "As a family-owned business, the directors are fully involved in the daily management and strategic direction of the homes.",
+                "order": 3
+            }
+        ]
+
+        count = 0
+        for m in team:
+            member = ManagementMember(
+                id=str(uuid.uuid4()),
+                name=m['name'],
+                role=m['role'],
+                description=m['description'],
+                image='', # User can upload images later
+                order=m['order']
+            )
+            db.session.add(member)
+            count += 1
+        
+        db.session.commit()
+        return jsonify({'message': f'Successfully seeded {count} members'}), 201
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
