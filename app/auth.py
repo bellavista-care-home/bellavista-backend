@@ -142,23 +142,33 @@ def require_auth(f):
     return decorated_function
 
 def create_initial_admin():
-    """Create the initial superadmin user if no users exist."""
-    if User.query.count() == 0:
-        print("[AUTH] No users found. Creating initial superadmin from env vars.")
-        try:
-            admin = User(
+    """Ensure the initial superadmin user exists."""
+    try:
+        # Check if the specific admin user exists
+        admin = User.query.filter_by(username=ADMIN_USERNAME).first()
+        
+        if not admin:
+            print(f"[AUTH] Admin user '{ADMIN_USERNAME}' not found. Creating from env vars.")
+            new_admin = User(
                 id=str(uuid.uuid4()),
                 username=ADMIN_USERNAME,
-                password_hash=generate_password_hash(ADMIN_PASSWORD),
+                password_hash=generate_password_hash(ADMIN_PASSWORD, method='pbkdf2:sha256'),
                 role='superadmin',
                 home_id=None
             )
-            db.session.add(admin)
+            db.session.add(new_admin)
             db.session.commit()
             print(f"[AUTH] Created superadmin user: {ADMIN_USERNAME}")
-        except Exception as e:
-            print(f"[AUTH] Failed to create initial admin: {e}")
-            db.session.rollback()
+        else:
+            # Optional: Ensure role is superadmin
+            if admin.role != 'superadmin':
+                admin.role = 'superadmin'
+                db.session.commit()
+                print(f"[AUTH] Updated existing admin user role to superadmin")
+                
+    except Exception as e:
+        print(f"[AUTH] Failed to check/create initial admin: {e}")
+        db.session.rollback()
 
 def login_user(username, password):
     """
