@@ -1481,6 +1481,7 @@ CV Link: {cv_url}
     return jsonify({"ok": True, "id": aid}), 201
 
 @api_bp.get('/applications')
+@require_auth
 def get_applications():
     apps = JobApplication.query.order_by(JobApplication.createdAt.desc()).all()
     return jsonify([{
