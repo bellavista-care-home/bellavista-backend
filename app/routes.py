@@ -1001,7 +1001,7 @@ def create_user():
     new_user = User(
         id=str(uuid.uuid4()),
         username=data.get('username'),
-        password_hash=generate_password_hash(data.get('password')),
+        password_hash=generate_password_hash(data.get('password'), method='pbkdf2:sha256'),
         role=data.get('role', 'home_admin'),
         home_id=data.get('home_id')
     )
@@ -1047,7 +1047,7 @@ def update_user(user_id):
     data = request.get_json()
     
     if 'password' in data and data['password']:
-        user.password_hash = generate_password_hash(data['password'])
+        user.password_hash = generate_password_hash(data['password'], method='pbkdf2:sha256')
         
     if 'role' in data:
         user.role = data['role']
