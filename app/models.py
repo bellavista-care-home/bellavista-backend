@@ -156,3 +156,11 @@ class ManagementMember(db.Model):
     image = db.Column(db.Text)
     order = db.Column(db.Integer, default=0)
     createdAt = db.Column(db.DateTime, default=datetime.utcnow)
+
+class User(db.Model):
+    id = db.Column(db.String, primary_key=True)
+    username = db.Column(db.String(64), unique=True, nullable=False)
+    password_hash = db.Column(db.String(255), nullable=False)
+    role = db.Column(db.String(64), default='home_admin') # 'superadmin' or 'home_admin'
+    home_id = db.Column(db.String, db.ForeignKey('home.id'), nullable=True) # Null for superadmin
+    createdAt = db.Column(db.DateTime, default=datetime.utcnow)

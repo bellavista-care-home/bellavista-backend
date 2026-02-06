@@ -5,12 +5,16 @@ Handles JWT token generation, verification, and role-based access control.
 
 import os
 import jwt
+import uuid
 from datetime import datetime, timedelta
 from functools import wraps
 from flask import request, jsonify, current_app
 from dotenv import load_dotenv
+from werkzeug.security import generate_password_hash, check_password_hash
 from .account_lockout import AccountLockout, check_account_lockout
 from .audit_log import log_login_attempt
+from . import db
+from .models import User
 
 # Load environment variables
 load_dotenv()
@@ -30,14 +34,15 @@ if os.environ.get('FLASK_CONFIG') == 'production':
         print("!! Set ADMIN_USERNAME and ADMIN_PASSWORD environment variables immediately !!")
         print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 
-def generate_token(user_id, username, role='admin', expires_in_hours=JWT_EXPIRATION_HOURS):
+def generate_token(user_id, username, role='admin', home_id=None, expires_in_hours=JWT_EXPIRATION_HOURS):
     """
     Generate a JWT token for authenticated user.
     
     Args:
         user_id: Unique user identifier
         username: Username for logging
-        role: User role (default: 'admin')
+        role: User role ('superadmin' or 'home_admin')
+        home_id: ID of the home (if role is home_admin)
         expires_in_hours: Token expiration time in hours
     
     Returns:
@@ -48,6 +53,7 @@ def generate_token(user_id, username, role='admin', expires_in_hours=JWT_EXPIRAT
             'user_id': user_id,
             'username': username,
             'role': role,
+            'home_id': home_id,
             'iat': datetime.utcnow(),
             'exp': datetime.utcnow() + timedelta(hours=expires_in_hours)
         }
@@ -135,6 +141,25 @@ def require_auth(f):
     
     return decorated_function
 
+def create_initial_admin():
+    """Create the initial superadmin user if no users exist."""
+    if User.query.count() == 0:
+        print("[AUTH] No users found. Creating initial superadmin from env vars.")
+        try:
+            admin = User(
+                id=str(uuid.uuid4()),
+                username=ADMIN_USERNAME,
+                password_hash=generate_password_hash(ADMIN_PASSWORD),
+                role='superadmin',
+                home_id=None
+            )
+            db.session.add(admin)
+            db.session.commit()
+            print(f"[AUTH] Created superadmin user: {ADMIN_USERNAME}")
+        except Exception as e:
+            print(f"[AUTH] Failed to create initial admin: {e}")
+            db.session.rollback()
+
 def login_user(username, password):
     """
     Authenticate user credentials and generate token.
@@ -153,8 +178,13 @@ def login_user(username, password):
         log_login_attempt(False, 'ACCOUNT_LOCKED')
         return lockout_check[0]
     
-    # Validate against environment credentials
-    if username != ADMIN_USERNAME or password != ADMIN_PASSWORD:
+    # Ensure initial admin exists (migration step)
+    create_initial_admin()
+    
+    # Find user in DB
+    user = User.query.filter_by(username=username).first()
+    
+    if not user or not check_password_hash(user.password_hash, password):
         # Record failed attempt
         AccountLockout.record_failed_attempt(username)
         remaining = AccountLockout.get_remaining_attempts(username)
@@ -172,7 +202,12 @@ def login_user(username, password):
     AccountLockout.record_successful_attempt(username)
     
     # Generate token
-    token = generate_token(user_id='1', username=username, role='admin')
+    token = generate_token(
+        user_id=user.id, 
+        username=user.username, 
+        role=user.role, 
+        home_id=user.home_id
+    )
     
     if not token:
         log_login_attempt(False, 'token_generation_failed')
@@ -181,7 +216,7 @@ def login_user(username, password):
             'message': 'Token generation failed'
         }
     
-    print(f"[SECURITY] Successful login for user: {username}")
+    print(f"[SECURITY] Successful login for user: {username} ({user.role})")
     log_login_attempt(True)
     
     return {
@@ -189,22 +224,16 @@ def login_user(username, password):
         'message': 'Login successful',
         'token': token,
         'user': {
-            'username': username,
-            'role': 'admin'
+            'username': user.username,
+            'role': user.role,
+            'homeId': user.home_id
         }
     }
 
 def require_admin(f):
     """
-    Decorator to protect routes that require admin role.
+    Decorator to protect routes that require superadmin role.
     Must be used after @require_auth.
-    
-    Usage:
-        @app.route('/api/admin/users', methods=['GET'])
-        @require_auth
-        @require_admin
-        def get_users():
-            return jsonify({'users': []})
     """
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -214,7 +243,9 @@ def require_admin(f):
                 'message': 'Authentication required'
             }), 401
         
-        if request.auth_payload.get('role') != 'admin':
+        # Check for 'superadmin' role (or legacy 'admin' for backward compat if needed)
+        role = request.auth_payload.get('role')
+        if role != 'superadmin' and role != 'admin':
             return jsonify({
                 'status': 'error',
                 'message': 'Admin access required'
