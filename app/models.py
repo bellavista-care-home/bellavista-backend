@@ -19,6 +19,7 @@ class Home(db.Model):
     location = db.Column(db.String(255))
     adminEmail = db.Column(db.String(255))
     image = db.Column(db.Text)
+    cardImage2 = db.Column(db.Text)
     badge = db.Column(db.String(128))
     description = db.Column(db.Text)
     

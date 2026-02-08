@@ -907,7 +907,7 @@ def list_care_enquiries():
 # ============================================================================
 
 @api_bp.post('/auth/login')
-@rate_limit(max_attempts=5, window_seconds=900)  # 5 attempts per 15 minutes
+@rate_limit(max_attempts=50, window_seconds=900)  # Increased limit for testing
 def login():
     """
     Authenticate admin user and return JWT token.
@@ -1509,6 +1509,7 @@ def to_dict_home(h):
         "homeLocation": h.location,
         "adminEmail": h.adminEmail,
         "homeImage": h.image,
+        "cardImage2": h.cardImage2,
         "homeBadge": h.badge,
         "homeDesc": h.description,
         "heroTitle": h.heroTitle,
@@ -1547,6 +1548,7 @@ def create_home():
         location=data.get('homeLocation', ''),
         adminEmail=data.get('adminEmail', ''),
         image=data.get('homeImage', ''),
+        cardImage2=data.get('cardImage2', ''),
         badge=data.get('homeBadge', ''),
         description=data.get('homeDesc', ''),
         heroTitle=data.get('heroTitle', ''),
@@ -1626,6 +1628,7 @@ def update_home(id):
         home.location = data.get('homeLocation', home.location)
         home.adminEmail = data.get('adminEmail', home.adminEmail)
         home.image = data.get('homeImage', home.image)
+        home.cardImage2 = data.get('cardImage2', home.cardImage2)
         home.badge = data.get('homeBadge', home.badge)
         home.description = data.get('homeDesc', home.description)
         
