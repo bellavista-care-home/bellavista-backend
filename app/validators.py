@@ -89,8 +89,8 @@ def validate_news(data):
     
     if not data.get('content') or not isinstance(data.get('content'), str):
         errors.append('News content is required and must be a string')
-    elif len(data['content']) > MAX_TEXT_LENGTH or len(data['content']) < 10:
-        errors.append(f'News content must be between 10 and {MAX_TEXT_LENGTH} characters')
+    elif len(data['content']) < 10:
+        errors.append(f'News content must be at least 10 characters')
     
     if not data.get('author') or not isinstance(data.get('author'), str):
         errors.append('Author is required and must be a string')
