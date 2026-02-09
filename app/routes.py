@@ -4,6 +4,7 @@ import uuid
 import boto3
 import smtplib
 import threading
+from datetime import datetime
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from flask import Blueprint, request, jsonify, current_app
@@ -601,6 +602,27 @@ def kiosk_check_in():
     )
     
     db.session.add(check_in)
+    
+    # Also create a walk-in entry in scheduled_tours for admin visibility
+    try:
+        from datetime import datetime as dt
+        walk_in_tour = ScheduledTour(
+            id=str(uuid.uuid4()),
+            name=data.get('name', ''),
+            email=data.get('email', ''),
+            phone=data.get('phone', ''),
+            preferredDate=dt.utcnow().strftime('%Y-%m-%d'),
+            preferredTime=dt.utcnow().strftime('%H:%M'),
+            location=data.get('location', ''),
+            message=f"Walk-in Visit: {data.get('visitPurpose', 'General Visit')}",
+            status='walk-in'
+        )
+        db.session.add(walk_in_tour)
+        print(f"[KIOSK] Walk-in tour entry created for: {data.get('name', '')}")
+    except Exception as e:
+        print(f"[WARNING] Failed to create walk-in tour entry: {e}")
+        # Don't fail the main kiosk check-in if tour creation fails
+    
     db.session.commit()
     
     # Send Email Notifications
