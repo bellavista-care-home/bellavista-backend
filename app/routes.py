@@ -17,7 +17,7 @@ from .rate_limiter import rate_limit
 from .audit_log import log_action, log_login_attempt, log_unauthorized_access, setup_audit_logging
 from werkzeug.security import generate_password_hash
 from sqlalchemy import or_, func, literal
-from .models import ScheduledTour, CareEnquiry, NewsItem, Home, FAQ, Vacancy, JobApplication, KioskCheckIn, Review, Event, ManagementMember, User
+from .models import ScheduledTour, CareEnquiry, NewsItem, Home, FAQ, Vacancy, JobApplication, KioskCheckIn, Review, Event, ManagementMember, User, CareService
 
 api_bp = Blueprint('api', __name__)
 s3_bucket = os.environ.get('S3_BUCKET')
@@ -290,6 +290,182 @@ def upload_file_route():
         return jsonify(result), 200
         
     except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# =============================================================================
+# GLOBAL CARE SERVICES ROUTES
+# =============================================================================
+
+@api_bp.route('/care-services', methods=['GET'])
+def get_care_services():
+    try:
+        services = CareService.query.order_by(CareService.order.asc()).all()
+        return jsonify([{
+            'id': s.id,
+            'title': s.title,
+            'description': s.description,
+            'images': json.loads(s.imagesJson) if s.imagesJson else [],
+            'icon': s.icon,
+            'order': s.order,
+            'slug': s.slug,
+            'showOnPage': s.showOnPage if s.showOnPage is not None else True
+        } for s in services]), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@api_bp.route('/care-services', methods=['POST'])
+@require_auth
+@require_admin
+def create_care_service():
+    try:
+        data = request.get_json()
+        if not data.get('title'):
+            return jsonify({'error': 'Title is required'}), 400
+
+        service = CareService(
+            id=str(uuid.uuid4()),
+            title=data['title'],
+            description=data.get('description', ''),
+            imagesJson=json.dumps(data.get('images', [])),
+            icon=data.get('icon', ''),
+            order=data.get('order', 0),
+            slug=data.get('slug', ''),
+            showOnPage=data.get('showOnPage', True)
+        )
+        
+        db.session.add(service)
+        db.session.commit()
+        
+        return jsonify({'message': 'Service added successfully', 'id': service.id}), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@api_bp.route('/care-services/<id>', methods=['PUT'])
+@require_auth
+@require_admin
+def update_care_service(id):
+    try:
+        service = CareService.query.get(id)
+        if not service:
+            return jsonify({'error': 'Service not found'}), 404
+
+        data = request.get_json()
+        
+        if 'title' in data: service.title = data['title']
+        if 'description' in data: service.description = data['description']
+        if 'images' in data: service.imagesJson = json.dumps(data['images'])
+        if 'icon' in data: service.icon = data['icon']
+        if 'order' in data: service.order = data['order']
+        if 'slug' in data: service.slug = data['slug']
+        if 'showOnPage' in data: service.showOnPage = data['showOnPage']
+        
+        db.session.commit()
+        return jsonify({'message': 'Service updated successfully'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@api_bp.route('/care-services/<id>', methods=['DELETE'])
+@require_auth
+@require_admin
+def delete_care_service(id):
+    try:
+        service = CareService.query.get(id)
+        if not service:
+            return jsonify({'error': 'Service not found'}), 404
+            
+        db.session.delete(service)
+        db.session.commit()
+        return jsonify({'message': 'Service deleted successfully'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@api_bp.route('/care-services/seed', methods=['POST'])
+def seed_care_services():
+    try:
+        # Check if services already exist
+        if CareService.query.first():
+            return jsonify({'message': 'Care services already seeded'}), 200
+
+        services = [
+            {
+                "title": "Dementia Care",
+                "slug": "dementia-care",
+                "icon": "fas fa-brain",
+                "images": ["/OurCare/dementia-care.jpg"],
+                "order": 1,
+                "description": """
+                  <p>We focus on providing the best person-centred care for people with dementia and mental health problems. Our focus on this specific area allows us to use the knowledge that comes from our experience of the area, and along with our research and past evidence we are able to provide a tailored and person-centred approach to care for those in our homes.</p>
+                  <p>The small things are just as important like personalising a room or filling a memory box, and dementia-friendly features to support people with visual, hearing and mobility impairments associated with dementia. All through the home we enhanced and carefully designed the environment to be Dementia friendly with features themes for a calmer and stimulating atmosphere.</p>
+                  <p>Our staff are highly trained in all aspects of dementia care and behaviour therapy’s, we are always researching new information, ideas and technologies to give support to people living with Dementia, helping them lead fuller lives. With our new interaction inspired 3D dementia areas throughout our home we create scenes designed to inspire memories, and encourage conversations, Across the home, there are naturally simulated features and surroundings to match themes like indoor garden, café, library etc. so that people can relate their previous memories to their present life.</p>
+                """
+            },
+            {
+                "title": "Long Term Nursing",
+                "slug": "nursing-care",
+                "icon": "fas fa-user-nurse",
+                "images": ["/OurCare/long-time-nursing.jpg"],
+                "order": 2,
+                "description": """
+                  <p>We provide nursing care for individuals with specialist requirements in many of our care homes. Our nursing care teams are fully qualified and have the specialist expertise required to care for residents’ varying medical needs and requirements.</p>
+                  <p>There are many our residents who are in relatively good health but just need a little assistance with the activities. People who come to us may be living with conditions such as Parkinson’s Disease, Multiple Sclerosis or Motor Neuron Disease; others may have suffered a injury as a result of an accident.</p>
+                """
+            },
+            {
+                "title": "Palliative Care",
+                "slug": "palliative-care",
+                "icon": "fas fa-hands-helping",
+                "images": ["/OurCare/palliative-care.jpg"],
+                "order": 3,
+                "description": """
+                  <p>At Bellavista our palliative care services are provided with the care, compassion and professionalism that both the resident and their families need during this final stage in everyone’s life. The final stages of a person’s life can be even more of a complicated and emotionally overwhelming experience for the family of someone with late-stage dementia or a terminal illness.</p>
+                  <p>Our staff will work with medical staff, hospices and other professionals whenever needed in order to provide a comfortable environment for the resident and to relieve suffering as much as possible. We provide tailored emotional support and practical guidance for families and friends throughout end of life care.</p>
+                """
+            },
+            {
+                "title": "Respite Care",
+                "slug": "respite-care",
+                "icon": "fas fa-coffee",
+                "images": ["/OurCare/respite-care.jpg"],
+                "order": 4,
+                "description": """
+                  <p>We understand how difficult it can be for families or friends providing ongoing care. For this reason, it’s important to occasionally find time for yourself. Our respite care services provide a crucial break for carers for two weeks plus in planned circumstances or emergency circumstances.</p>
+                  <p>Respite care offers families the chance to go on holiday or simply have some well-earned time off. We also provide convalescent care, to help people who need to recuperate after a hospital stay and to support them to be well enough to go back home.</p>
+                """
+            },
+            {
+                "title": "EMI Nursing & Residential Care",
+                "slug": "emi-care",
+                "icon": "fas fa-home",
+                "images": ["/OurCare/emi-nursing-and-residential-care.jpg"],
+                "order": 5,
+                "description": """
+                  <p>Our residential care offers 24-hour support for older people who, through increasing frailty find it difficult to live independently at home. We do everything we can to make Residents feel safe and confident, and enjoy a fulfilled and happily balanced life within our homes.</p>
+                """
+            }
+        ]
+
+        count = 0
+        for s in services:
+            service = CareService(
+                id=str(uuid.uuid4()),
+                title=s['title'],
+                slug=s['slug'],
+                icon=s['icon'],
+                imagesJson=json.dumps(s['images']),
+                order=s['order'],
+                description=s['description'],
+                showOnPage=True
+            )
+            db.session.add(service)
+            count += 1
+        
+        db.session.commit()
+        return jsonify({'message': f'Successfully seeded {count} services'}), 201
+    except Exception as e:
+        db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
 def to_dict_review(r):
@@ -1553,6 +1729,10 @@ def to_dict_home(h):
         "facilitiesList": parse_json(h.facilitiesListJson),
         "detailedFacilities": parse_json(h.detailedFacilitiesJson),
         "facilitiesGalleryImages": parse_json(h.facilitiesGalleryJson),
+        "careIntro": h.careIntro,
+        "careServicesJson": parse_json(h.careServicesJson),
+        "careSectionsJson": parse_json(h.careSectionsJson),
+        "careGalleryImages": parse_json(h.careGalleryJson),
         "homeFeatured": h.featured,
         "createdAt": h.createdAt.isoformat() if h.createdAt else None
     }
@@ -1589,6 +1769,10 @@ def create_home():
         facilitiesListJson=json.dumps(data.get('facilitiesList', [])),
         detailedFacilitiesJson=json.dumps(data.get('detailedFacilities', [])),
         facilitiesGalleryJson=json.dumps(data.get('facilitiesGalleryImages', [])),
+        careIntro=data.get('careIntro', ''),
+        careServicesJson=json.dumps(data.get('careServicesJson', [])),
+        careSectionsJson=json.dumps(data.get('careSectionsJson', [])),
+        careGalleryJson=json.dumps(data.get('careGalleryImages', [])),
         featured=data.get('homeFeatured', False)
     )
     
@@ -1719,6 +1903,15 @@ def update_home(id):
             home.facilitiesGalleryJson = json.dumps(data['facilitiesGalleryImages'])
             print(f"[UPDATE HOME] Successfully serialized facilities gallery", flush=True)
             
+        # Update Care Sections
+        home.careIntro = data.get('careIntro', home.careIntro)
+        if 'careSectionsJson' in data:
+            print(f"[UPDATE HOME] Updating care sections...", flush=True)
+            home.careSectionsJson = json.dumps(data['careSectionsJson'])
+        if 'careGalleryImages' in data:
+            print(f"[UPDATE HOME] Updating care gallery images...", flush=True)
+            home.careGalleryJson = json.dumps(data['careGalleryImages'])
+
         if 'homeFeatured' in data:
             home.featured = data['homeFeatured']
         
@@ -2044,6 +2237,10 @@ def seed_homes_route():
                     facilitiesListJson=json.dumps(data.get('facilitiesList', [])),
                     detailedFacilitiesJson=json.dumps([]),
                     facilitiesGalleryJson=json.dumps([]),
+                    careIntro="",
+                    careServicesJson=json.dumps([]),
+                    careSectionsJson=json.dumps([]),
+                    careGalleryJson=json.dumps([]),
                     featured=data['featured']
                 )
                 db.session.add(home)

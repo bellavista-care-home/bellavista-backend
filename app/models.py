@@ -54,6 +54,12 @@ class Home(db.Model):
     detailedFacilitiesJson = db.Column(db.Text) # List of {title, icon, description}
     facilitiesGalleryJson = db.Column(db.Text) # List of {type, url}
     
+    # Care Section
+    careIntro = db.Column(db.Text)
+    careServicesJson = db.Column(db.Text) # List of {title, description, image}
+    careSectionsJson = db.Column(db.Text) # List of {title, description, images}
+    careGalleryJson = db.Column(db.Text) # List of {url, type}
+
     featured = db.Column(db.Boolean, default=False)
     createdAt = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -164,4 +170,15 @@ class User(db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(64), default='home_admin') # 'superadmin' or 'home_admin'
     home_id = db.Column(db.String, db.ForeignKey('home.id'), nullable=True) # Null for superadmin
+    createdAt = db.Column(db.DateTime, default=datetime.utcnow)
+
+class CareService(db.Model):
+    id = db.Column(db.String, primary_key=True)
+    title = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.Text)
+    imagesJson = db.Column(db.Text) # List of image URLs
+    icon = db.Column(db.String(128))
+    order = db.Column(db.Integer, default=0)
+    slug = db.Column(db.String(128))
+    showOnPage = db.Column(db.Boolean, default=True)
     createdAt = db.Column(db.DateTime, default=datetime.utcnow)
