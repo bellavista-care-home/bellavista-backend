@@ -1999,6 +1999,8 @@ def to_dict_event(e):
         "description": e.description,
         "date": e.date,
         "time": e.time,
+        "startTime": e.startTime,
+        "endTime": e.endTime,
         "location": e.location,
         "image": e.image,
         "category": e.category,
@@ -2022,6 +2024,8 @@ def create_event():
         description=data.get('description', ''),
         date=data.get('date', ''),
         time=data.get('time', ''),
+        startTime=data.get('startTime', ''),
+        endTime=data.get('endTime', ''),
         location=data.get('location', ''),
         image=data.get('image', ''),
         category=data.get('category', '')
@@ -2043,6 +2047,8 @@ def update_event(id):
     event.description = data.get('description', event.description)
     event.date = data.get('date', event.date)
     event.time = data.get('time', event.time)
+    event.startTime = data.get('startTime', event.startTime)
+    event.endTime = data.get('endTime', event.endTime)
     event.location = data.get('location', event.location)
     event.image = data.get('image', event.image)
     event.category = data.get('category', event.category)

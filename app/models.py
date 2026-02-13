@@ -97,6 +97,8 @@ class Event(db.Model):
     description = db.Column(db.Text)
     date = db.Column(db.String(64), nullable=False) # YYYY-MM-DD
     time = db.Column(db.String(64))
+    startTime = db.Column(db.String(64))
+    endTime = db.Column(db.String(64))
     location = db.Column(db.String(255))
     image = db.Column(db.Text)
     category = db.Column(db.String(128))
