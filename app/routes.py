@@ -2213,7 +2213,7 @@ def seed_homes_route():
                 "heroSubtitle": "A Victorian property with character and charm.",
                 "heroBgImage": "/FrontPageBanner/preview_Home_Banner3_1300x400_acf_cropped.png",
                 "heroExpandedDesc": "Waverley Care Centre combines historic charm with modern care...",
-                "statsBedrooms": "35",
+                "statsBedrooms": "129",
                 "statsPremier": "5",
                 "teamMembers": [
                     { "name": "Home Manager", "role": "Home Manager", "image": "" }
