@@ -1,5 +1,5 @@
 import os
-from flask import Flask, send_from_directory, request, session
+from flask import Flask, send_from_directory, request, session, Response
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from config import config
@@ -222,6 +222,206 @@ def create_app(config_name=None):
     @app.route('/uploads/<path:filename>')
     def uploads(filename):
         return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+    
+    @app.route('/sitemap-news.xml', methods=['GET'])
+    def sitemap_news():
+        from datetime import datetime
+        from .models import NewsItem
+        
+        base_url = "https://www.bellavistanursinghomes.com"
+        
+        try:
+            items = NewsItem.query.order_by(NewsItem.createdAt.desc()).limit(100).all()
+        except Exception as e:
+            print(f"[SITEMAP-NEWS] Failed to query NewsItem: {e}", flush=True)
+            items = []
+        
+        def format_publication_date(item):
+            try:
+                if item.createdAt:
+                    return item.createdAt.strftime("%Y-%m-%d")
+            except Exception:
+                pass
+            try:
+                if item.date:
+                    return str(item.date)[:10]
+            except Exception:
+                pass
+            return datetime.utcnow().strftime("%Y-%m-%d")
+        
+        parts = [
+            '<?xml version="1.0" encoding="UTF-8"?>',
+            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:news="http://www.google.com/schemas/sitemap-news/0.9">'
+        ]
+        
+        if not items:
+            today = datetime.utcnow().strftime("%Y-%m-%d")
+            parts.extend([
+                '  <url>',
+                f'    <loc>{base_url}/news</loc>',
+                '    <news:news>',
+                '      <news:publication>',
+                '        <news:name>Bellavista Nursing Home News</news:name>',
+                '        <news:language>en</news:language>',
+                '      </news:publication>',
+                f'      <news:publication_date>{today}</news:publication_date>',
+                '      <news:title>Latest News from Bellavista Nursing Homes</news:title>',
+                '      <news:keywords>nursing home, care home, dementia care, elderly care, South Wales</news:keywords>',
+                '    </news:news>',
+                '  </url>'
+            ])
+        else:
+            for item in items:
+                pub_date = format_publication_date(item)
+                loc = f"{base_url}/news/{item.id}"
+                title = (item.title or "").replace("&", "&amp;")
+                
+                parts.extend([
+                    '  <url>',
+                    f'    <loc>{loc}</loc>',
+                    '    <news:news>',
+                    '      <news:publication>',
+                    '        <news:name>Bellavista Nursing Home News</news:name>',
+                    '        <news:language>en</news:language>',
+                    '      </news:publication>',
+                    f'      <news:publication_date>{pub_date}</news:publication_date>',
+                    f'      <news:title>{title}</news:title>',
+                    '      <news:keywords>nursing home, care home, dementia care, elderly care, South Wales</news:keywords>',
+                    '    </news:news>',
+                    '  </url>'
+                ])
+        
+        parts.append('</urlset>')
+        xml = "\n".join(parts)
+        return Response(xml, mimetype="application/xml")
+    
+    @app.route('/sitemap.xml', methods=['GET'])
+    def sitemap_full():
+        from datetime import datetime
+        from .models import Home, NewsItem
+        
+        base_url = "https://www.bellavistanursinghomes.com"
+        today = datetime.utcnow().strftime("%Y-%m-%d")
+        
+        static_pages = [
+            ("/", "daily", "1.0"),
+            ("/our-homes", "daily", "0.9"),
+            ("/services", "weekly", "0.9"),
+            ("/gallery", "weekly", "0.8"),
+            ("/contact", "monthly", "0.7"),
+            ("/careers", "weekly", "0.7"),
+            ("/enquiry", "weekly", "0.7"),
+            ("/schedule-tour", "weekly", "0.8"),
+            ("/faq", "monthly", "0.6"),
+            ("/testimonials", "monthly", "0.7"),
+            ("/news", "daily", "0.7"),
+            ("/bellavista-nursing-home", "weekly", "0.8"),
+            ("/visitor-policy", "monthly", "0.5"),
+            ("/dementia-friendly-environment", "monthly", "0.7"),
+            ("/dining-and-nutrition", "monthly", "0.6"),
+            ("/our-vision", "monthly", "0.6"),
+            ("/our-values", "monthly", "0.6"),
+            ("/management-team", "monthly", "0.6"),
+            ("/care-homes-cardiff", "monthly", "0.7"),
+            ("/dementia-care-guide", "monthly", "0.7"),
+            ("/privacy-policy", "yearly", "0.3"),
+            ("/terms-of-service", "yearly", "0.3")
+        ]
+        
+        def home_slug_from_name(name):
+            if not name:
+                return None
+            n = name.lower()
+            if "cardiff" in n:
+                return "/bellavista-cardiff"
+            if "barry" in n and "college" not in n and "baltimore" not in n:
+                return "/bellavista-barry"
+            if "waverley" in n:
+                return "/waverley-care-center"
+            if "college fields" in n:
+                return "/college-fields-nursing-home"
+            if "baltimore" in n:
+                return "/baltimore-care-home"
+            if "meadow vale" in n:
+                return "/meadow-vale-cwtch"
+            if "pontypridd" in n:
+                return "/bellavista-pontypridd"
+            return None
+        
+        urls = []
+        
+        for path, changefreq, priority in static_pages:
+            urls.append({
+                "loc": f"{base_url}{path}",
+                "lastmod": today,
+                "changefreq": changefreq,
+                "priority": priority
+            })
+        
+        try:
+            homes = Home.query.all()
+        except Exception as e:
+            print(f"[SITEMAP] Failed to query Home: {e}", flush=True)
+            homes = []
+        
+        for home in homes:
+            slug = home_slug_from_name(home.name)
+            if not slug:
+                continue
+            lastmod = home.createdAt.strftime("%Y-%m-%d") if getattr(home, "createdAt", None) else today
+            urls.append({
+                "loc": f"{base_url}{slug}",
+                "lastmod": lastmod,
+                "changefreq": "daily",
+                "priority": "0.9"
+            })
+            location_id = slug.lstrip("/")
+            urls.append({
+                "loc": f"{base_url}/activities/{location_id}",
+                "lastmod": lastmod,
+                "changefreq": "weekly",
+                "priority": "0.7"
+            })
+            urls.append({
+                "loc": f"{base_url}/facilities/{location_id}",
+                "lastmod": lastmod,
+                "changefreq": "weekly",
+                "priority": "0.7"
+            })
+        
+        try:
+            news_items = NewsItem.query.order_by(NewsItem.createdAt.desc()).limit(50).all()
+        except Exception as e:
+            print(f"[SITEMAP] Failed to query NewsItem: {e}", flush=True)
+            news_items = []
+        
+        for item in news_items:
+            lastmod = item.createdAt.strftime("%Y-%m-%d") if getattr(item, "createdAt", None) else today
+            urls.append({
+                "loc": f"{base_url}/news/{item.id}",
+                "lastmod": lastmod,
+                "changefreq": "daily",
+                "priority": "0.6"
+            })
+        
+        parts = [
+            '<?xml version="1.0" encoding="UTF-8"?>',
+            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+        ]
+        
+        for u in urls:
+            parts.extend([
+                "  <url>",
+                f"    <loc>{u['loc']}</loc>",
+                f"    <lastmod>{u['lastmod']}</lastmod>",
+                f"    <changefreq>{u['changefreq']}</changefreq>",
+                f"    <priority>{u['priority']}</priority>",
+                "  </url>"
+            ])
+        
+        parts.append("</urlset>")
+        xml = "\n".join(parts)
+        return Response(xml, mimetype="application/xml")
     
     # Initialize Scheduler
     try:

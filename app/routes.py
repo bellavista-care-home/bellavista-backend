@@ -2,6 +2,7 @@ import os
 import json
 import uuid
 import boto3
+import urllib.request
 import smtplib
 import threading
 from datetime import datetime
@@ -21,6 +22,32 @@ from .models import ScheduledTour, CareEnquiry, NewsItem, Home, FAQ, Vacancy, Jo
 
 api_bp = Blueprint('api', __name__)
 s3_bucket = os.environ.get('S3_BUCKET')
+
+def submit_indexnow(urls):
+    key = os.environ.get('INDEXNOW_KEY')
+    if not key:
+        return
+    if not urls:
+        return
+    endpoint = os.environ.get('INDEXNOW_ENDPOINT', 'https://api.indexnow.org/indexnow')
+    key_location = os.environ.get('INDEXNOW_KEY_LOCATION')
+    host = 'www.bellavistanursinghomes.com'
+    if not key_location:
+        key_location = f"https://{host}/{key}.txt"
+    payload = {
+        "host": host,
+        "key": key,
+        "keyLocation": key_location,
+        "urlList": urls
+    }
+    try:
+        data = json.dumps(payload).encode('utf-8')
+        req = urllib.request.Request(endpoint, data=data, headers={'Content-Type': 'application/json'})
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            resp.read()
+        print(f"[INDEXNOW] Submitted {len(urls)} urls", flush=True)
+    except Exception as e:
+        print(f"[INDEXNOW] Failed to submit URLs: {e}", flush=True)
 
 def send_email_sync(to_emails, subject, body):
     if not isinstance(to_emails, list):
@@ -1282,16 +1309,16 @@ def create_news():
     data = request.form.to_dict()
     files = request.files
     
-    # Enforce location for home_admin
+    # Enforce location for home_admin, but allow explicit "All Locations"
     if hasattr(request, 'auth_payload'):
         role = request.auth_payload.get('role')
         home_id = request.auth_payload.get('home_id')
         if role == 'home_admin' and home_id:
             home = Home.query.get(home_id)
             if home:
-                data['location'] = home.name
-                # Also ensure they can't set important flag (optional, but good practice)
-                # data['important'] = 'false' 
+                location_value = data.get('location', '').strip()
+                if location_value not in ['All Locations', 'All locations']:
+                    data['location'] = home.name
     
     # Validate required fields
     validation_data = {
@@ -1383,6 +1410,11 @@ def create_news():
     )
     db.session.add(item)
     db.session.commit()
+    base_url = "https://www.bellavistanursinghomes.com"
+    try:
+        submit_indexnow([f"{base_url}/news/{nid}"])
+    except Exception as e:
+        print(f"[INDEXNOW] Error in create_news: {e}", flush=True)
     return jsonify({"ok": True, "id": nid}), 201
 
 @api_bp.put('/news/<id>')
@@ -1392,27 +1424,6 @@ def update_news(id):
     if not item:
         return jsonify({"error":"Not found"}), 404
         
-    # Enforce permission for home_admin
-    if hasattr(request, 'auth_payload'):
-        role = request.auth_payload.get('role')
-        home_id = request.auth_payload.get('home_id')
-        if role == 'home_admin' and home_id:
-            home = Home.query.get(home_id)
-            if home:
-                # Can only edit news from their location
-                if item.location != home.name:
-                    return jsonify({"error": "Permission denied"}), 403
-                
-                # Prevent changing location to something else
-                if request.content_type and 'multipart/form-data' in request.content_type:
-                    request.form = request.form.copy()
-                    request.form['location'] = home.name
-                else:
-                    # JSON handling logic would need modification if we wanted to enforce it strictly here
-                    # But for now, let's assume valid home_admin won't hack the request to change location
-                    # Just validating ownership is enough for safety
-                    pass
-
     # Handle multipart/form-data or JSON
     if request.content_type and 'multipart/form-data' in request.content_type:
         data = request.form.to_dict()
@@ -1420,6 +1431,22 @@ def update_news(id):
     else:
         data = request.get_json(force=True)
         files = {}
+
+    # Enforce permission for home_admin
+    if hasattr(request, 'auth_payload'):
+        role = request.auth_payload.get('role')
+        home_id = request.auth_payload.get('home_id')
+        if role == 'home_admin' and home_id:
+            home = Home.query.get(home_id)
+            if home:
+                # Can only edit news from their location or global news
+                if item.location != home.name and item.location not in ['All Locations', 'All locations']:
+                    return jsonify({"error": "Permission denied"}), 403
+                
+                # Prevent changing location to something else
+                current_loc = data.get('location', '').strip()
+                if current_loc not in ['All Locations', 'All locations']:
+                    data['location'] = home.name
 
     item.title = data.get('title', item.title)
     item.excerpt = (data.get('excerpt', item.excerpt) or '')[:180]
@@ -1501,6 +1528,11 @@ def update_news(id):
         item.videoDescription = data['videoDescription']
 
     db.session.commit()
+    base_url = "https://www.bellavistanursinghomes.com"
+    try:
+        submit_indexnow([f"{base_url}/news/{id}"])
+    except Exception as e:
+        print(f"[INDEXNOW] Error in update_news: {e}", flush=True)
     return jsonify(to_dict_news(item))
 
 @api_bp.get('/news')
@@ -1778,6 +1810,34 @@ def create_home():
     
     db.session.add(home)
     db.session.commit()
+    base_url = "https://www.bellavistanursinghomes.com"
+    urls = []
+    name_lower = (home.name or "").lower()
+    slug = None
+    if "cardiff" in name_lower:
+        slug = "/bellavista-cardiff"
+    elif "barry" in name_lower and "college" not in name_lower and "baltimore" not in name_lower:
+        slug = "/bellavista-barry"
+    elif "waverley" in name_lower:
+        slug = "/waverley-care-center"
+    elif "college fields" in name_lower:
+        slug = "/college-fields-nursing-home"
+    elif "baltimore" in name_lower:
+        slug = "/baltimore-care-home"
+    elif "meadow vale" in name_lower:
+        slug = "/meadow-vale-cwtch"
+    elif "pontypridd" in name_lower:
+        slug = "/bellavista-pontypridd"
+    if slug:
+        urls.append(f"{base_url}{slug}")
+        location_id = slug.lstrip("/")
+        urls.append(f"{base_url}/activities/{location_id}")
+        urls.append(f"{base_url}/facilities/{location_id}")
+    if urls:
+        try:
+            submit_indexnow(urls)
+        except Exception as e:
+            print(f"[INDEXNOW] Error in create_home: {e}", flush=True)
     return jsonify({"ok": True, "id": hid}), 201
 
 @api_bp.get('/homes')
@@ -1916,11 +1976,37 @@ def update_home(id):
             home.featured = data['homeFeatured']
         
         print(f"[UPDATE HOME] Committing changes to database...", flush=True)
-        sys.stdout.flush()  # Force flush
+        sys.stdout.flush()
         db.session.commit()
         print(f"[UPDATE HOME] ===== Successfully updated home ID: {id} =====", flush=True)
-        
-        # Invalidate cache after successful update
+        base_url = "https://www.bellavistanursinghomes.com"
+        urls = []
+        name_lower = (home.name or "").lower()
+        slug = None
+        if "cardiff" in name_lower:
+            slug = "/bellavista-cardiff"
+        elif "barry" in name_lower and "college" not in name_lower and "baltimore" not in name_lower:
+            slug = "/bellavista-barry"
+        elif "waverley" in name_lower:
+            slug = "/waverley-care-center"
+        elif "college fields" in name_lower:
+            slug = "/college-fields-nursing-home"
+        elif "baltimore" in name_lower:
+            slug = "/baltimore-care-home"
+        elif "meadow vale" in name_lower:
+            slug = "/meadow-vale-cwtch"
+        elif "pontypridd" in name_lower:
+            slug = "/bellavista-pontypridd"
+        if slug:
+            urls.append(f"{base_url}{slug}")
+            location_id = slug.lstrip("/")
+            urls.append(f"{base_url}/activities/{location_id}")
+            urls.append(f"{base_url}/facilities/{location_id}")
+        if urls:
+            try:
+                submit_indexnow(urls)
+            except Exception as e:
+                print(f"[INDEXNOW] Error in update_home: {e}", flush=True)
         invalidate_homes_cache()
         
         result = to_dict_home(home)
