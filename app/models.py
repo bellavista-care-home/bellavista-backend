@@ -184,3 +184,23 @@ class CareService(db.Model):
     slug = db.Column(db.String(128))
     showOnPage = db.Column(db.Boolean, default=True)
     createdAt = db.Column(db.DateTime, default=datetime.utcnow)
+
+class MealPlan(db.Model):
+    id = db.Column(db.String, primary_key=True)
+    homeId = db.Column(db.String, db.ForeignKey('home.id'), nullable=False)
+    dayOfWeek = db.Column(db.String(64), nullable=False)  # Monday-Sunday
+    mealType = db.Column(db.String(64), nullable=False)  # Breakfast, Lunch, Snack, Dinner
+    mealName = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.Text)
+    ingredients = db.Column(db.Text)  # JSON array as string
+    allergyInfo = db.Column(db.Text)  # JSON array (gluten-free, vegan, dairy-free, etc.)
+    imageUrl = db.Column(db.Text)
+    nutritionalInfo = db.Column(db.Text)  # JSON (calories, protein, carbs, fat, fiber)
+    tags = db.Column(db.Text)  # JSON array (vegetarian, high-protein, etc.)
+    isSpecialMenu = db.Column(db.Boolean, default=False)  # For holiday/special occasion menus
+    effectiveDate = db.Column(db.String(64))  # YYYY-MM-DD format, null = recurring weekly
+    isActive = db.Column(db.Boolean, default=True)
+    order = db.Column(db.Integer, default=0)  # For sorting meals in a day
+    createdBy = db.Column(db.String, db.ForeignKey('user.id'), nullable=True)
+    createdAt = db.Column(db.DateTime, default=datetime.utcnow)
+    updatedAt = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

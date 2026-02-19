@@ -1842,19 +1842,35 @@ def create_home():
 
 @api_bp.get('/homes')
 def list_homes():
+    """Lightweight homes endpoint for frontend dropdowns"""
     try:
         homes = Home.query.order_by(Home.createdAt.asc()).all()
-        return jsonify([to_dict_home(h) for h in homes])
+        result = []
+        for h in homes:
+            result.append({
+                'id': h.id,
+                'homeName': h.name
+            })
+        return jsonify(result), 200
     except Exception as e:
-        print(f"[ERROR] list_homes failed: {e}")
+        import traceback
+        print(f"[ERROR] list_homes failed: {e}", flush=True)
+        print(traceback.format_exc(), flush=True)
         return jsonify({"error": str(e)}), 500
 
 @api_bp.get('/homes/<id>')
 def get_home(id):
-    home = Home.query.get(id)
-    if not home:
-        return jsonify({"error": "Not found"}), 404
-    return jsonify(to_dict_home(home))
+    """Get detailed home information"""
+    try:
+        home = Home.query.get(id)
+        if not home:
+            return jsonify({"error": "Home not found"}), 404
+        return jsonify(to_dict_home(home)), 200
+    except Exception as e:
+        import traceback
+        print(f"[ERROR] get_home failed: {e}", flush=True)
+        print(traceback.format_exc(), flush=True)
+        return jsonify({"error": str(e)}), 500
 
 @api_bp.put('/homes/<id>')
 @require_auth
@@ -2490,3 +2506,7 @@ def seed_management_team():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+
+# Register Meal Plans Blueprint
+from .meal_plans import meal_plans_bp
+api_bp.register_blueprint(meal_plans_bp)
