@@ -1453,7 +1453,7 @@ def create_news():
     item = NewsItem(
         id=nid,
         title=data.get('title',''),
-        excerpt=data.get('excerpt','')[:180],
+        excerpt=data.get('excerpt','')[:500],
         fullDescription=data.get('fullDescription'),
         image=main_image_url,
         category=data.get('category','events'),
@@ -1507,7 +1507,7 @@ def update_news(id):
                     data['location'] = home.name
 
     item.title = data.get('title', item.title)
-    item.excerpt = (data.get('excerpt', item.excerpt) or '')[:180]
+    item.excerpt = (data.get('excerpt', item.excerpt) or '')[:600]
     item.fullDescription = data.get('fullDescription', item.fullDescription)
     
     if 'image' in files:
