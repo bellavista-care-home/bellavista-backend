@@ -1842,7 +1842,7 @@ def create_home():
 
 @api_bp.get('/homes')
 def list_homes():
-    """Lightweight homes endpoint for frontend dropdowns and admin"""
+    """Homes endpoint for frontend - includes card display data"""
     try:
         homes = Home.query.order_by(Home.createdAt.asc()).all()
         result = []
@@ -1851,7 +1851,10 @@ def list_homes():
                 'id': h.id,
                 'homeName': h.name,
                 'homeLocation': h.location,
-                'adminEmail': h.adminEmail
+                'adminEmail': h.adminEmail,
+                'homeImage': h.image,
+                'cardImage2': h.cardImage2,
+                'homeDesc': h.description
             })
         return jsonify(result), 200
     except Exception as e:
@@ -1906,6 +1909,43 @@ def update_home(id):
         data_keys = list(data.keys())
         print(f"[UPDATE HOME] Received {len(data_keys)} fields: {', '.join(data_keys)}", flush=True)
         
+        # === DATA LOSS PROTECTION ===
+        # Helper to safely update JSON array fields - prevents accidental overwrites
+        def safe_update_json_array(field_name, json_attr, current_json, new_data, force_clear=False):
+            """
+            Prevents overwriting existing data with empty arrays unless explicitly forced.
+            Returns the new JSON string or None if no update needed.
+            """
+            if new_data is None:
+                return None  # Field not in request, don't update
+            
+            # Parse current data
+            try:
+                current_data = json.loads(current_json) if current_json else []
+            except:
+                current_data = []
+            
+            current_count = len(current_data) if isinstance(current_data, list) else 0
+            new_count = len(new_data) if isinstance(new_data, list) else 0
+            
+            # SAFEGUARD: Block clearing arrays with 3+ items unless force_clear is set
+            if current_count >= 3 and new_count == 0 and not force_clear:
+                print(f"[UPDATE HOME] ⚠️ BLOCKED: Attempt to clear {field_name} with {current_count} items. Set force_clear=true to confirm.", flush=True)
+                return "BLOCKED"
+            
+            # Log significant changes
+            if current_count > 0 and new_count == 0:
+                print(f"[UPDATE HOME] ⚠️ Warning: Clearing {field_name} (had {current_count} items)", flush=True)
+            elif abs(current_count - new_count) > 5:
+                print(f"[UPDATE HOME] Note: {field_name} changing from {current_count} to {new_count} items", flush=True)
+            
+            return json.dumps(new_data)
+        
+        # Check if force_clear flag is set (for intentional deletions)
+        force_clear = data.get('_force_clear', False)
+        if force_clear:
+            print(f"[UPDATE HOME] ⚠️ force_clear=True - allowing gallery deletions", flush=True)
+        
         # Update basic fields
         print(f"[UPDATE HOME] Updating basic fields...", flush=True)
         home.name = data.get('homeName', home.name)
@@ -1927,71 +1967,105 @@ def update_home(id):
         home.statsBedrooms = data.get('statsBedrooms', home.statsBedrooms)
         home.statsPremier = data.get('statsPremier', home.statsPremier)
         
-        # Update banner images
-        if 'bannerImages' in data:
-            print(f"[UPDATE HOME] Updating {len(data['bannerImages'])} banner images...", flush=True)
-            home.bannerImagesJson = json.dumps(data['bannerImages'])
+        # Track blocked updates
+        blocked_fields = []
         
-        # Update team members
+        # Update banner images with protection
+        if 'bannerImages' in data:
+            result = safe_update_json_array('bannerImages', 'bannerImagesJson', home.bannerImagesJson, data['bannerImages'], force_clear)
+            if result == "BLOCKED":
+                blocked_fields.append('bannerImages')
+            elif result:
+                home.bannerImagesJson = result
+                print(f"[UPDATE HOME] Updated {len(data['bannerImages'])} banner images", flush=True)
+        
+        # Update team members with protection
         if 'teamMembers' in data:
-            team_count = len(data['teamMembers'])
-            print(f"[UPDATE HOME] Updating {team_count} team members...", flush=True)
-            home.teamMembersJson = json.dumps(data['teamMembers'])
+            result = safe_update_json_array('teamMembers', 'teamMembersJson', home.teamMembersJson, data['teamMembers'], force_clear)
+            if result == "BLOCKED":
+                blocked_fields.append('teamMembers')
+            elif result:
+                home.teamMembersJson = result
+                print(f"[UPDATE HOME] Updated {len(data['teamMembers'])} team members", flush=True)
+                
         if 'teamGalleryImages' in data:
-            gallery_count = len(data['teamGalleryImages'])
-            print(f"[UPDATE HOME] Updating {gallery_count} team gallery images...", flush=True)
-            home.teamGalleryJson = json.dumps(data['teamGalleryImages'])
+            result = safe_update_json_array('teamGalleryImages', 'teamGalleryJson', home.teamGalleryJson, data['teamGalleryImages'], force_clear)
+            if result == "BLOCKED":
+                blocked_fields.append('teamGalleryImages')
+            elif result:
+                home.teamGalleryJson = result
+                print(f"[UPDATE HOME] Updated {len(data['teamGalleryImages'])} team gallery images", flush=True)
             
-        # Update activities
+        # Update activities with protection
         home.activitiesIntro = data.get('activitiesIntro', home.activitiesIntro)
         if 'activities' in data:
-            activity_count = len(data['activities'])
-            print(f"[UPDATE HOME] Updating {activity_count} activities...", flush=True)
-            home.activitiesJson = json.dumps(data['activities'])
+            result = safe_update_json_array('activities', 'activitiesJson', home.activitiesJson, data['activities'], force_clear)
+            if result == "BLOCKED":
+                blocked_fields.append('activities')
+            elif result:
+                home.activitiesJson = result
+                print(f"[UPDATE HOME] Updated {len(data['activities'])} activities", flush=True)
         if 'activityImages' in data:
-            activity_img_count = len(data['activityImages'])
-            print(f"[UPDATE HOME] Updating {activity_img_count} activity images...", flush=True)
-            home.activityImagesJson = json.dumps(data['activityImages'])
+            result = safe_update_json_array('activityImages', 'activityImagesJson', home.activityImagesJson, data['activityImages'], force_clear)
+            if result == "BLOCKED":
+                blocked_fields.append('activityImages')
+            elif result:
+                home.activityImagesJson = result
+                print(f"[UPDATE HOME] Updated {len(data['activityImages'])} activity images", flush=True)
         home.activitiesModalDesc = data.get('activitiesModalDesc', home.activitiesModalDesc)
         
-        # Update facilities
+        # Update facilities with protection
         home.facilitiesIntro = data.get('facilitiesIntro', home.facilitiesIntro)
         if 'facilitiesList' in data:
-            facilities_count = len(data['facilitiesList'])
-            print(f"[UPDATE HOME] Updating {facilities_count} facilities list items...", flush=True)
-            home.facilitiesListJson = json.dumps(data['facilitiesList'])
+            result = safe_update_json_array('facilitiesList', 'facilitiesListJson', home.facilitiesListJson, data['facilitiesList'], force_clear)
+            if result == "BLOCKED":
+                blocked_fields.append('facilitiesList')
+            elif result:
+                home.facilitiesListJson = result
+                print(f"[UPDATE HOME] Updated {len(data['facilitiesList'])} facilities list items", flush=True)
         if 'detailedFacilities' in data:
-            detailed_count = len(data['detailedFacilities'])
-            print(f"[UPDATE HOME] Updating {detailed_count} detailed facilities...", flush=True)
-            home.detailedFacilitiesJson = json.dumps(data['detailedFacilities'])
+            result = safe_update_json_array('detailedFacilities', 'detailedFacilitiesJson', home.detailedFacilitiesJson, data['detailedFacilities'], force_clear)
+            if result == "BLOCKED":
+                blocked_fields.append('detailedFacilities')
+            elif result:
+                home.detailedFacilitiesJson = result
+                print(f"[UPDATE HOME] Updated {len(data['detailedFacilities'])} detailed facilities", flush=True)
         if 'facilitiesGalleryImages' in data:
-            gallery_count = len(data['facilitiesGalleryImages'])
-            print(f"[UPDATE HOME] Processing {gallery_count} facilities gallery images...", flush=True)
+            result = safe_update_json_array('facilitiesGalleryImages', 'facilitiesGalleryJson', home.facilitiesGalleryJson, data['facilitiesGalleryImages'], force_clear)
+            if result == "BLOCKED":
+                blocked_fields.append('facilitiesGalleryImages')
+            elif result:
+                home.facilitiesGalleryJson = result
+                print(f"[UPDATE HOME] Updated {len(data['facilitiesGalleryImages'])} facilities gallery images", flush=True)
             
-            # Check if images are too large (base64 encoded)
-            total_size = 0
-            for idx, img in enumerate(data['facilitiesGalleryImages']):
-                if isinstance(img, str):
-                    img_size = len(img)
-                    total_size += img_size
-                    if img_size > 500000:  # > 500KB
-                        print(f"[UPDATE HOME] WARNING: Image {idx+1} is large: {img_size / 1024:.1f}KB", flush=True)
-            
-            print(f"[UPDATE HOME] Total gallery images data size: {total_size / 1024 / 1024:.2f}MB", flush=True)
-            home.facilitiesGalleryJson = json.dumps(data['facilitiesGalleryImages'])
-            print(f"[UPDATE HOME] Successfully serialized facilities gallery", flush=True)
-            
-        # Update Care Sections
+        # Update Care Sections with protection
         home.careIntro = data.get('careIntro', home.careIntro)
         if 'careSectionsJson' in data:
-            print(f"[UPDATE HOME] Updating care sections...", flush=True)
-            home.careSectionsJson = json.dumps(data['careSectionsJson'])
+            result = safe_update_json_array('careSectionsJson', 'careSectionsJson', home.careSectionsJson, data['careSectionsJson'], force_clear)
+            if result == "BLOCKED":
+                blocked_fields.append('careSectionsJson')
+            elif result:
+                home.careSectionsJson = result
+                print(f"[UPDATE HOME] Updated care sections", flush=True)
         if 'careGalleryImages' in data:
-            print(f"[UPDATE HOME] Updating care gallery images...", flush=True)
-            home.careGalleryJson = json.dumps(data['careGalleryImages'])
+            result = safe_update_json_array('careGalleryImages', 'careGalleryJson', home.careGalleryJson, data['careGalleryImages'], force_clear)
+            if result == "BLOCKED":
+                blocked_fields.append('careGalleryImages')
+            elif result:
+                home.careGalleryJson = result
+                print(f"[UPDATE HOME] Updated care gallery images", flush=True)
 
         if 'homeFeatured' in data:
             home.featured = data['homeFeatured']
+        
+        # If any fields were blocked, return error before committing
+        if blocked_fields:
+            print(f"[UPDATE HOME] ❌ REJECTED: Attempted to clear protected fields: {', '.join(blocked_fields)}", flush=True)
+            return jsonify({
+                "error": f"Cannot clear galleries with existing data. Blocked fields: {', '.join(blocked_fields)}. If intentional, contact admin.",
+                "blocked_fields": blocked_fields,
+                "hint": "This protection prevents accidental data loss. If you really want to clear these galleries, the request must include '_force_clear': true"
+            }), 400
         
         print(f"[UPDATE HOME] Committing changes to database...", flush=True)
         sys.stdout.flush()
