@@ -198,6 +198,11 @@ def create_app(config_name=None):
             print("[APP] Routes imported successfully", flush=True)
             app.register_blueprint(api_bp, url_prefix='/api')
             print("[APP] API blueprint registered", flush=True)
+            
+            # Register meal plans blueprint
+            from .meal_plans import meal_plans_bp
+            app.register_blueprint(meal_plans_bp, url_prefix='/api/meal-plans')
+            print("[APP] Meal plans blueprint registered", flush=True)
         except Exception as e:
             print(f"[ERROR] Failed to register API blueprint: {e}", flush=True)
             import traceback

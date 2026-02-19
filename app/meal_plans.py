@@ -13,7 +13,7 @@ from .models import MealPlan, Home, User
 from .auth import require_auth
 from . import db
 
-meal_plans_bp = Blueprint('meal_plans', __name__, url_prefix='/meal-plans')
+meal_plans_bp = Blueprint('meal_plans', __name__)
 
 def home_admin_or_superadmin(f):
     """

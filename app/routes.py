@@ -1842,14 +1842,16 @@ def create_home():
 
 @api_bp.get('/homes')
 def list_homes():
-    """Lightweight homes endpoint for frontend dropdowns"""
+    """Lightweight homes endpoint for frontend dropdowns and admin"""
     try:
         homes = Home.query.order_by(Home.createdAt.asc()).all()
         result = []
         for h in homes:
             result.append({
                 'id': h.id,
-                'homeName': h.name
+                'homeName': h.name,
+                'homeLocation': h.location,
+                'adminEmail': h.adminEmail
             })
         return jsonify(result), 200
     except Exception as e:
