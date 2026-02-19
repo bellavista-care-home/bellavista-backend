@@ -23,6 +23,51 @@ from .models import ScheduledTour, CareEnquiry, NewsItem, Home, FAQ, Vacancy, Jo
 api_bp = Blueprint('api', __name__)
 s3_bucket = os.environ.get('S3_BUCKET')
 
+# ============================================
+# GLOBAL DATA LOSS PROTECTION HELPER
+# ============================================
+def safe_json_array_update(field_name, current_json, new_data, min_items_to_protect=3, force_clear=False):
+    """
+    Prevents accidental overwriting of JSON array fields with empty arrays.
+    
+    Args:
+        field_name: Name of the field (for logging)
+        current_json: Current JSON string from database
+        new_data: New data (list) to save
+        min_items_to_protect: Minimum items before protection kicks in (default: 3)
+        force_clear: If True, allows clearing regardless of item count
+    
+    Returns:
+        tuple: (json_string_or_none, was_blocked)
+        - If update should proceed: (json_string, False)
+        - If blocked: (None, True)
+        - If field not in request: (None, False)
+    """
+    if new_data is None:
+        return (None, False)  # Field not in request, don't update
+    
+    # Parse current data
+    try:
+        current_data = json.loads(current_json) if current_json else []
+    except:
+        current_data = []
+    
+    current_count = len(current_data) if isinstance(current_data, list) else 0
+    new_count = len(new_data) if isinstance(new_data, list) else 0
+    
+    # SAFEGUARD: Block clearing arrays with min_items_to_protect+ items unless force_clear is set
+    if current_count >= min_items_to_protect and new_count == 0 and not force_clear:
+        print(f"[DATA PROTECTION] ⚠️ BLOCKED: Attempt to clear {field_name} with {current_count} items. Set force_clear=true to confirm.", flush=True)
+        return (None, True)  # Blocked
+    
+    # Log significant changes
+    if current_count > 0 and new_count == 0:
+        print(f"[DATA PROTECTION] ⚠️ Warning: Clearing {field_name} (had {current_count} items)", flush=True)
+    elif abs(current_count - new_count) > 5:
+        print(f"[DATA PROTECTION] Note: {field_name} changing from {current_count} to {new_count} items", flush=True)
+    
+    return (json.dumps(new_data), False)
+
 def submit_indexnow(urls):
     key = os.environ.get('INDEXNOW_KEY')
     if not key:
@@ -378,10 +423,23 @@ def update_care_service(id):
             return jsonify({'error': 'Service not found'}), 404
 
         data = request.get_json()
+        force_clear = data.get('_force_clear', False)
         
         if 'title' in data: service.title = data['title']
         if 'description' in data: service.description = data['description']
-        if 'images' in data: service.imagesJson = json.dumps(data['images'])
+        
+        # Protected update for images array
+        if 'images' in data:
+            result, blocked = safe_json_array_update('images', service.imagesJson, data['images'], force_clear=force_clear)
+            if blocked:
+                return jsonify({
+                    'error': f"Cannot clear images with existing data. Current count: {len(json.loads(service.imagesJson) if service.imagesJson else [])}",
+                    'blocked_field': 'images',
+                    'hint': "Set '_force_clear': true to confirm deletion"
+                }), 400
+            if result:
+                service.imagesJson = result
+        
         if 'icon' in data: service.icon = data['icon']
         if 'order' in data: service.order = data['order']
         if 'slug' in data: service.slug = data['slug']
@@ -1519,8 +1577,27 @@ def update_news(id):
                     print(f"Gallery processing error: {e}")
                     new_gallery_urls.append(uploaded_url)
     
-    # Merge old and new gallery
-    item.galleryJson = json.dumps(current_gallery + new_gallery_urls)
+    # Merge old and new gallery - WITH PROTECTION
+    final_gallery = current_gallery + new_gallery_urls
+    
+    # Get existing gallery from database
+    existing_gallery = []
+    try:
+        existing_gallery = json.loads(item.galleryJson) if item.galleryJson else []
+    except:
+        pass
+    
+    # Check for accidental clearing
+    force_clear = data.get('_force_clear', False) if isinstance(data, dict) else False
+    if len(existing_gallery) >= 3 and len(final_gallery) == 0 and not force_clear:
+        print(f"[DATA PROTECTION] ⚠️ BLOCKED: Attempt to clear news gallery with {len(existing_gallery)} items", flush=True)
+        return jsonify({
+            "error": f"Cannot clear gallery with {len(existing_gallery)} existing items",
+            "blocked_field": "gallery",
+            "hint": "Set '_force_clear': true to confirm deletion"
+        }), 400
+    
+    item.galleryJson = json.dumps(final_gallery)
 
     if 'videoUrl' in data:
         item.videoUrl = data['videoUrl']
