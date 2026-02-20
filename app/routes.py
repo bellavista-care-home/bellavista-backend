@@ -1920,6 +1920,12 @@ def create_home():
 @api_bp.get('/homes')
 def list_homes():
     """Homes endpoint for frontend - includes card display data"""
+    def parse_json(field):
+        try:
+            return json.loads(field) if field else []
+        except:
+            return []
+    
     try:
         homes = Home.query.order_by(Home.createdAt.asc()).all()
         result = []
@@ -1931,7 +1937,8 @@ def list_homes():
                 'adminEmail': h.adminEmail,
                 'homeImage': h.image,
                 'cardImage2': h.cardImage2,
-                'homeDesc': h.description
+                'homeDesc': h.description,
+                'bannerImages': parse_json(h.bannerImagesJson)
             })
         return jsonify(result), 200
     except Exception as e:
