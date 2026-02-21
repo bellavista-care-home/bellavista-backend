@@ -32,6 +32,16 @@ try:
         """)
     else:
         print("Event table already exists.")
+    
+    # Add contentBlocksJson column to home table if it doesn't exist
+    cursor.execute("PRAGMA table_info(home)")
+    columns = [col[1] for col in cursor.fetchall()]
+    if 'contentBlocksJson' not in columns:
+        print("Adding contentBlocksJson column to home table...")
+        cursor.execute("ALTER TABLE home ADD COLUMN contentBlocksJson TEXT")
+        print("contentBlocksJson column added successfully.")
+    else:
+        print("contentBlocksJson column already exists.")
         
     conn.commit()
     conn.close()

@@ -23,38 +23,125 @@ class Home(db.Model):
     badge = db.Column(db.String(128))
     description = db.Column(db.Text)
     
-    # Hero Section
+    # ========================
+    # HERO SECTION
+    # ========================
     heroTitle = db.Column(db.String(255))
-    heroSubtitle = db.Column(db.String(255))
+    heroSubtitle = db.Column(db.String(500))
     heroBgImage = db.Column(db.Text)
+    heroDescription = db.Column(db.Text)
     heroExpandedDesc = db.Column(db.Text)
+    statsLocationBadge = db.Column(db.String(128))
+    statsQualityBadge = db.Column(db.String(128))
+    statsTeamBadge = db.Column(db.String(128))
     
     # Documents
     ciwReportUrl = db.Column(db.Text)
     newsletterUrl = db.Column(db.Text)
     
     # Scrolling Banner
-    bannerImagesJson = db.Column(db.Text) # List of {url, showOnMain}
+    bannerImagesJson = db.Column(db.Text) # List of {url, alt, showOnPage}
     
     # Stats
     statsBedrooms = db.Column(db.String(64))
     statsPremier = db.Column(db.String(64))
     
-    # JSON Fields for Lists
-    teamMembersJson = db.Column(db.Text)  # List of {name, role, image}
-    teamGalleryJson = db.Column(db.Text)  # List of {type, url}
+    # ========================
+    # ABOUT/WELCOME SECTION
+    # ========================
+    aboutTitle = db.Column(db.String(255))
+    aboutIntro = db.Column(db.Text)
+    aboutParagraph2 = db.Column(db.Text)
+    carePhilosophyTitle = db.Column(db.String(255))
+    carePhilosophy = db.Column(db.Text)
+    locationTitle = db.Column(db.String(255))
+    locationDescription = db.Column(db.Text)
+    contentBlocksJson = db.Column(db.Text)  # JSON array of dynamic content blocks
     
-    activitiesIntro = db.Column(db.Text)
-    activitiesJson = db.Column(db.Text)   # List of strings or objects
-    activityImagesJson = db.Column(db.Text) # List of {type, url}
-    activitiesModalDesc = db.Column(db.Text)
+    # ========================
+    # WHY CHOOSE US SECTION
+    # ========================
+    whyChooseTitle = db.Column(db.String(255))
+    whyChooseSubtitle = db.Column(db.String(255))
+    whyChooseListJson = db.Column(db.Text)  # JSON array of strings
+    whyChooseClosing = db.Column(db.Text)
     
+    # ========================
+    # SERVICES SECTION
+    # ========================
+    servicesTitle = db.Column(db.String(255))
+    servicesSubtitle = db.Column(db.String(255))
+    servicesIntro = db.Column(db.Text)
+    servicesListJson = db.Column(db.Text)  # JSON array of strings
+    servicesClosing = db.Column(db.Text)
+    servicesCta = db.Column(db.String(255))
+    servicesCtaLink = db.Column(db.String(255))
+    
+    # ========================
+    # FACILITIES SECTION
+    # ========================
+    facilitiesTitle = db.Column(db.String(255))
+    facilitiesSubtitle = db.Column(db.String(255))
     facilitiesIntro = db.Column(db.Text)
     facilitiesListJson = db.Column(db.Text) # List of {icon, title}
     detailedFacilitiesJson = db.Column(db.Text) # List of {title, icon, description}
     facilitiesGalleryJson = db.Column(db.Text) # List of {type, url}
     
-    # Care Section
+    # ========================
+    # ACTIVITIES SECTION
+    # ========================
+    activitiesTitle = db.Column(db.String(255))
+    activitiesSubtitle = db.Column(db.String(255))
+    activitiesIntro = db.Column(db.Text)
+    activitiesJson = db.Column(db.Text)   # List of strings or objects
+    activityImagesJson = db.Column(db.Text) # List of {type, url}
+    activitiesModalDesc = db.Column(db.Text)
+    
+    # ========================
+    # TEAM SECTION
+    # ========================
+    teamTitle = db.Column(db.String(255))
+    teamSubtitle = db.Column(db.String(255))
+    teamIntro = db.Column(db.Text)
+    teamIntro2 = db.Column(db.Text)
+    teamMembersJson = db.Column(db.Text)  # List of {name, role, image, bio}
+    teamGalleryJson = db.Column(db.Text)  # List of {type, url}
+    
+    # ========================
+    # TESTIMONIALS SECTION
+    # ========================
+    testimonialsTitle = db.Column(db.String(255))
+    googleRating = db.Column(db.String(16))
+    googleReviewCount = db.Column(db.Integer)
+    carehomeRating = db.Column(db.String(16))
+    carehomeReviewCount = db.Column(db.Integer)
+    testimonialsIntro = db.Column(db.Text)
+    
+    # ========================
+    # NEWS SECTION
+    # ========================
+    newsTitle = db.Column(db.String(255))
+    newsSubtitle = db.Column(db.String(255))
+    
+    # ========================
+    # CONTACT SECTION
+    # ========================
+    contactTitle = db.Column(db.String(255))
+    contactSubtitle = db.Column(db.String(255))
+    contactAddress = db.Column(db.Text)
+    contactPhone = db.Column(db.String(64))
+    contactEmail = db.Column(db.String(255))
+    contactMapUrl = db.Column(db.Text)
+    quickFactBeds = db.Column(db.String(64))
+    quickFactLocation = db.Column(db.String(128))
+    quickFactCareType = db.Column(db.String(128))
+    quickFactParking = db.Column(db.String(64))
+    googleReviewUrl = db.Column(db.Text)
+    carehomeUrl = db.Column(db.Text)
+    
+    # ========================
+    # CARE SECTION (existing)
+    # ========================
     careIntro = db.Column(db.Text)
     careServicesJson = db.Column(db.Text) # List of {title, description, image}
     careSectionsJson = db.Column(db.Text) # List of {title, description, images}
@@ -62,6 +149,19 @@ class Home(db.Model):
 
     featured = db.Column(db.Boolean, default=False)
     createdAt = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class PageSection(db.Model):
+    """Stores the order and visibility of sections for each home page."""
+    id = db.Column(db.String, primary_key=True)
+    homeId = db.Column(db.String, db.ForeignKey('home.id'), nullable=False)
+    sectionKey = db.Column(db.String(64), nullable=False)  # hero, about, whyChoose, etc.
+    order = db.Column(db.Integer, default=0)
+    visible = db.Column(db.Boolean, default=True)
+    customTitle = db.Column(db.String(255))  # Override default section title
+    customCssClass = db.Column(db.String(255))  # Custom styling class
+    createdAt = db.Column(db.DateTime, default=datetime.utcnow)
+    updatedAt = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 class CareEnquiry(db.Model):
     id = db.Column(db.String, primary_key=True)
