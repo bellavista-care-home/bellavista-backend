@@ -57,6 +57,12 @@ def create_app(config_name=None):
         "https://master.dxv4enxpqrrf6.amplifyapp.com",  # Production Frontend
         "http://localhost:5173",                       # Local Development
         "http://127.0.0.1:5173",                       # Local Development IP
+        "http://localhost:5174",                       # Vite fallback port
+        "http://127.0.0.1:5174",                       # Vite fallback port IP
+        "http://localhost:5175",                       # Vite fallback port 2
+        "http://127.0.0.1:5175",                       # Vite fallback port 2 IP
+        "http://localhost:5176",                       # Vite fallback port 3
+        "http://127.0.0.1:5176",                       # Vite fallback port 3 IP
         "http://localhost:3000",                       # Fallback localhost
         "http://127.0.0.1:3000"                        # Fallback localhost IP
     ]

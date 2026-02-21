@@ -1520,17 +1520,48 @@ def to_dict_home(h):
         "newsletterUrl": h.newsletterUrl,
         "statsBedrooms": h.statsBedrooms,
         "statsPremier": h.statsPremier,
+        "statsLocationBadge": h.statsLocationBadge,
+        "statsQualityBadge": h.statsQualityBadge,
+        "statsTeamBadge": h.statsTeamBadge,
         "bannerImages": parse_json(h.bannerImagesJson),
         "teamMembers": parse_json(h.teamMembersJson),
         "teamGalleryImages": parse_json(h.teamGalleryJson),
+        "teamTitle": h.teamTitle,
+        "teamSubtitle": h.teamSubtitle,
+        "teamIntro": h.teamIntro,
+        "teamContent": h.teamContent,
+        "activitiesTitle": h.activitiesTitle,
+        "activitiesSubtitle": h.activitiesSubtitle,
         "activitiesIntro": h.activitiesIntro,
+        "activitiesContent": h.activitiesContent,
         "activities": parse_json(h.activitiesJson),
         "activityImages": parse_json(h.activityImagesJson),
         "activitiesModalDesc": h.activitiesModalDesc,
+        "facilitiesTitle": h.facilitiesTitle,
+        "facilitiesSubtitle": h.facilitiesSubtitle,
         "facilitiesIntro": h.facilitiesIntro,
+        "facilitiesContent": h.facilitiesContent,
         "facilitiesList": parse_json(h.facilitiesListJson),
         "detailedFacilities": parse_json(h.detailedFacilitiesJson),
         "facilitiesGalleryImages": parse_json(h.facilitiesGalleryJson),
+        "servicesTitle": h.servicesTitle,
+        "servicesSubtitle": h.servicesSubtitle,
+        "servicesIntro": h.servicesIntro,
+        "servicesContent": h.servicesContent,
+        "servicesList": parse_json(h.servicesListJson),
+        "contactTitle": h.contactTitle,
+        "contactSubtitle": h.contactSubtitle,
+        "contactAddress": h.contactAddress,
+        "contactPhone": h.contactPhone,
+        "contactEmail": h.contactEmail,
+        "contactMapUrl": h.contactMapUrl,
+        "quickFactBeds": h.quickFactBeds,
+        "quickFactLocation": h.quickFactLocation,
+        "quickFactCareType": h.quickFactCareType,
+        "quickFactParking": h.quickFactParking,
+        "googleReviewUrl": h.googleReviewUrl,
+        "carehomeUrl": h.carehomeUrl,
+        "contentBlocks": parse_json(h.contentBlocksJson),
         "homeFeatured": h.featured,
         "createdAt": h.createdAt.isoformat() if h.createdAt else None
     }
@@ -1906,7 +1937,7 @@ def seed_homes_route():
                 "heroSubtitle": "A Victorian property with character and charm.",
                 "heroBgImage": "/FrontPageBanner/preview_Home_Banner3_1300x400_acf_cropped.png",
                 "heroExpandedDesc": "Waverley Care Centre combines historic charm with modern care...",
-                "statsBedrooms": "35",
+                "statsBedrooms": "129",
                 "statsPremier": "5",
                 "teamMembers": [
                     { "name": "Home Manager", "role": "Home Manager", "image": "" }
@@ -2179,3 +2210,382 @@ def seed_management_team():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+
+# =============================================================================
+# PAGE SECTION MANAGEMENT API (for inline editing)
+# =============================================================================
+
+DEFAULT_SECTIONS = [
+    {'sectionKey': 'hero', 'order': 0, 'visible': True},
+    {'sectionKey': 'about', 'order': 1, 'visible': True},
+    {'sectionKey': 'whyChoose', 'order': 2, 'visible': True},
+    {'sectionKey': 'services', 'order': 3, 'visible': True},
+    {'sectionKey': 'facilities', 'order': 4, 'visible': True},
+    {'sectionKey': 'activities', 'order': 5, 'visible': True},
+    {'sectionKey': 'team', 'order': 6, 'visible': True},
+    {'sectionKey': 'testimonials', 'order': 7, 'visible': True},
+    {'sectionKey': 'news', 'order': 8, 'visible': True},
+    {'sectionKey': 'contact', 'order': 9, 'visible': True},
+]
+
+
+@api_bp.get('/homes/<home_id>/sections')
+def get_home_sections(home_id):
+    """Get all sections with order for a home"""
+    from .models import PageSection
+    try:
+        sections = PageSection.query.filter_by(homeId=home_id).order_by(PageSection.order).all()
+        
+        # If no sections exist, create default ones
+        if not sections:
+            for s in DEFAULT_SECTIONS:
+                section = PageSection(
+                    id=str(uuid.uuid4()),
+                    homeId=home_id,
+                    sectionKey=s['sectionKey'],
+                    order=s['order'],
+                    visible=s['visible']
+                )
+                db.session.add(section)
+            db.session.commit()
+            sections = PageSection.query.filter_by(homeId=home_id).order_by(PageSection.order).all()
+        
+        return jsonify([{
+            'id': s.id,
+            'sectionKey': s.sectionKey,
+            'order': s.order,
+            'visible': s.visible,
+            'customTitle': s.customTitle,
+            'customCssClass': s.customCssClass
+        } for s in sections]), 200
+    except Exception as e:
+        print(f"Error getting sections: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@api_bp.put('/homes/<home_id>/sections/order')
+@require_auth
+def update_sections_order(home_id):
+    """Update section order (for drag-drop)"""
+    from .models import PageSection
+    try:
+        data = request.get_json()
+        sections = data.get('sections', [])
+        
+        for item in sections:
+            section = PageSection.query.filter_by(
+                homeId=home_id,
+                sectionKey=item.get('sectionKey')
+            ).first()
+            
+            if section:
+                section.order = item.get('order', section.order)
+                section.visible = item.get('visible', section.visible)
+                section.customTitle = item.get('customTitle', section.customTitle)
+        
+        db.session.commit()
+        return jsonify({'message': 'Section order updated'}), 200
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error updating section order: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@api_bp.put('/homes/<home_id>/sections/<section_key>/visibility')
+@require_auth
+def toggle_section_visibility(home_id, section_key):
+    """Toggle section visibility"""
+    from .models import PageSection
+    try:
+        data = request.get_json()
+        section = PageSection.query.filter_by(
+            homeId=home_id,
+            sectionKey=section_key
+        ).first()
+        
+        if not section:
+            return jsonify({'error': 'Section not found'}), 404
+        
+        section.visible = data.get('visible', not section.visible)
+        db.session.commit()
+        
+        return jsonify({
+            'sectionKey': section.sectionKey,
+            'visible': section.visible
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+@api_bp.put('/homes/<home_id>/section/<section_key>')
+@require_auth
+def update_section_content(home_id, section_key):
+    """Update specific section content"""
+    try:
+        home = Home.query.get(home_id)
+        if not home:
+            return jsonify({'error': 'Home not found'}), 404
+        
+        data = request.get_json()
+        
+        # Map section keys to Home model fields
+        section_field_mapping = {
+            'hero': {
+                'heroTitle': 'heroTitle',
+                'heroSubtitle': 'heroSubtitle',
+                'heroDescription': 'heroDescription',
+                'heroExpandedDesc': 'heroExpandedDesc',
+                'statsBedrooms': 'statsBedrooms',
+                'statsLocationBadge': 'statsLocationBadge',
+                'statsQualityBadge': 'statsQualityBadge',
+                'statsTeamBadge': 'statsTeamBadge',
+                'ciwReportUrl': 'ciwReportUrl',
+                'newsletterUrl': 'newsletterUrl',
+                'bannerImages': 'bannerImagesJson',
+            },
+            'about': {
+                'aboutTitle': 'aboutTitle',
+                'aboutIntro': 'aboutIntro',
+                'aboutParagraph2': 'aboutParagraph2',
+                'carePhilosophyTitle': 'carePhilosophyTitle',
+                'carePhilosophy': 'carePhilosophy',
+                'locationTitle': 'locationTitle',
+                'locationDescription': 'locationDescription',
+                'contentBlocks': 'contentBlocksJson',
+            },
+            'whyChoose': {
+                'whyChooseTitle': 'whyChooseTitle',
+                'whyChooseSubtitle': 'whyChooseSubtitle',
+                'whyChooseList': 'whyChooseListJson',
+                'whyChooseClosing': 'whyChooseClosing',
+            },
+            'services': {
+                'servicesTitle': 'servicesTitle',
+                'servicesSubtitle': 'servicesSubtitle',
+                'servicesIntro': 'servicesIntro',
+                'servicesList': 'servicesListJson',
+                'servicesClosing': 'servicesClosing',
+                'servicesCta': 'servicesCta',
+                'servicesCtaLink': 'servicesCtaLink',
+                'servicesContent': 'servicesContent',
+            },
+            'facilities': {
+                'facilitiesTitle': 'facilitiesTitle',
+                'facilitiesSubtitle': 'facilitiesSubtitle',
+                'facilitiesIntro': 'facilitiesIntro',
+                'facilitiesList': 'facilitiesListJson',
+                'facilitiesGallery': 'facilitiesGalleryJson',
+                'facilitiesContent': 'facilitiesContent',
+            },
+            'activities': {
+                'activitiesTitle': 'activitiesTitle',
+                'activitiesSubtitle': 'activitiesSubtitle',
+                'activitiesIntro': 'activitiesIntro',
+                'activitiesList': 'activitiesJson',
+                'activitiesGallery': 'activityImagesJson',
+                'activitiesContent': 'activitiesContent',
+            },
+            'team': {
+                'teamTitle': 'teamTitle',
+                'teamSubtitle': 'teamSubtitle',
+                'teamIntro': 'teamIntro',
+                'teamIntro2': 'teamIntro2',
+                'teamMembers': 'teamMembersJson',
+                'teamContent': 'teamContent',
+            },
+            'testimonials': {
+                'testimonialsTitle': 'testimonialsTitle',
+                'googleRating': 'googleRating',
+                'googleReviewCount': 'googleReviewCount',
+                'carehomeRating': 'carehomeRating',
+                'carehomeReviewCount': 'carehomeReviewCount',
+                'testimonialsIntro': 'testimonialsIntro',
+            },
+            'news': {
+                'newsTitle': 'newsTitle',
+                'newsSubtitle': 'newsSubtitle',
+            },
+            'contact': {
+                'contactTitle': 'contactTitle',
+                'contactSubtitle': 'contactSubtitle',
+                'contactAddress': 'contactAddress',
+                'contactPhone': 'contactPhone',
+                'contactEmail': 'contactEmail',
+                'contactMapUrl': 'contactMapUrl',
+                'quickFactBeds': 'quickFactBeds',
+                'quickFactLocation': 'quickFactLocation',
+                'quickFactCareType': 'quickFactCareType',
+                'quickFactParking': 'quickFactParking',
+                'googleReviewUrl': 'googleReviewUrl',
+                'carehomeUrl': 'carehomeUrl',
+            },
+        }
+        
+        if section_key not in section_field_mapping:
+            return jsonify({'error': f'Unknown section: {section_key}'}), 400
+        
+        field_map = section_field_mapping[section_key]
+        
+        for data_field, model_field in field_map.items():
+            if data_field in data:
+                value = data[data_field]
+                # Convert lists/dicts to JSON strings for Json fields
+                if model_field.endswith('Json') and isinstance(value, (list, dict)):
+                    value = json.dumps(value)
+                setattr(home, model_field, value)
+        
+        db.session.commit()
+        return jsonify({'message': f'Section {section_key} updated successfully'}), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error updating section {section_key}: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
+@api_bp.get('/homes/<home_id>/full')
+def get_home_full(home_id):
+    """Get home with all section data and section order"""
+    from .models import PageSection
+    try:
+        home = Home.query.get(home_id)
+        if not home:
+            return jsonify({'error': 'Home not found'}), 404
+        
+        # Get section order
+        sections = PageSection.query.filter_by(homeId=home_id).order_by(PageSection.order).all()
+        
+        # If no sections exist, create defaults
+        if not sections:
+            for s in DEFAULT_SECTIONS:
+                section = PageSection(
+                    id=str(uuid.uuid4()),
+                    homeId=home_id,
+                    sectionKey=s['sectionKey'],
+                    order=s['order'],
+                    visible=s['visible']
+                )
+                db.session.add(section)
+            db.session.commit()
+            sections = PageSection.query.filter_by(homeId=home_id).order_by(PageSection.order).all()
+        
+        def parse_json(json_str):
+            if not json_str:
+                return []
+            try:
+                return json.loads(json_str)
+            except:
+                return []
+        
+        return jsonify({
+            'id': home.id,
+            'name': home.name,
+            'location': home.location,
+            
+            # Section order
+            'sections': [{
+                'sectionKey': s.sectionKey,
+                'order': s.order,
+                'visible': s.visible,
+                'customTitle': s.customTitle
+            } for s in sections],
+            
+            # Hero
+            'heroTitle': home.heroTitle,
+            'heroSubtitle': home.heroSubtitle,
+            'heroDescription': home.heroDescription,
+            'heroExpandedDesc': home.heroExpandedDesc,
+            'statsBedrooms': home.statsBedrooms,
+            'statsLocationBadge': home.statsLocationBadge,
+            'statsQualityBadge': home.statsQualityBadge,
+            'statsTeamBadge': home.statsTeamBadge,
+            'ciwReportUrl': home.ciwReportUrl,
+            'newsletterUrl': home.newsletterUrl,
+            'bannerImages': parse_json(home.bannerImagesJson),
+            'heroBgImage': home.heroBgImage,
+            
+            # About
+            'aboutTitle': home.aboutTitle,
+            'aboutIntro': home.aboutIntro,
+            'aboutParagraph2': home.aboutParagraph2,
+            'carePhilosophyTitle': home.carePhilosophyTitle,
+            'carePhilosophy': home.carePhilosophy,
+            'locationTitle': home.locationTitle,
+            'locationDescription': home.locationDescription,
+            'contentBlocks': parse_json(home.contentBlocksJson),
+            
+            # Why Choose
+            'whyChooseTitle': home.whyChooseTitle,
+            'whyChooseSubtitle': home.whyChooseSubtitle,
+            'whyChooseList': parse_json(home.whyChooseListJson),
+            'whyChooseClosing': home.whyChooseClosing,
+            
+            # Services
+            'servicesTitle': home.servicesTitle,
+            'servicesSubtitle': home.servicesSubtitle,
+            'servicesIntro': home.servicesIntro,
+            'servicesList': parse_json(home.servicesListJson),
+            'servicesClosing': home.servicesClosing,
+            'servicesCta': home.servicesCta,
+            'servicesCtaLink': home.servicesCtaLink,
+            'servicesContent': home.servicesContent,
+            
+            # Facilities
+            'facilitiesTitle': home.facilitiesTitle,
+            'facilitiesSubtitle': home.facilitiesSubtitle,
+            'facilitiesIntro': home.facilitiesIntro,
+            'facilitiesList': parse_json(home.facilitiesListJson),
+            'facilitiesGallery': parse_json(home.facilitiesGalleryJson),
+            'facilitiesContent': home.facilitiesContent,
+            
+            # Activities
+            'activitiesTitle': home.activitiesTitle,
+            'activitiesSubtitle': home.activitiesSubtitle,
+            'activitiesIntro': home.activitiesIntro,
+            'activitiesList': parse_json(home.activitiesJson),
+            'activitiesGallery': parse_json(home.activityImagesJson),
+            'activitiesContent': home.activitiesContent,
+            
+            # Team
+            'teamTitle': home.teamTitle,
+            'teamSubtitle': home.teamSubtitle,
+            'teamIntro': home.teamIntro,
+            'teamIntro2': home.teamIntro2,
+            'teamMembers': parse_json(home.teamMembersJson),
+            'teamContent': home.teamContent,
+            
+            # Testimonials
+            'testimonialsTitle': home.testimonialsTitle,
+            'googleRating': home.googleRating,
+            'googleReviewCount': home.googleReviewCount,
+            'carehomeRating': home.carehomeRating,
+            'carehomeReviewCount': home.carehomeReviewCount,
+            'testimonialsIntro': home.testimonialsIntro,
+            
+            # News
+            'newsTitle': home.newsTitle,
+            'newsSubtitle': home.newsSubtitle,
+            
+            # Contact
+            'contactTitle': home.contactTitle,
+            'contactSubtitle': home.contactSubtitle,
+            'contactAddress': home.contactAddress,
+            'contactPhone': home.contactPhone,
+            'contactEmail': home.contactEmail,
+            'contactMapUrl': home.contactMapUrl,
+            'quickFactBeds': home.quickFactBeds,
+            'quickFactLocation': home.quickFactLocation,
+            'quickFactCareType': home.quickFactCareType,
+            'quickFactParking': home.quickFactParking,
+            'googleReviewUrl': home.googleReviewUrl,
+            'carehomeUrl': home.carehomeUrl,
+        }), 200
+        
+    except Exception as e:
+        print(f"Error getting full home: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
