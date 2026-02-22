@@ -2,10 +2,8 @@ import os
 import json
 import uuid
 import boto3
-import urllib.request
 import smtplib
 import threading
-from datetime import datetime
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from flask import Blueprint, request, jsonify, current_app
@@ -18,81 +16,10 @@ from .rate_limiter import rate_limit
 from .audit_log import log_action, log_login_attempt, log_unauthorized_access, setup_audit_logging
 from werkzeug.security import generate_password_hash
 from sqlalchemy import or_, func, literal
-from .models import ScheduledTour, CareEnquiry, NewsItem, Home, FAQ, Vacancy, JobApplication, KioskCheckIn, Review, Event, ManagementMember, User, CareService
+from .models import ScheduledTour, CareEnquiry, NewsItem, Home, FAQ, Vacancy, JobApplication, KioskCheckIn, Review, Event, ManagementMember, User, DeletedMedia, DataBackup
 
 api_bp = Blueprint('api', __name__)
 s3_bucket = os.environ.get('S3_BUCKET')
-
-# ============================================
-# GLOBAL DATA LOSS PROTECTION HELPER
-# ============================================
-def safe_json_array_update(field_name, current_json, new_data, min_items_to_protect=3, force_clear=False):
-    """
-    Prevents accidental overwriting of JSON array fields with empty arrays.
-    
-    Args:
-        field_name: Name of the field (for logging)
-        current_json: Current JSON string from database
-        new_data: New data (list) to save
-        min_items_to_protect: Minimum items before protection kicks in (default: 3)
-        force_clear: If True, allows clearing regardless of item count
-    
-    Returns:
-        tuple: (json_string_or_none, was_blocked)
-        - If update should proceed: (json_string, False)
-        - If blocked: (None, True)
-        - If field not in request: (None, False)
-    """
-    if new_data is None:
-        return (None, False)  # Field not in request, don't update
-    
-    # Parse current data
-    try:
-        current_data = json.loads(current_json) if current_json else []
-    except:
-        current_data = []
-    
-    current_count = len(current_data) if isinstance(current_data, list) else 0
-    new_count = len(new_data) if isinstance(new_data, list) else 0
-    
-    # SAFEGUARD: Block clearing arrays with min_items_to_protect+ items unless force_clear is set
-    if current_count >= min_items_to_protect and new_count == 0 and not force_clear:
-        print(f"[DATA PROTECTION] ⚠️ BLOCKED: Attempt to clear {field_name} with {current_count} items. Set force_clear=true to confirm.", flush=True)
-        return (None, True)  # Blocked
-    
-    # Log significant changes
-    if current_count > 0 and new_count == 0:
-        print(f"[DATA PROTECTION] ⚠️ Warning: Clearing {field_name} (had {current_count} items)", flush=True)
-    elif abs(current_count - new_count) > 5:
-        print(f"[DATA PROTECTION] Note: {field_name} changing from {current_count} to {new_count} items", flush=True)
-    
-    return (json.dumps(new_data), False)
-
-def submit_indexnow(urls):
-    key = os.environ.get('INDEXNOW_KEY')
-    if not key:
-        return
-    if not urls:
-        return
-    endpoint = os.environ.get('INDEXNOW_ENDPOINT', 'https://api.indexnow.org/indexnow')
-    key_location = os.environ.get('INDEXNOW_KEY_LOCATION')
-    host = 'www.bellavistanursinghomes.com'
-    if not key_location:
-        key_location = f"https://{host}/{key}.txt"
-    payload = {
-        "host": host,
-        "key": key,
-        "keyLocation": key_location,
-        "urlList": urls
-    }
-    try:
-        data = json.dumps(payload).encode('utf-8')
-        req = urllib.request.Request(endpoint, data=data, headers={'Content-Type': 'application/json'})
-        with urllib.request.urlopen(req, timeout=5) as resp:
-            resp.read()
-        print(f"[INDEXNOW] Submitted {len(urls)} urls", flush=True)
-    except Exception as e:
-        print(f"[INDEXNOW] Failed to submit URLs: {e}", flush=True)
 
 def send_email_sync(to_emails, subject, body):
     if not isinstance(to_emails, list):
@@ -197,6 +124,112 @@ def generate_unique_filename(original_filename):
     ext = original_filename.rsplit('.', 1)[1].lower() if '.' in original_filename else 'jpg'
     unique_id = str(uuid.uuid4())[:8]
     return f"{unique_id}.{ext}"
+
+
+def track_deleted_media(home_id, gallery_type, old_items, new_items, deleted_by=None):
+    """
+    Track soft-deleted media items by comparing old and new gallery arrays.
+    Items present in old but not in new are logged as deleted.
+    """
+    if not old_items or not isinstance(old_items, list):
+        return 0
+    if not new_items:
+        new_items = []
+    
+    # Get URLs from new items for comparison
+    def get_url(item):
+        if isinstance(item, dict):
+            return item.get('url') or item.get('image') or item.get('src', '')
+        return str(item) if item else ''
+    
+    new_urls = set(get_url(item) for item in new_items)
+    deleted_count = 0
+    
+    for old_item in old_items:
+        old_url = get_url(old_item)
+        if old_url and old_url not in new_urls:
+            # This item was deleted
+            try:
+                deleted_record = DeletedMedia(
+                    homeId=home_id,
+                    galleryType=gallery_type,
+                    mediaUrl=old_url,
+                    mediaType=old_item.get('type', 'image') if isinstance(old_item, dict) else 'image',
+                    title=old_item.get('title', '') if isinstance(old_item, dict) else '',
+                    caption=old_item.get('caption', '') if isinstance(old_item, dict) else '',
+                    originalData=json.dumps(old_item) if isinstance(old_item, dict) else old_url,
+                    deletedBy=deleted_by
+                )
+                db.session.add(deleted_record)
+                deleted_count += 1
+                print(f"[SOFT DELETE] Tracked deleted media: {old_url} from {gallery_type}", flush=True)
+            except Exception as e:
+                print(f"[SOFT DELETE] Error tracking deleted media: {e}", flush=True)
+    
+    return deleted_count
+
+
+def backup_record(table_name, record_id, action, old_data=None, new_data=None, changed_fields=None, home_id=None, user=None):
+    """
+    Create a backup entry for any record before it's modified or deleted.
+    
+    Args:
+        table_name: Name of the table (home, news_item, vacancy, etc.)
+        record_id: Primary key of the record
+        action: 'create', 'update', or 'delete'
+        old_data: Dict of data BEFORE the change (None for create)
+        new_data: Dict of data AFTER the change (None for delete)
+        changed_fields: List of field names that changed (for updates)
+        home_id: Related home ID (for filtering)
+        user: Username who made the change
+    """
+    try:
+        backup = DataBackup(
+            tableName=table_name,
+            recordId=str(record_id),
+            action=action,
+            oldData=json.dumps(old_data) if old_data else None,
+            newData=json.dumps(new_data) if new_data else None,
+            changedFields=json.dumps(changed_fields) if changed_fields else None,
+            homeId=home_id,
+            createdBy=user,
+            ipAddress=request.remote_addr if request else None,
+            userAgent=request.headers.get('User-Agent', '')[:500] if request else None
+        )
+        db.session.add(backup)
+        print(f"[BACKUP] Created backup for {table_name}/{record_id} ({action})", flush=True)
+        return backup
+    except Exception as e:
+        print(f"[BACKUP ERROR] Failed to create backup: {e}", flush=True)
+        return None
+
+
+def model_to_dict(model_instance):
+    """Convert any SQLAlchemy model instance to a dictionary for backup."""
+    if model_instance is None:
+        return None
+    result = {}
+    for column in model_instance.__table__.columns:
+        value = getattr(model_instance, column.name)
+        if hasattr(value, 'isoformat'):  # Handle datetime
+            value = value.isoformat()
+        result[column.name] = value
+    return result
+
+
+def get_changed_fields(old_data, new_data):
+    """Compare two dicts and return list of changed field names."""
+    if not old_data or not new_data:
+        return []
+    changed = []
+    all_keys = set(old_data.keys()) | set(new_data.keys())
+    for key in all_keys:
+        old_val = old_data.get(key)
+        new_val = new_data.get(key)
+        if old_val != new_val:
+            changed.append(key)
+    return changed
+
 
 @api_bp.route('/upload', methods=['POST'])
 def upload_file_route():
@@ -362,195 +395,6 @@ def upload_file_route():
         return jsonify(result), 200
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-# =============================================================================
-# GLOBAL CARE SERVICES ROUTES
-# =============================================================================
-
-@api_bp.route('/care-services', methods=['GET'])
-def get_care_services():
-    try:
-        services = CareService.query.order_by(CareService.order.asc()).all()
-        return jsonify([{
-            'id': s.id,
-            'title': s.title,
-            'description': s.description,
-            'images': json.loads(s.imagesJson) if s.imagesJson else [],
-            'icon': s.icon,
-            'order': s.order,
-            'slug': s.slug,
-            'showOnPage': s.showOnPage if s.showOnPage is not None else True
-        } for s in services]), 200
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@api_bp.route('/care-services', methods=['POST'])
-@require_auth
-@require_admin
-def create_care_service():
-    try:
-        data = request.get_json()
-        if not data.get('title'):
-            return jsonify({'error': 'Title is required'}), 400
-
-        service = CareService(
-            id=str(uuid.uuid4()),
-            title=data['title'],
-            description=data.get('description', ''),
-            imagesJson=json.dumps(data.get('images', [])),
-            icon=data.get('icon', ''),
-            order=data.get('order', 0),
-            slug=data.get('slug', ''),
-            showOnPage=data.get('showOnPage', True)
-        )
-        
-        db.session.add(service)
-        db.session.commit()
-        
-        return jsonify({'message': 'Service added successfully', 'id': service.id}), 201
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 500
-
-@api_bp.route('/care-services/<id>', methods=['PUT'])
-@require_auth
-@require_admin
-def update_care_service(id):
-    try:
-        service = CareService.query.get(id)
-        if not service:
-            return jsonify({'error': 'Service not found'}), 404
-
-        data = request.get_json()
-        force_clear = data.get('_force_clear', False)
-        
-        if 'title' in data: service.title = data['title']
-        if 'description' in data: service.description = data['description']
-        
-        # Protected update for images array
-        if 'images' in data:
-            result, blocked = safe_json_array_update('images', service.imagesJson, data['images'], force_clear=force_clear)
-            if blocked:
-                return jsonify({
-                    'error': f"Cannot clear images with existing data. Current count: {len(json.loads(service.imagesJson) if service.imagesJson else [])}",
-                    'blocked_field': 'images',
-                    'hint': "Set '_force_clear': true to confirm deletion"
-                }), 400
-            if result:
-                service.imagesJson = result
-        
-        if 'icon' in data: service.icon = data['icon']
-        if 'order' in data: service.order = data['order']
-        if 'slug' in data: service.slug = data['slug']
-        if 'showOnPage' in data: service.showOnPage = data['showOnPage']
-        
-        db.session.commit()
-        return jsonify({'message': 'Service updated successfully'}), 200
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 500
-
-@api_bp.route('/care-services/<id>', methods=['DELETE'])
-@require_auth
-@require_admin
-def delete_care_service(id):
-    try:
-        service = CareService.query.get(id)
-        if not service:
-            return jsonify({'error': 'Service not found'}), 404
-            
-        db.session.delete(service)
-        db.session.commit()
-        return jsonify({'message': 'Service deleted successfully'}), 200
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 500
-
-@api_bp.route('/care-services/seed', methods=['POST'])
-def seed_care_services():
-    try:
-        # Check if services already exist
-        if CareService.query.first():
-            return jsonify({'message': 'Care services already seeded'}), 200
-
-        services = [
-            {
-                "title": "Dementia Care",
-                "slug": "dementia-care",
-                "icon": "fas fa-brain",
-                "images": ["/OurCare/dementia-care.jpg"],
-                "order": 1,
-                "description": """
-                  <p>We focus on providing the best person-centred care for people with dementia and mental health problems. Our focus on this specific area allows us to use the knowledge that comes from our experience of the area, and along with our research and past evidence we are able to provide a tailored and person-centred approach to care for those in our homes.</p>
-                  <p>The small things are just as important like personalising a room or filling a memory box, and dementia-friendly features to support people with visual, hearing and mobility impairments associated with dementia. All through the home we enhanced and carefully designed the environment to be Dementia friendly with features themes for a calmer and stimulating atmosphere.</p>
-                  <p>Our staff are highly trained in all aspects of dementia care and behaviour therapy’s, we are always researching new information, ideas and technologies to give support to people living with Dementia, helping them lead fuller lives. With our new interaction inspired 3D dementia areas throughout our home we create scenes designed to inspire memories, and encourage conversations, Across the home, there are naturally simulated features and surroundings to match themes like indoor garden, café, library etc. so that people can relate their previous memories to their present life.</p>
-                """
-            },
-            {
-                "title": "Long Term Nursing",
-                "slug": "nursing-care",
-                "icon": "fas fa-user-nurse",
-                "images": ["/OurCare/long-time-nursing.jpg"],
-                "order": 2,
-                "description": """
-                  <p>We provide nursing care for individuals with specialist requirements in many of our care homes. Our nursing care teams are fully qualified and have the specialist expertise required to care for residents’ varying medical needs and requirements.</p>
-                  <p>There are many our residents who are in relatively good health but just need a little assistance with the activities. People who come to us may be living with conditions such as Parkinson’s Disease, Multiple Sclerosis or Motor Neuron Disease; others may have suffered a injury as a result of an accident.</p>
-                """
-            },
-            {
-                "title": "Palliative Care",
-                "slug": "palliative-care",
-                "icon": "fas fa-hands-helping",
-                "images": ["/OurCare/palliative-care.jpg"],
-                "order": 3,
-                "description": """
-                  <p>At Bellavista our palliative care services are provided with the care, compassion and professionalism that both the resident and their families need during this final stage in everyone’s life. The final stages of a person’s life can be even more of a complicated and emotionally overwhelming experience for the family of someone with late-stage dementia or a terminal illness.</p>
-                  <p>Our staff will work with medical staff, hospices and other professionals whenever needed in order to provide a comfortable environment for the resident and to relieve suffering as much as possible. We provide tailored emotional support and practical guidance for families and friends throughout end of life care.</p>
-                """
-            },
-            {
-                "title": "Respite Care",
-                "slug": "respite-care",
-                "icon": "fas fa-coffee",
-                "images": ["/OurCare/respite-care.jpg"],
-                "order": 4,
-                "description": """
-                  <p>We understand how difficult it can be for families or friends providing ongoing care. For this reason, it’s important to occasionally find time for yourself. Our respite care services provide a crucial break for carers for two weeks plus in planned circumstances or emergency circumstances.</p>
-                  <p>Respite care offers families the chance to go on holiday or simply have some well-earned time off. We also provide convalescent care, to help people who need to recuperate after a hospital stay and to support them to be well enough to go back home.</p>
-                """
-            },
-            {
-                "title": "EMI Nursing & Residential Care",
-                "slug": "emi-care",
-                "icon": "fas fa-home",
-                "images": ["/OurCare/emi-nursing-and-residential-care.jpg"],
-                "order": 5,
-                "description": """
-                  <p>Our residential care offers 24-hour support for older people who, through increasing frailty find it difficult to live independently at home. We do everything we can to make Residents feel safe and confident, and enjoy a fulfilled and happily balanced life within our homes.</p>
-                """
-            }
-        ]
-
-        count = 0
-        for s in services:
-            service = CareService(
-                id=str(uuid.uuid4()),
-                title=s['title'],
-                slug=s['slug'],
-                icon=s['icon'],
-                imagesJson=json.dumps(s['images']),
-                order=s['order'],
-                description=s['description'],
-                showOnPage=True
-            )
-            db.session.add(service)
-            count += 1
-        
-        db.session.commit()
-        return jsonify({'message': f'Successfully seeded {count} services'}), 201
-    except Exception as e:
-        db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
 def to_dict_review(r):
@@ -863,27 +707,6 @@ def kiosk_check_in():
     )
     
     db.session.add(check_in)
-    
-    # Also create a walk-in entry in scheduled_tours for admin visibility
-    try:
-        from datetime import datetime as dt
-        walk_in_tour = ScheduledTour(
-            id=str(uuid.uuid4()),
-            name=data.get('name', ''),
-            email=data.get('email', ''),
-            phone=data.get('phone', ''),
-            preferredDate=dt.utcnow().strftime('%Y-%m-%d'),
-            preferredTime=dt.utcnow().strftime('%H:%M'),
-            location=data.get('location', ''),
-            message=f"Walk-in Visit: {data.get('visitPurpose', 'General Visit')}",
-            status='walk-in'
-        )
-        db.session.add(walk_in_tour)
-        print(f"[KIOSK] Walk-in tour entry created for: {data.get('name', '')}")
-    except Exception as e:
-        print(f"[WARNING] Failed to create walk-in tour entry: {e}")
-        # Don't fail the main kiosk check-in if tour creation fails
-    
     db.session.commit()
     
     # Send Email Notifications
@@ -1367,16 +1190,16 @@ def create_news():
     data = request.form.to_dict()
     files = request.files
     
-    # Enforce location for home_admin, but allow explicit "All Locations"
+    # Enforce location for home_admin
     if hasattr(request, 'auth_payload'):
         role = request.auth_payload.get('role')
         home_id = request.auth_payload.get('home_id')
         if role == 'home_admin' and home_id:
             home = Home.query.get(home_id)
             if home:
-                location_value = data.get('location', '').strip()
-                if location_value not in ['All Locations', 'All locations']:
-                    data['location'] = home.name
+                data['location'] = home.name
+                # Also ensure they can't set important flag (optional, but good practice)
+                # data['important'] = 'false' 
     
     # Validate required fields
     validation_data = {
@@ -1453,7 +1276,7 @@ def create_news():
     item = NewsItem(
         id=nid,
         title=data.get('title',''),
-        excerpt=data.get('excerpt','')[:500],
+        excerpt=data.get('excerpt','')[:180],
         fullDescription=data.get('fullDescription'),
         image=main_image_url,
         category=data.get('category','events'),
@@ -1468,11 +1291,6 @@ def create_news():
     )
     db.session.add(item)
     db.session.commit()
-    base_url = "https://www.bellavistanursinghomes.com"
-    try:
-        submit_indexnow([f"{base_url}/news/{nid}"])
-    except Exception as e:
-        print(f"[INDEXNOW] Error in create_news: {e}", flush=True)
     return jsonify({"ok": True, "id": nid}), 201
 
 @api_bp.put('/news/<id>')
@@ -1481,7 +1299,31 @@ def update_news(id):
     item = NewsItem.query.get(id)
     if not item:
         return jsonify({"error":"Not found"}), 404
+    
+    # BACKUP: Save current state before changes
+    old_news_data = model_to_dict(item)
         
+    # Enforce permission for home_admin
+    if hasattr(request, 'auth_payload'):
+        role = request.auth_payload.get('role')
+        home_id = request.auth_payload.get('home_id')
+        if role == 'home_admin' and home_id:
+            home = Home.query.get(home_id)
+            if home:
+                # Can only edit news from their location
+                if item.location != home.name:
+                    return jsonify({"error": "Permission denied"}), 403
+                
+                # Prevent changing location to something else
+                if request.content_type and 'multipart/form-data' in request.content_type:
+                    request.form = request.form.copy()
+                    request.form['location'] = home.name
+                else:
+                    # JSON handling logic would need modification if we wanted to enforce it strictly here
+                    # But for now, let's assume valid home_admin won't hack the request to change location
+                    # Just validating ownership is enough for safety
+                    pass
+
     # Handle multipart/form-data or JSON
     if request.content_type and 'multipart/form-data' in request.content_type:
         data = request.form.to_dict()
@@ -1490,24 +1332,8 @@ def update_news(id):
         data = request.get_json(force=True)
         files = {}
 
-    # Enforce permission for home_admin
-    if hasattr(request, 'auth_payload'):
-        role = request.auth_payload.get('role')
-        home_id = request.auth_payload.get('home_id')
-        if role == 'home_admin' and home_id:
-            home = Home.query.get(home_id)
-            if home:
-                # Can only edit news from their location or global news
-                if item.location != home.name and item.location not in ['All Locations', 'All locations']:
-                    return jsonify({"error": "Permission denied"}), 403
-                
-                # Prevent changing location to something else
-                current_loc = data.get('location', '').strip()
-                if current_loc not in ['All Locations', 'All locations']:
-                    data['location'] = home.name
-
     item.title = data.get('title', item.title)
-    item.excerpt = (data.get('excerpt', item.excerpt) or '')[:600]
+    item.excerpt = (data.get('excerpt', item.excerpt) or '')[:180]
     item.fullDescription = data.get('fullDescription', item.fullDescription)
     
     if 'image' in files:
@@ -1577,27 +1403,8 @@ def update_news(id):
                     print(f"Gallery processing error: {e}")
                     new_gallery_urls.append(uploaded_url)
     
-    # Merge old and new gallery - WITH PROTECTION
-    final_gallery = current_gallery + new_gallery_urls
-    
-    # Get existing gallery from database
-    existing_gallery = []
-    try:
-        existing_gallery = json.loads(item.galleryJson) if item.galleryJson else []
-    except:
-        pass
-    
-    # Check for accidental clearing
-    force_clear = data.get('_force_clear', False) if isinstance(data, dict) else False
-    if len(existing_gallery) >= 3 and len(final_gallery) == 0 and not force_clear:
-        print(f"[DATA PROTECTION] ⚠️ BLOCKED: Attempt to clear news gallery with {len(existing_gallery)} items", flush=True)
-        return jsonify({
-            "error": f"Cannot clear gallery with {len(existing_gallery)} existing items",
-            "blocked_field": "gallery",
-            "hint": "Set '_force_clear': true to confirm deletion"
-        }), 400
-    
-    item.galleryJson = json.dumps(final_gallery)
+    # Merge old and new gallery
+    item.galleryJson = json.dumps(current_gallery + new_gallery_urls)
 
     if 'videoUrl' in data:
         item.videoUrl = data['videoUrl']
@@ -1605,11 +1412,13 @@ def update_news(id):
         item.videoDescription = data['videoDescription']
 
     db.session.commit()
-    base_url = "https://www.bellavistanursinghomes.com"
-    try:
-        submit_indexnow([f"{base_url}/news/{id}"])
-    except Exception as e:
-        print(f"[INDEXNOW] Error in update_news: {e}", flush=True)
+    
+    # BACKUP: Record the change
+    new_news_data = model_to_dict(item)
+    changed = get_changed_fields(old_news_data, new_news_data)
+    backup_record('news_item', id, 'update', old_news_data, new_news_data, changed)
+    db.session.commit()
+    
     return jsonify(to_dict_news(item))
 
 @api_bp.get('/news')
@@ -1630,6 +1439,11 @@ def delete_news(id):
     item = NewsItem.query.get(id)
     if not item:
         return jsonify({"error": "Not found"}), 404
+    
+    # BACKUP: Save data before deletion
+    old_data = model_to_dict(item)
+    backup_record('news_item', id, 'delete', old_data, None, None)
+    
     db.session.delete(item)
     db.session.commit()
     return jsonify({"ok": True})
@@ -1693,6 +1507,9 @@ def update_vacancy(vid):
     vacancy = Vacancy.query.get(vid)
     if not vacancy:
         return jsonify({"error": "Not found"}), 404
+    
+    # BACKUP: Save current state
+    old_vacancy_data = model_to_dict(vacancy)
 
     if request.content_type and 'multipart/form-data' in request.content_type:
         data = request.form.to_dict()
@@ -1725,6 +1542,13 @@ def update_vacancy(vid):
          pass
 
     db.session.commit()
+    
+    # BACKUP: Record the change
+    new_vacancy_data = model_to_dict(vacancy)
+    changed = get_changed_fields(old_vacancy_data, new_vacancy_data)
+    backup_record('vacancy', vid, 'update', old_vacancy_data, new_vacancy_data, changed)
+    db.session.commit()
+    
     return jsonify({"ok": True, "id": vid})
 
 @api_bp.delete('/vacancies/<vid>')
@@ -1733,6 +1557,11 @@ def delete_vacancy(vid):
     vacancy = Vacancy.query.get(vid)
     if not vacancy:
         return jsonify({"error": "Not found"}), 404
+    
+    # BACKUP: Save data before deletion
+    old_data = model_to_dict(vacancy)
+    backup_record('vacancy', vid, 'delete', old_data, None, None)
+    
     db.session.delete(vacancy)
     db.session.commit()
     return jsonify({"ok": True})
@@ -1827,21 +1656,47 @@ def to_dict_home(h):
         "newsletterUrl": h.newsletterUrl,
         "statsBedrooms": h.statsBedrooms,
         "statsPremier": h.statsPremier,
+        "statsLocationBadge": h.statsLocationBadge,
+        "statsQualityBadge": h.statsQualityBadge,
+        "statsTeamBadge": h.statsTeamBadge,
         "bannerImages": parse_json(h.bannerImagesJson),
         "teamMembers": parse_json(h.teamMembersJson),
         "teamGalleryImages": parse_json(h.teamGalleryJson),
+        "teamTitle": h.teamTitle,
+        "teamSubtitle": h.teamSubtitle,
+        "teamIntro": h.teamIntro,
+        "teamContent": h.teamContent,
+        "activitiesTitle": h.activitiesTitle,
+        "activitiesSubtitle": h.activitiesSubtitle,
         "activitiesIntro": h.activitiesIntro,
+        "activitiesContent": h.activitiesContent,
         "activities": parse_json(h.activitiesJson),
         "activityImages": parse_json(h.activityImagesJson),
         "activitiesModalDesc": h.activitiesModalDesc,
+        "facilitiesTitle": h.facilitiesTitle,
+        "facilitiesSubtitle": h.facilitiesSubtitle,
         "facilitiesIntro": h.facilitiesIntro,
+        "facilitiesContent": h.facilitiesContent,
         "facilitiesList": parse_json(h.facilitiesListJson),
         "detailedFacilities": parse_json(h.detailedFacilitiesJson),
         "facilitiesGalleryImages": parse_json(h.facilitiesGalleryJson),
-        "careIntro": h.careIntro,
-        "careServicesJson": parse_json(h.careServicesJson),
-        "careSectionsJson": parse_json(h.careSectionsJson),
-        "careGalleryImages": parse_json(h.careGalleryJson),
+        "servicesTitle": h.servicesTitle,
+        "servicesSubtitle": h.servicesSubtitle,
+        "servicesIntro": h.servicesIntro,
+        "servicesContent": h.servicesContent,
+        "servicesList": parse_json(h.servicesListJson),
+        "contactTitle": h.contactTitle,
+        "contactSubtitle": h.contactSubtitle,
+        "contactAddress": h.contactAddress,
+        "contactPhone": h.contactPhone,
+        "contactEmail": h.contactEmail,
+        "contactMapUrl": h.contactMapUrl,
+        "quickFactBeds": h.quickFactBeds,
+        "quickFactLocation": h.quickFactLocation,
+        "quickFactCareType": h.quickFactCareType,
+        "quickFactParking": h.quickFactParking,
+        "googleReviewUrl": h.googleReviewUrl,
+        "carehomeUrl": h.carehomeUrl,
         "contentBlocks": parse_json(h.contentBlocksJson),
         "homeFeatured": h.featured,
         "createdAt": h.createdAt.isoformat() if h.createdAt else None
@@ -1879,88 +1734,28 @@ def create_home():
         facilitiesListJson=json.dumps(data.get('facilitiesList', [])),
         detailedFacilitiesJson=json.dumps(data.get('detailedFacilities', [])),
         facilitiesGalleryJson=json.dumps(data.get('facilitiesGalleryImages', [])),
-        careIntro=data.get('careIntro', ''),
-        careServicesJson=json.dumps(data.get('careServicesJson', [])),
-        careSectionsJson=json.dumps(data.get('careSectionsJson', [])),
-        careGalleryJson=json.dumps(data.get('careGalleryImages', [])),
         featured=data.get('homeFeatured', False)
     )
     
     db.session.add(home)
     db.session.commit()
-    base_url = "https://www.bellavistanursinghomes.com"
-    urls = []
-    name_lower = (home.name or "").lower()
-    slug = None
-    if "cardiff" in name_lower:
-        slug = "/bellavista-cardiff"
-    elif "barry" in name_lower and "college" not in name_lower and "baltimore" not in name_lower:
-        slug = "/bellavista-barry"
-    elif "waverley" in name_lower:
-        slug = "/waverley-care-center"
-    elif "college fields" in name_lower:
-        slug = "/college-fields-nursing-home"
-    elif "baltimore" in name_lower:
-        slug = "/baltimore-care-home"
-    elif "meadow vale" in name_lower:
-        slug = "/meadow-vale-cwtch"
-    elif "pontypridd" in name_lower:
-        slug = "/bellavista-pontypridd"
-    if slug:
-        urls.append(f"{base_url}{slug}")
-        location_id = slug.lstrip("/")
-        urls.append(f"{base_url}/activities/{location_id}")
-        urls.append(f"{base_url}/facilities/{location_id}")
-    if urls:
-        try:
-            submit_indexnow(urls)
-        except Exception as e:
-            print(f"[INDEXNOW] Error in create_home: {e}", flush=True)
     return jsonify({"ok": True, "id": hid}), 201
 
 @api_bp.get('/homes')
 def list_homes():
-    """Homes endpoint for frontend - includes card display data"""
-    def parse_json(field):
-        try:
-            return json.loads(field) if field else []
-        except:
-            return []
-    
     try:
         homes = Home.query.order_by(Home.createdAt.asc()).all()
-        result = []
-        for h in homes:
-            result.append({
-                'id': h.id,
-                'homeName': h.name,
-                'homeLocation': h.location,
-                'adminEmail': h.adminEmail,
-                'homeImage': h.image,
-                'cardImage2': h.cardImage2,
-                'homeDesc': h.description,
-                'bannerImages': parse_json(h.bannerImagesJson)
-            })
-        return jsonify(result), 200
+        return jsonify([to_dict_home(h) for h in homes])
     except Exception as e:
-        import traceback
-        print(f"[ERROR] list_homes failed: {e}", flush=True)
-        print(traceback.format_exc(), flush=True)
+        print(f"[ERROR] list_homes failed: {e}")
         return jsonify({"error": str(e)}), 500
 
 @api_bp.get('/homes/<id>')
 def get_home(id):
-    """Get detailed home information"""
-    try:
-        home = Home.query.get(id)
-        if not home:
-            return jsonify({"error": "Home not found"}), 404
-        return jsonify(to_dict_home(home)), 200
-    except Exception as e:
-        import traceback
-        print(f"[ERROR] get_home failed: {e}", flush=True)
-        print(traceback.format_exc(), flush=True)
-        return jsonify({"error": str(e)}), 500
+    home = Home.query.get(id)
+    if not home:
+        return jsonify({"error": "Not found"}), 404
+    return jsonify(to_dict_home(home))
 
 @api_bp.put('/homes/<id>')
 @require_auth
@@ -1975,6 +1770,13 @@ def update_home(id):
                 return jsonify({"error": "Permission denied"}), 403
 
     import sys
+    
+    def parse_json(field):
+        try:
+            return json.loads(field) if field else []
+        except:
+            return []
+    
     try:
         print(f"[UPDATE HOME] ===== Starting update for home ID: {id} =====", flush=True)
         
@@ -1987,49 +1789,16 @@ def update_home(id):
             print(f"[UPDATE HOME] ERROR: Home not found with ID: {id}", flush=True)
             return jsonify({"error": "Not found"}), 404
         
+        # BACKUP: Save current state before any changes
+        old_home_data = model_to_dict(home)
+        print(f"[UPDATE HOME] Created backup of current state", flush=True)
+        
         print(f"[UPDATE HOME] Parsing JSON data...", flush=True)
         data = request.get_json(force=True)
         
         # Log data size
         data_keys = list(data.keys())
         print(f"[UPDATE HOME] Received {len(data_keys)} fields: {', '.join(data_keys)}", flush=True)
-        
-        # === DATA LOSS PROTECTION ===
-        # Helper to safely update JSON array fields - prevents accidental overwrites
-        def safe_update_json_array(field_name, json_attr, current_json, new_data, force_clear=False):
-            """
-            Prevents overwriting existing data with empty arrays unless explicitly forced.
-            Returns the new JSON string or None if no update needed.
-            """
-            if new_data is None:
-                return None  # Field not in request, don't update
-            
-            # Parse current data
-            try:
-                current_data = json.loads(current_json) if current_json else []
-            except:
-                current_data = []
-            
-            current_count = len(current_data) if isinstance(current_data, list) else 0
-            new_count = len(new_data) if isinstance(new_data, list) else 0
-            
-            # SAFEGUARD: Block clearing arrays with 3+ items unless force_clear is set
-            if current_count >= 3 and new_count == 0 and not force_clear:
-                print(f"[UPDATE HOME] ⚠️ BLOCKED: Attempt to clear {field_name} with {current_count} items. Set force_clear=true to confirm.", flush=True)
-                return "BLOCKED"
-            
-            # Log significant changes
-            if current_count > 0 and new_count == 0:
-                print(f"[UPDATE HOME] ⚠️ Warning: Clearing {field_name} (had {current_count} items)", flush=True)
-            elif abs(current_count - new_count) > 5:
-                print(f"[UPDATE HOME] Note: {field_name} changing from {current_count} to {new_count} items", flush=True)
-            
-            return json.dumps(new_data)
-        
-        # Check if force_clear flag is set (for intentional deletions)
-        force_clear = data.get('_force_clear', False)
-        if force_clear:
-            print(f"[UPDATE HOME] ⚠️ force_clear=True - allowing gallery deletions", flush=True)
         
         # Update basic fields
         print(f"[UPDATE HOME] Updating basic fields...", flush=True)
@@ -2052,138 +1821,85 @@ def update_home(id):
         home.statsBedrooms = data.get('statsBedrooms', home.statsBedrooms)
         home.statsPremier = data.get('statsPremier', home.statsPremier)
         
-        # Track blocked updates
-        blocked_fields = []
-        
-        # Update banner images with protection
+        # Update banner images
         if 'bannerImages' in data:
-            result = safe_update_json_array('bannerImages', 'bannerImagesJson', home.bannerImagesJson, data['bannerImages'], force_clear)
-            if result == "BLOCKED":
-                blocked_fields.append('bannerImages')
-            elif result:
-                home.bannerImagesJson = result
-                print(f"[UPDATE HOME] Updated {len(data['bannerImages'])} banner images", flush=True)
+            old_banner = parse_json(home.bannerImagesJson) or []
+            track_deleted_media(id, 'banner', old_banner, data['bannerImages'])
+            print(f"[UPDATE HOME] Updating {len(data['bannerImages'])} banner images...", flush=True)
+            home.bannerImagesJson = json.dumps(data['bannerImages'])
         
-        # Update team members with protection
+        # Update team members
         if 'teamMembers' in data:
-            result = safe_update_json_array('teamMembers', 'teamMembersJson', home.teamMembersJson, data['teamMembers'], force_clear)
-            if result == "BLOCKED":
-                blocked_fields.append('teamMembers')
-            elif result:
-                home.teamMembersJson = result
-                print(f"[UPDATE HOME] Updated {len(data['teamMembers'])} team members", flush=True)
-                
+            old_team = parse_json(home.teamMembersJson) or []
+            track_deleted_media(id, 'team', old_team, data['teamMembers'])
+            team_count = len(data['teamMembers'])
+            print(f"[UPDATE HOME] Updating {team_count} team members...", flush=True)
+            home.teamMembersJson = json.dumps(data['teamMembers'])
         if 'teamGalleryImages' in data:
-            result = safe_update_json_array('teamGalleryImages', 'teamGalleryJson', home.teamGalleryJson, data['teamGalleryImages'], force_clear)
-            if result == "BLOCKED":
-                blocked_fields.append('teamGalleryImages')
-            elif result:
-                home.teamGalleryJson = result
-                print(f"[UPDATE HOME] Updated {len(data['teamGalleryImages'])} team gallery images", flush=True)
+            old_team_gallery = parse_json(home.teamGalleryJson) or []
+            track_deleted_media(id, 'team_gallery', old_team_gallery, data['teamGalleryImages'])
+            gallery_count = len(data['teamGalleryImages'])
+            print(f"[UPDATE HOME] Updating {gallery_count} team gallery images...", flush=True)
+            home.teamGalleryJson = json.dumps(data['teamGalleryImages'])
             
-        # Update activities with protection
+        # Update activities
         home.activitiesIntro = data.get('activitiesIntro', home.activitiesIntro)
         if 'activities' in data:
-            result = safe_update_json_array('activities', 'activitiesJson', home.activitiesJson, data['activities'], force_clear)
-            if result == "BLOCKED":
-                blocked_fields.append('activities')
-            elif result:
-                home.activitiesJson = result
-                print(f"[UPDATE HOME] Updated {len(data['activities'])} activities", flush=True)
+            activity_count = len(data['activities'])
+            print(f"[UPDATE HOME] Updating {activity_count} activities...", flush=True)
+            home.activitiesJson = json.dumps(data['activities'])
         if 'activityImages' in data:
-            result = safe_update_json_array('activityImages', 'activityImagesJson', home.activityImagesJson, data['activityImages'], force_clear)
-            if result == "BLOCKED":
-                blocked_fields.append('activityImages')
-            elif result:
-                home.activityImagesJson = result
-                print(f"[UPDATE HOME] Updated {len(data['activityImages'])} activity images", flush=True)
+            old_activity = parse_json(home.activityImagesJson) or []
+            track_deleted_media(id, 'activity', old_activity, data['activityImages'])
+            activity_img_count = len(data['activityImages'])
+            print(f"[UPDATE HOME] Updating {activity_img_count} activity images...", flush=True)
+            home.activityImagesJson = json.dumps(data['activityImages'])
         home.activitiesModalDesc = data.get('activitiesModalDesc', home.activitiesModalDesc)
         
-        # Update facilities with protection
+        # Update facilities
         home.facilitiesIntro = data.get('facilitiesIntro', home.facilitiesIntro)
         if 'facilitiesList' in data:
-            result = safe_update_json_array('facilitiesList', 'facilitiesListJson', home.facilitiesListJson, data['facilitiesList'], force_clear)
-            if result == "BLOCKED":
-                blocked_fields.append('facilitiesList')
-            elif result:
-                home.facilitiesListJson = result
-                print(f"[UPDATE HOME] Updated {len(data['facilitiesList'])} facilities list items", flush=True)
+            facilities_count = len(data['facilitiesList'])
+            print(f"[UPDATE HOME] Updating {facilities_count} facilities list items...", flush=True)
+            home.facilitiesListJson = json.dumps(data['facilitiesList'])
         if 'detailedFacilities' in data:
-            result = safe_update_json_array('detailedFacilities', 'detailedFacilitiesJson', home.detailedFacilitiesJson, data['detailedFacilities'], force_clear)
-            if result == "BLOCKED":
-                blocked_fields.append('detailedFacilities')
-            elif result:
-                home.detailedFacilitiesJson = result
-                print(f"[UPDATE HOME] Updated {len(data['detailedFacilities'])} detailed facilities", flush=True)
+            detailed_count = len(data['detailedFacilities'])
+            print(f"[UPDATE HOME] Updating {detailed_count} detailed facilities...", flush=True)
+            home.detailedFacilitiesJson = json.dumps(data['detailedFacilities'])
         if 'facilitiesGalleryImages' in data:
-            result = safe_update_json_array('facilitiesGalleryImages', 'facilitiesGalleryJson', home.facilitiesGalleryJson, data['facilitiesGalleryImages'], force_clear)
-            if result == "BLOCKED":
-                blocked_fields.append('facilitiesGalleryImages')
-            elif result:
-                home.facilitiesGalleryJson = result
-                print(f"[UPDATE HOME] Updated {len(data['facilitiesGalleryImages'])} facilities gallery images", flush=True)
+            old_facilities = parse_json(home.facilitiesGalleryJson) or []
+            track_deleted_media(id, 'facility', old_facilities, data['facilitiesGalleryImages'])
+            gallery_count = len(data['facilitiesGalleryImages'])
+            print(f"[UPDATE HOME] Processing {gallery_count} facilities gallery images...", flush=True)
             
-        # Update Care Sections with protection
-        home.careIntro = data.get('careIntro', home.careIntro)
-        if 'careSectionsJson' in data:
-            result = safe_update_json_array('careSectionsJson', 'careSectionsJson', home.careSectionsJson, data['careSectionsJson'], force_clear)
-            if result == "BLOCKED":
-                blocked_fields.append('careSectionsJson')
-            elif result:
-                home.careSectionsJson = result
-                print(f"[UPDATE HOME] Updated care sections", flush=True)
-        if 'careGalleryImages' in data:
-            result = safe_update_json_array('careGalleryImages', 'careGalleryJson', home.careGalleryJson, data['careGalleryImages'], force_clear)
-            if result == "BLOCKED":
-                blocked_fields.append('careGalleryImages')
-            elif result:
-                home.careGalleryJson = result
-                print(f"[UPDATE HOME] Updated care gallery images", flush=True)
-
+            # Check if images are too large (base64 encoded)
+            total_size = 0
+            for idx, img in enumerate(data['facilitiesGalleryImages']):
+                if isinstance(img, str):
+                    img_size = len(img)
+                    total_size += img_size
+                    if img_size > 500000:  # > 500KB
+                        print(f"[UPDATE HOME] WARNING: Image {idx+1} is large: {img_size / 1024:.1f}KB", flush=True)
+            
+            print(f"[UPDATE HOME] Total gallery images data size: {total_size / 1024 / 1024:.2f}MB", flush=True)
+            home.facilitiesGalleryJson = json.dumps(data['facilitiesGalleryImages'])
+            print(f"[UPDATE HOME] Successfully serialized facilities gallery", flush=True)
+            
         if 'homeFeatured' in data:
             home.featured = data['homeFeatured']
         
-        # If any fields were blocked, return error before committing
-        if blocked_fields:
-            print(f"[UPDATE HOME] ❌ REJECTED: Attempted to clear protected fields: {', '.join(blocked_fields)}", flush=True)
-            return jsonify({
-                "error": f"Cannot clear galleries with existing data. Blocked fields: {', '.join(blocked_fields)}. If intentional, contact admin.",
-                "blocked_fields": blocked_fields,
-                "hint": "This protection prevents accidental data loss. If you really want to clear these galleries, the request must include '_force_clear': true"
-            }), 400
-        
         print(f"[UPDATE HOME] Committing changes to database...", flush=True)
-        sys.stdout.flush()
+        sys.stdout.flush()  # Force flush
         db.session.commit()
         print(f"[UPDATE HOME] ===== Successfully updated home ID: {id} =====", flush=True)
-        base_url = "https://www.bellavistanursinghomes.com"
-        urls = []
-        name_lower = (home.name or "").lower()
-        slug = None
-        if "cardiff" in name_lower:
-            slug = "/bellavista-cardiff"
-        elif "barry" in name_lower and "college" not in name_lower and "baltimore" not in name_lower:
-            slug = "/bellavista-barry"
-        elif "waverley" in name_lower:
-            slug = "/waverley-care-center"
-        elif "college fields" in name_lower:
-            slug = "/college-fields-nursing-home"
-        elif "baltimore" in name_lower:
-            slug = "/baltimore-care-home"
-        elif "meadow vale" in name_lower:
-            slug = "/meadow-vale-cwtch"
-        elif "pontypridd" in name_lower:
-            slug = "/bellavista-pontypridd"
-        if slug:
-            urls.append(f"{base_url}{slug}")
-            location_id = slug.lstrip("/")
-            urls.append(f"{base_url}/activities/{location_id}")
-            urls.append(f"{base_url}/facilities/{location_id}")
-        if urls:
-            try:
-                submit_indexnow(urls)
-            except Exception as e:
-                print(f"[INDEXNOW] Error in update_home: {e}", flush=True)
+        
+        # BACKUP: Record the change after successful commit
+        new_home_data = model_to_dict(home)
+        changed = get_changed_fields(old_home_data, new_home_data)
+        backup_record('home', id, 'update', old_home_data, new_home_data, changed, home_id=id)
+        db.session.commit()  # Commit the backup record
+        
+        # Invalidate cache after successful update
         invalidate_homes_cache()
         
         result = to_dict_home(home)
@@ -2251,6 +1967,11 @@ def delete_faq(id):
     item = FAQ.query.get(id)
     if not item:
         return jsonify({"error": "Not found"}), 404
+    
+    # BACKUP: Save data before deletion
+    old_data = model_to_dict(item)
+    backup_record('faq', id, 'delete', old_data, None, None)
+    
     db.session.delete(item)
     db.session.commit()
     return jsonify({"ok": True})
@@ -2262,8 +1983,6 @@ def to_dict_event(e):
         "description": e.description,
         "date": e.date,
         "time": e.time,
-        "startTime": e.startTime,
-        "endTime": e.endTime,
         "location": e.location,
         "image": e.image,
         "category": e.category,
@@ -2287,8 +2006,6 @@ def create_event():
         description=data.get('description', ''),
         date=data.get('date', ''),
         time=data.get('time', ''),
-        startTime=data.get('startTime', ''),
-        endTime=data.get('endTime', ''),
         location=data.get('location', ''),
         image=data.get('image', ''),
         category=data.get('category', '')
@@ -2304,19 +2021,27 @@ def update_event(id):
     event = Event.query.get(id)
     if not event:
         return jsonify({"error": "Not found"}), 404
+    
+    # BACKUP: Save current state
+    old_event_data = model_to_dict(event)
         
     data = request.get_json(force=True)
     event.title = data.get('title', event.title)
     event.description = data.get('description', event.description)
     event.date = data.get('date', event.date)
     event.time = data.get('time', event.time)
-    event.startTime = data.get('startTime', event.startTime)
-    event.endTime = data.get('endTime', event.endTime)
     event.location = data.get('location', event.location)
     event.image = data.get('image', event.image)
     event.category = data.get('category', event.category)
     
     db.session.commit()
+    
+    # BACKUP: Record the change
+    new_event_data = model_to_dict(event)
+    changed = get_changed_fields(old_event_data, new_event_data)
+    backup_record('event', id, 'update', old_event_data, new_event_data, changed)
+    db.session.commit()
+    
     return jsonify({"ok": True}), 200
 
 @api_bp.delete('/events/<id>')
@@ -2325,6 +2050,10 @@ def delete_event(id):
     event = Event.query.get(id)
     if not event:
         return jsonify({"error": "Not found"}), 404
+    
+    # BACKUP: Save data before deletion
+    old_data = model_to_dict(event)
+    backup_record('event', id, 'delete', old_data, None, None)
         
     db.session.delete(event)
     db.session.commit()
@@ -2506,10 +2235,6 @@ def seed_homes_route():
                     facilitiesListJson=json.dumps(data.get('facilitiesList', [])),
                     detailedFacilitiesJson=json.dumps([]),
                     facilitiesGalleryJson=json.dumps([]),
-                    careIntro="",
-                    careServicesJson=json.dumps([]),
-                    careSectionsJson=json.dumps([]),
-                    careGalleryJson=json.dumps([]),
                     featured=data['featured']
                 )
                 db.session.add(home)
@@ -2668,11 +2393,6 @@ def seed_management_team():
         return jsonify({'error': str(e)}), 500
 
 
-# Register Meal Plans Blueprint
-from .meal_plans import meal_plans_bp
-api_bp.register_blueprint(meal_plans_bp)
-
-
 # =============================================================================
 # PAGE SECTION MANAGEMENT API (for inline editing)
 # =============================================================================
@@ -2689,6 +2409,7 @@ DEFAULT_SECTIONS = [
     {'sectionKey': 'news', 'order': 8, 'visible': True},
     {'sectionKey': 'contact', 'order': 9, 'visible': True},
 ]
+
 
 @api_bp.get('/homes/<home_id>/sections')
 def get_home_sections(home_id):
@@ -2829,6 +2550,7 @@ def update_section_content(home_id, section_key):
                 'servicesClosing': 'servicesClosing',
                 'servicesCta': 'servicesCta',
                 'servicesCtaLink': 'servicesCtaLink',
+                'servicesContent': 'servicesContent',
             },
             'facilities': {
                 'facilitiesTitle': 'facilitiesTitle',
@@ -2836,6 +2558,7 @@ def update_section_content(home_id, section_key):
                 'facilitiesIntro': 'facilitiesIntro',
                 'facilitiesList': 'facilitiesListJson',
                 'facilitiesGallery': 'facilitiesGalleryJson',
+                'facilitiesContent': 'facilitiesContent',
             },
             'activities': {
                 'activitiesTitle': 'activitiesTitle',
@@ -2843,6 +2566,7 @@ def update_section_content(home_id, section_key):
                 'activitiesIntro': 'activitiesIntro',
                 'activitiesList': 'activitiesJson',
                 'activitiesGallery': 'activityImagesJson',
+                'activitiesContent': 'activitiesContent',
             },
             'team': {
                 'teamTitle': 'teamTitle',
@@ -2850,6 +2574,8 @@ def update_section_content(home_id, section_key):
                 'teamIntro': 'teamIntro',
                 'teamIntro2': 'teamIntro2',
                 'teamMembers': 'teamMembersJson',
+                'teamContent': 'teamContent',
+                'teamGallery': 'teamGalleryJson',
             },
             'testimonials': {
                 'testimonialsTitle': 'testimonialsTitle',
@@ -2988,6 +2714,7 @@ def get_home_full(home_id):
             'servicesClosing': home.servicesClosing,
             'servicesCta': home.servicesCta,
             'servicesCtaLink': home.servicesCtaLink,
+            'servicesContent': home.servicesContent,
             
             # Facilities
             'facilitiesTitle': home.facilitiesTitle,
@@ -2995,6 +2722,7 @@ def get_home_full(home_id):
             'facilitiesIntro': home.facilitiesIntro,
             'facilitiesList': parse_json(home.facilitiesListJson),
             'facilitiesGallery': parse_json(home.facilitiesGalleryJson),
+            'facilitiesContent': home.facilitiesContent,
             
             # Activities
             'activitiesTitle': home.activitiesTitle,
@@ -3002,6 +2730,7 @@ def get_home_full(home_id):
             'activitiesIntro': home.activitiesIntro,
             'activitiesList': parse_json(home.activitiesJson),
             'activitiesGallery': parse_json(home.activityImagesJson),
+            'activitiesContent': home.activitiesContent,
             
             # Team
             'teamTitle': home.teamTitle,
@@ -3009,6 +2738,8 @@ def get_home_full(home_id):
             'teamIntro': home.teamIntro,
             'teamIntro2': home.teamIntro2,
             'teamMembers': parse_json(home.teamMembersJson),
+            'teamContent': home.teamContent,
+            'teamGallery': parse_json(home.teamGalleryJson),
             
             # Testimonials
             'testimonialsTitle': home.testimonialsTitle,
@@ -3043,3 +2774,284 @@ def get_home_full(home_id):
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
+
+# ==================== DELETED MEDIA RECOVERY ENDPOINTS ====================
+
+@api_bp.route('/deleted-media', methods=['GET'])
+@require_auth
+def get_deleted_media():
+    """Get all soft-deleted media items with optional filtering"""
+    try:
+        home_id = request.args.get('homeId')
+        gallery_type = request.args.get('galleryType')
+        include_recovered = request.args.get('includeRecovered', 'false').lower() == 'true'
+        
+        query = DeletedMedia.query
+        
+        if home_id:
+            query = query.filter_by(homeId=home_id)
+        if gallery_type:
+            query = query.filter_by(galleryType=gallery_type)
+        if not include_recovered:
+            query = query.filter_by(recovered=False)
+            
+        items = query.order_by(DeletedMedia.deletedAt.desc()).limit(100).all()
+        
+        return jsonify([{
+            'id': item.id,
+            'homeId': item.homeId,
+            'galleryType': item.galleryType,
+            'mediaUrl': item.mediaUrl,
+            'mediaType': item.mediaType,
+            'title': item.title,
+            'caption': item.caption,
+            'originalData': item.originalData,
+            'deletedAt': item.deletedAt.isoformat() if item.deletedAt else None,
+            'deletedBy': item.deletedBy,
+            'recovered': item.recovered,
+            'recoveredAt': item.recoveredAt.isoformat() if item.recoveredAt else None
+        } for item in items])
+        
+    except Exception as e:
+        print(f"Error fetching deleted media: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@api_bp.route('/deleted-media/<int:item_id>/recover', methods=['POST'])
+@require_auth
+def recover_deleted_media(item_id):
+    """Mark a deleted media item as recovered (for audit purposes)"""
+    try:
+        from datetime import datetime
+        
+        item = DeletedMedia.query.get(item_id)
+        if not item:
+            return jsonify({'error': 'Deleted media not found'}), 404
+        
+        if item.recovered:
+            return jsonify({'error': 'This item has already been recovered'}), 400
+        
+        # Mark as recovered
+        item.recovered = True
+        item.recoveredAt = datetime.utcnow()
+        item.recoveredBy = request.args.get('recoveredBy', 'admin')
+        
+        db.session.commit()
+        
+        # Return the original data so frontend can re-add it to gallery
+        return jsonify({
+            'success': True,
+            'message': 'Item marked as recovered',
+            'homeId': item.homeId,
+            'galleryType': item.galleryType,
+            'originalData': json.loads(item.originalData) if item.originalData.startswith('{') else {'url': item.mediaUrl}
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error recovering media: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@api_bp.route('/deleted-media/<int:item_id>', methods=['DELETE'])
+@require_admin
+def permanently_delete_media(item_id):
+    """Permanently delete a soft-deleted media record (admin only)"""
+    try:
+        item = DeletedMedia.query.get(item_id)
+        if not item:
+            return jsonify({'error': 'Deleted media not found'}), 404
+        
+        db.session.delete(item)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Permanently deleted'})
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error permanently deleting: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+# ==================== DATA BACKUP ENDPOINTS ====================
+
+@api_bp.route('/backups', methods=['GET'])
+@require_auth
+def get_backups():
+    """Get all data backups with optional filtering"""
+    try:
+        table_name = request.args.get('tableName')
+        record_id = request.args.get('recordId')
+        home_id = request.args.get('homeId')
+        action = request.args.get('action')
+        include_restored = request.args.get('includeRestored', 'false').lower() == 'true'
+        limit = int(request.args.get('limit', 100))
+        
+        query = DataBackup.query
+        
+        if table_name:
+            query = query.filter_by(tableName=table_name)
+        if record_id:
+            query = query.filter_by(recordId=record_id)
+        if home_id:
+            query = query.filter_by(homeId=home_id)
+        if action:
+            query = query.filter_by(action=action)
+        if not include_restored:
+            query = query.filter_by(restored=False)
+            
+        items = query.order_by(DataBackup.createdAt.desc()).limit(limit).all()
+        
+        return jsonify([{
+            'id': item.id,
+            'tableName': item.tableName,
+            'recordId': item.recordId,
+            'action': item.action,
+            'oldData': json.loads(item.oldData) if item.oldData else None,
+            'newData': json.loads(item.newData) if item.newData else None,
+            'changedFields': json.loads(item.changedFields) if item.changedFields else None,
+            'homeId': item.homeId,
+            'createdAt': item.createdAt.isoformat() if item.createdAt else None,
+            'createdBy': item.createdBy,
+            'restored': item.restored,
+            'restoredAt': item.restoredAt.isoformat() if item.restoredAt else None,
+            'restoredBy': item.restoredBy
+        } for item in items])
+        
+    except Exception as e:
+        print(f"Error fetching backups: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@api_bp.route('/backups/<int:backup_id>', methods=['GET'])
+@require_auth
+def get_backup_detail(backup_id):
+    """Get a specific backup with full data"""
+    try:
+        item = DataBackup.query.get(backup_id)
+        if not item:
+            return jsonify({'error': 'Backup not found'}), 404
+        
+        return jsonify({
+            'id': item.id,
+            'tableName': item.tableName,
+            'recordId': item.recordId,
+            'action': item.action,
+            'oldData': json.loads(item.oldData) if item.oldData else None,
+            'newData': json.loads(item.newData) if item.newData else None,
+            'changedFields': json.loads(item.changedFields) if item.changedFields else None,
+            'homeId': item.homeId,
+            'createdAt': item.createdAt.isoformat() if item.createdAt else None,
+            'createdBy': item.createdBy,
+            'ipAddress': item.ipAddress,
+            'restored': item.restored,
+            'restoredAt': item.restoredAt.isoformat() if item.restoredAt else None,
+            'restoredBy': item.restoredBy
+        })
+        
+    except Exception as e:
+        print(f"Error fetching backup detail: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@api_bp.route('/backups/<int:backup_id>/restore', methods=['POST'])
+@require_admin
+def restore_backup(backup_id):
+    """
+    Restore data from a backup (admin only).
+    For 'delete' backups: Re-creates the record
+    For 'update' backups: Reverts the record to old state
+    """
+    try:
+        from datetime import datetime
+        
+        backup = DataBackup.query.get(backup_id)
+        if not backup:
+            return jsonify({'error': 'Backup not found'}), 404
+        
+        if backup.restored:
+            return jsonify({'error': 'This backup has already been restored'}), 400
+        
+        if not backup.oldData:
+            return jsonify({'error': 'No old data to restore'}), 400
+        
+        old_data = json.loads(backup.oldData)
+        
+        # Handle restore based on table type
+        model_map = {
+            'home': Home,
+            'news_item': NewsItem,
+            'vacancy': Vacancy,
+            'faq': FAQ,
+            'event': Event,
+        }
+        
+        model_class = model_map.get(backup.tableName)
+        if not model_class:
+            return jsonify({'error': f'Unknown table: {backup.tableName}'}), 400
+        
+        if backup.action == 'delete':
+            # Re-create the deleted record
+            # Remove fields that shouldn't be set directly
+            create_data = {k: v for k, v in old_data.items() if k not in ['createdAt']}
+            new_record = model_class(**create_data)
+            db.session.add(new_record)
+            message = f'Restored deleted {backup.tableName}'
+            
+        elif backup.action == 'update':
+            # Revert to old state
+            record = model_class.query.get(backup.recordId)
+            if not record:
+                return jsonify({'error': f'Record {backup.recordId} no longer exists'}), 404
+            
+            for key, value in old_data.items():
+                if key != 'createdAt' and hasattr(record, key):
+                    setattr(record, key, value)
+            message = f'Reverted {backup.tableName} to previous state'
+        else:
+            return jsonify({'error': f'Cannot restore action: {backup.action}'}), 400
+        
+        # Mark backup as restored
+        backup.restored = True
+        backup.restoredAt = datetime.utcnow()
+        backup.restoredBy = request.args.get('restoredBy', 'admin')
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': message,
+            'tableName': backup.tableName,
+            'recordId': backup.recordId
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error restoring backup: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
+@api_bp.route('/backups/history/<table_name>/<record_id>', methods=['GET'])
+@require_auth
+def get_record_history(table_name, record_id):
+    """Get complete change history for a specific record"""
+    try:
+        items = DataBackup.query.filter_by(
+            tableName=table_name,
+            recordId=record_id
+        ).order_by(DataBackup.createdAt.desc()).all()
+        
+        return jsonify([{
+            'id': item.id,
+            'action': item.action,
+            'changedFields': json.loads(item.changedFields) if item.changedFields else None,
+            'createdAt': item.createdAt.isoformat() if item.createdAt else None,
+            'createdBy': item.createdBy,
+            'restored': item.restored
+        } for item in items])
+        
+    except Exception as e:
+        print(f"Error fetching record history: {e}")
+        return jsonify({'error': str(e)}), 500

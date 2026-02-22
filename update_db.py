@@ -42,6 +42,18 @@ try:
         print("contentBlocksJson column added successfully.")
     else:
         print("contentBlocksJson column already exists.")
+    
+    # Add rich text content columns for simplified section editors
+    new_content_columns = ['servicesContent', 'facilitiesContent', 'activitiesContent', 'teamContent']
+    cursor.execute("PRAGMA table_info(home)")
+    columns = [col[1] for col in cursor.fetchall()]
+    for col_name in new_content_columns:
+        if col_name not in columns:
+            print(f"Adding {col_name} column to home table...")
+            cursor.execute(f"ALTER TABLE home ADD COLUMN {col_name} TEXT")
+            print(f"{col_name} column added successfully.")
+        else:
+            print(f"{col_name} column already exists.")
         
     conn.commit()
     conn.close()
