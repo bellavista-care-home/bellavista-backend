@@ -1947,7 +1947,7 @@ def seed_homes_route():
                 "featured": False
             },
             {
-                "id": "college-fields-nursing-home",
+                "id": "college-fields",
                 "name": "College Fields Nursing Home",
                 "location": "",
                 "image": "/HomeImages/preview_cf-1_425x300_acf_cropped.jpg",
@@ -1967,7 +1967,7 @@ def seed_homes_route():
                 "featured": False
             },
             {
-                "id": "bellavista-baltimore",
+                "id": "baltimore-care-home",
                 "name": "Baltimore Care Home",
                 "location": "",
                 "image": "/HomeImages/preview_bch-1_425x300_acf_cropped.jpg",
