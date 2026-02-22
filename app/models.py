@@ -254,3 +254,68 @@ class User(db.Model):
     role = db.Column(db.String(64), default='home_admin') # 'superadmin' or 'home_admin'
     home_id = db.Column(db.String, db.ForeignKey('home.id'), nullable=True) # Null for superadmin
     createdAt = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class DeletedMedia(db.Model):
+    """Soft delete audit log for media files - keeps record of removed images/videos"""
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    homeId = db.Column(db.String, db.ForeignKey('home.id'), nullable=False)
+    galleryType = db.Column(db.String(64), nullable=False)  # banner, facility, activity, team, care
+    
+    # Original media data (stored as JSON)
+    mediaUrl = db.Column(db.Text, nullable=False)
+    mediaType = db.Column(db.String(32), default='image')  # image or video
+    title = db.Column(db.String(255))
+    caption = db.Column(db.Text)
+    originalData = db.Column(db.Text)  # Full JSON of original item
+    
+    # Audit fields
+    deletedAt = db.Column(db.DateTime, default=datetime.utcnow)
+    deletedBy = db.Column(db.String(128))  # username who deleted
+    reason = db.Column(db.String(255))  # optional reason
+    
+    # Recovery tracking
+    recovered = db.Column(db.Boolean, default=False)
+    recoveredAt = db.Column(db.DateTime)
+    recoveredBy = db.Column(db.String(128))
+
+
+class DataBackup(db.Model):
+    """
+    Universal backup/audit table - tracks ALL changes to any record.
+    Before any update or delete, the old data is stored here for recovery.
+    """
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    
+    # What was changed
+    tableName = db.Column(db.String(64), nullable=False)  # home, news_item, vacancy, etc.
+    recordId = db.Column(db.String(255), nullable=False)  # Primary key of the record
+    
+    # Change type
+    action = db.Column(db.String(32), nullable=False)  # 'update', 'delete', 'create'
+    
+    # The complete data snapshot (JSON)
+    oldData = db.Column(db.Text)  # Data BEFORE the change (null for create)
+    newData = db.Column(db.Text)  # Data AFTER the change (null for delete)
+    changedFields = db.Column(db.Text)  # JSON list of field names that changed
+    
+    # Related home (for filtering)
+    homeId = db.Column(db.String, db.ForeignKey('home.id'), nullable=True)
+    
+    # Audit info
+    createdAt = db.Column(db.DateTime, default=datetime.utcnow)
+    createdBy = db.Column(db.String(128))  # username who made the change
+    ipAddress = db.Column(db.String(64))
+    userAgent = db.Column(db.String(512))
+    
+    # Recovery tracking
+    restored = db.Column(db.Boolean, default=False)
+    restoredAt = db.Column(db.DateTime)
+    restoredBy = db.Column(db.String(128))
+    
+    # Index for efficient queries
+    __table_args__ = (
+        db.Index('idx_backup_table_record', 'tableName', 'recordId'),
+        db.Index('idx_backup_home', 'homeId'),
+        db.Index('idx_backup_date', 'createdAt'),
+    )
