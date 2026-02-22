@@ -2393,6 +2393,7 @@ def update_section_content(home_id, section_key):
                 'teamIntro2': 'teamIntro2',
                 'teamMembers': 'teamMembersJson',
                 'teamContent': 'teamContent',
+                'teamGallery': 'teamGalleryJson',
             },
             'testimonials': {
                 'testimonialsTitle': 'testimonialsTitle',
@@ -2556,6 +2557,7 @@ def get_home_full(home_id):
             'teamIntro2': home.teamIntro2,
             'teamMembers': parse_json(home.teamMembersJson),
             'teamContent': home.teamContent,
+            'teamGallery': parse_json(home.teamGalleryJson),
             
             # Testimonials
             'testimonialsTitle': home.testimonialsTitle,
