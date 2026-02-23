@@ -142,6 +142,7 @@ def create_app(config_name=None):
                 # List of columns to check/add [table, column, type]
                 columns_to_check = [
                     ('home', 'bannerImagesJson', 'TEXT'),
+                    ('home', 'heroDescription', 'TEXT'),
                     ('home', 'heroExpandedDesc', 'TEXT'),
                     ('home', 'ciwReportUrl', 'TEXT'),
                     ('home', 'newsletterUrl', 'TEXT'),
@@ -161,18 +162,17 @@ def create_app(config_name=None):
                     ('home', 'careServicesJson', 'TEXT'),
                     ('home', 'careSectionsJson', 'TEXT'),
                     ('home', 'careGalleryJson', 'TEXT'),
-        
-        # CareService Table
-        ('care_service', 'id', 'VARCHAR'),
-        ('care_service', 'title', 'VARCHAR(255)'),
-        ('care_service', 'description', 'TEXT'),
-        ('care_service', 'imagesJson', 'TEXT'),
-        ('care_service', 'icon', 'VARCHAR(128)'),
-        ('care_service', 'order', 'INTEGER'),
-        ('care_service', 'slug', 'VARCHAR(128)'),
-        ('care_service', 'createdAt', 'DATETIME'),
-        ('review', 'source', 'VARCHAR(64)')
-    ]
+                    # CareService Table
+                    ('care_service', 'id', 'VARCHAR'),
+                    ('care_service', 'title', 'VARCHAR(255)'),
+                    ('care_service', 'description', 'TEXT'),
+                    ('care_service', 'imagesJson', 'TEXT'),
+                    ('care_service', 'icon', 'VARCHAR(128)'),
+                    ('care_service', 'order', 'INTEGER'),
+                    ('care_service', 'slug', 'VARCHAR(128)'),
+                    ('care_service', 'createdAt', 'DATETIME'),
+                    ('review', 'source', 'VARCHAR(64)')
+                ]
 
                 for table, col, dtype in columns_to_check:
                     try:
