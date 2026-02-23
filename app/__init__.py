@@ -140,38 +140,102 @@ def create_app(config_name=None):
                             print(f"[DB] Failed to add column {column}: {e}", flush=True)
 
                 # List of columns to check/add [table, column, type]
+                # This is a COMPREHENSIVE list of all Home model columns
                 columns_to_check = [
-                    ('home', 'bannerImagesJson', 'TEXT'),
+                    # Hero Section
+                    ('home', 'heroTitle', 'VARCHAR(255)'),
+                    ('home', 'heroSubtitle', 'VARCHAR(255)'),
+                    ('home', 'heroBgImage', 'TEXT'),
                     ('home', 'heroDescription', 'TEXT'),
                     ('home', 'heroExpandedDesc', 'TEXT'),
+                    ('home', 'statsLocationBadge', 'VARCHAR(255)'),
+                    ('home', 'statsQualityBadge', 'VARCHAR(255)'),
+                    ('home', 'statsTeamBadge', 'VARCHAR(255)'),
+                    # Documents
                     ('home', 'ciwReportUrl', 'TEXT'),
                     ('home', 'newsletterUrl', 'TEXT'),
+                    # Banner
+                    ('home', 'bannerImagesJson', 'TEXT'),
+                    # Stats
                     ('home', 'statsBedrooms', 'VARCHAR(64)'),
                     ('home', 'statsPremier', 'VARCHAR(64)'),
-                    ('home', 'teamMembersJson', 'TEXT'),
-                    ('home', 'teamGalleryJson', 'TEXT'),
-                    ('home', 'activitiesIntro', 'TEXT'),
-                    ('home', 'activitiesJson', 'TEXT'),
-                    ('home', 'activityImagesJson', 'TEXT'),
-                    ('home', 'activitiesModalDesc', 'TEXT'),
+                    # About Section
+                    ('home', 'aboutTitle', 'VARCHAR(255)'),
+                    ('home', 'aboutIntro', 'TEXT'),
+                    ('home', 'aboutParagraph2', 'TEXT'),
+                    ('home', 'carePhilosophyTitle', 'VARCHAR(255)'),
+                    ('home', 'carePhilosophy', 'TEXT'),
+                    ('home', 'locationTitle', 'VARCHAR(255)'),
+                    ('home', 'locationDescription', 'TEXT'),
+                    ('home', 'contentBlocksJson', 'TEXT'),
+                    # Why Choose Section
+                    ('home', 'whyChooseTitle', 'VARCHAR(255)'),
+                    ('home', 'whyChooseSubtitle', 'VARCHAR(255)'),
+                    ('home', 'whyChooseListJson', 'TEXT'),
+                    ('home', 'whyChooseClosing', 'TEXT'),
+                    # Services Section
+                    ('home', 'servicesTitle', 'VARCHAR(255)'),
+                    ('home', 'servicesSubtitle', 'VARCHAR(255)'),
+                    ('home', 'servicesIntro', 'TEXT'),
+                    ('home', 'servicesListJson', 'TEXT'),
+                    ('home', 'servicesClosing', 'TEXT'),
+                    ('home', 'servicesCta', 'VARCHAR(255)'),
+                    ('home', 'servicesCtaLink', 'TEXT'),
+                    ('home', 'servicesContent', 'TEXT'),
+                    # Facilities Section
+                    ('home', 'facilitiesTitle', 'VARCHAR(255)'),
+                    ('home', 'facilitiesSubtitle', 'VARCHAR(255)'),
                     ('home', 'facilitiesIntro', 'TEXT'),
                     ('home', 'facilitiesListJson', 'TEXT'),
                     ('home', 'detailedFacilitiesJson', 'TEXT'),
                     ('home', 'facilitiesGalleryJson', 'TEXT'),
+                    ('home', 'facilitiesContent', 'TEXT'),
+                    # Activities Section
+                    ('home', 'activitiesTitle', 'VARCHAR(255)'),
+                    ('home', 'activitiesSubtitle', 'VARCHAR(255)'),
+                    ('home', 'activitiesIntro', 'TEXT'),
+                    ('home', 'activitiesJson', 'TEXT'),
+                    ('home', 'activityImagesJson', 'TEXT'),
+                    ('home', 'activitiesModalDesc', 'TEXT'),
+                    ('home', 'activitiesContent', 'TEXT'),
+                    # Team Section
+                    ('home', 'teamTitle', 'VARCHAR(255)'),
+                    ('home', 'teamSubtitle', 'VARCHAR(255)'),
+                    ('home', 'teamIntro', 'TEXT'),
+                    ('home', 'teamIntro2', 'TEXT'),
+                    ('home', 'teamMembersJson', 'TEXT'),
+                    ('home', 'teamGalleryJson', 'TEXT'),
+                    ('home', 'teamContent', 'TEXT'),
+                    # Testimonials Section
+                    ('home', 'testimonialsTitle', 'VARCHAR(255)'),
+                    ('home', 'googleRating', 'FLOAT'),
+                    ('home', 'googleReviewCount', 'INTEGER'),
+                    ('home', 'carehomeRating', 'FLOAT'),
+                    ('home', 'carehomeReviewCount', 'INTEGER'),
+                    ('home', 'testimonialsIntro', 'TEXT'),
+                    # News Section
+                    ('home', 'newsTitle', 'VARCHAR(255)'),
+                    ('home', 'newsSubtitle', 'VARCHAR(255)'),
+                    # Contact Section
+                    ('home', 'contactTitle', 'VARCHAR(255)'),
+                    ('home', 'contactSubtitle', 'VARCHAR(255)'),
+                    ('home', 'contactAddress', 'TEXT'),
+                    ('home', 'contactPhone', 'VARCHAR(64)'),
+                    ('home', 'contactEmail', 'VARCHAR(255)'),
+                    ('home', 'contactMapUrl', 'TEXT'),
+                    ('home', 'quickFactBeds', 'VARCHAR(64)'),
+                    ('home', 'quickFactLocation', 'VARCHAR(255)'),
+                    ('home', 'quickFactCareType', 'VARCHAR(255)'),
+                    ('home', 'quickFactParking', 'VARCHAR(128)'),
+                    ('home', 'googleReviewUrl', 'TEXT'),
+                    ('home', 'carehomeUrl', 'TEXT'),
+                    # Care Section
                     ('home', 'careIntro', 'TEXT'),
                     ('home', 'careServicesJson', 'TEXT'),
                     ('home', 'careSectionsJson', 'TEXT'),
                     ('home', 'careGalleryJson', 'TEXT'),
-                    # CareService Table
-                    ('care_service', 'id', 'VARCHAR'),
-                    ('care_service', 'title', 'VARCHAR(255)'),
-                    ('care_service', 'description', 'TEXT'),
-                    ('care_service', 'imagesJson', 'TEXT'),
-                    ('care_service', 'icon', 'VARCHAR(128)'),
-                    ('care_service', 'order', 'INTEGER'),
-                    ('care_service', 'slug', 'VARCHAR(128)'),
-                    ('care_service', 'createdAt', 'DATETIME'),
-                    ('review', 'source', 'VARCHAR(64)')
+                    # Other tables
+                    ('review', 'source', 'VARCHAR(64)'),
                 ]
 
                 for table, col, dtype in columns_to_check:
