@@ -256,6 +256,28 @@ class User(db.Model):
     createdAt = db.Column(db.DateTime, default=datetime.utcnow)
 
 
+class MealPlan(db.Model):
+    """Meal plans for each home - supports weekly menu planning"""
+    id = db.Column(db.String, primary_key=True)
+    homeId = db.Column(db.String, db.ForeignKey('home.id'), nullable=False)
+    dayOfWeek = db.Column(db.Integer, nullable=False)  # 0=Monday, 6=Sunday
+    mealType = db.Column(db.String(64), nullable=False)  # breakfast, lunch, dinner, snack
+    mealName = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.Text)
+    ingredients = db.Column(db.Text)  # JSON array
+    allergyInfo = db.Column(db.Text)  # JSON array
+    imageUrl = db.Column(db.Text)
+    nutritionalInfo = db.Column(db.Text)  # JSON object
+    tags = db.Column(db.Text)  # JSON array
+    isSpecialMenu = db.Column(db.Boolean, default=False)
+    effectiveDate = db.Column(db.String(32))  # ISO date string
+    order = db.Column(db.Integer, default=0)
+    isActive = db.Column(db.Boolean, default=True)
+    createdBy = db.Column(db.String(128))
+    createdAt = db.Column(db.DateTime, default=datetime.utcnow)
+    updatedAt = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 class DeletedMedia(db.Model):
     """Soft delete audit log for media files - keeps record of removed images/videos"""
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
