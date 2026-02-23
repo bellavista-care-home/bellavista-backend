@@ -259,7 +259,7 @@ class User(db.Model):
 class DeletedMedia(db.Model):
     """Soft delete audit log for media files - keeps record of removed images/videos"""
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    homeId = db.Column(db.String, db.ForeignKey('home.id'), nullable=False)
+    homeId = db.Column(db.String, db.ForeignKey('home.id'), nullable=True)  # Made nullable for safety
     galleryType = db.Column(db.String(64), nullable=False)  # banner, facility, activity, team, care
     
     # Original media data (stored as JSON)

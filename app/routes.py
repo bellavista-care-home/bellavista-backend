@@ -8,7 +8,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from flask import Blueprint, request, jsonify, current_app
 from . import db
-from .models import ScheduledTour, CareEnquiry, NewsItem, Home, FAQ, Vacancy, JobApplication, KioskCheckIn, Review, Event, ManagementMember
+from .models import ScheduledTour, CareEnquiry, NewsItem, Home, FAQ, Vacancy, JobApplication, KioskCheckIn, Review, Event, ManagementMember, User
 from .image_processor import ImageProcessor
 from .auth import login_user, require_auth, require_admin
 from .validators import validate_and_sanitize, validate_news, validate_home, validate_faq, validate_vacancy, validate_review, create_error_response
@@ -16,7 +16,14 @@ from .rate_limiter import rate_limit
 from .audit_log import log_action, log_login_attempt, log_unauthorized_access, setup_audit_logging
 from werkzeug.security import generate_password_hash
 from sqlalchemy import or_, func, literal
-from .models import ScheduledTour, CareEnquiry, NewsItem, Home, FAQ, Vacancy, JobApplication, KioskCheckIn, Review, Event, ManagementMember, User, DeletedMedia, DataBackup
+
+# Import backup models - make optional for graceful degradation if tables don't exist
+try:
+    from .models import DeletedMedia, DataBackup
+    BACKUP_ENABLED = True
+except ImportError:
+    BACKUP_ENABLED = False
+    print("[WARNING] Backup models not available", flush=True)
 
 api_bp = Blueprint('api', __name__)
 s3_bucket = os.environ.get('S3_BUCKET')
@@ -131,6 +138,8 @@ def track_deleted_media(home_id, gallery_type, old_items, new_items, deleted_by=
     Track soft-deleted media items by comparing old and new gallery arrays.
     Items present in old but not in new are logged as deleted.
     """
+    if not BACKUP_ENABLED:
+        return 0
     if not old_items or not isinstance(old_items, list):
         return 0
     if not new_items:
@@ -183,6 +192,8 @@ def backup_record(table_name, record_id, action, old_data=None, new_data=None, c
         home_id: Related home ID (for filtering)
         user: Username who made the change
     """
+    if not BACKUP_ENABLED:
+        return None
     try:
         backup = DataBackup(
             tableName=table_name,
@@ -2781,6 +2792,8 @@ def get_home_full(home_id):
 @require_auth
 def get_deleted_media():
     """Get all soft-deleted media items with optional filtering"""
+    if not BACKUP_ENABLED:
+        return jsonify({'error': 'Backup system not available', 'items': []}), 200
     try:
         home_id = request.args.get('homeId')
         gallery_type = request.args.get('galleryType')
@@ -2821,6 +2834,8 @@ def get_deleted_media():
 @require_auth
 def recover_deleted_media(item_id):
     """Mark a deleted media item as recovered (for audit purposes)"""
+    if not BACKUP_ENABLED:
+        return jsonify({'error': 'Backup system not available'}), 400
     try:
         from datetime import datetime
         
@@ -2857,6 +2872,8 @@ def recover_deleted_media(item_id):
 @require_admin
 def permanently_delete_media(item_id):
     """Permanently delete a soft-deleted media record (admin only)"""
+    if not BACKUP_ENABLED:
+        return jsonify({'error': 'Backup system not available'}), 400
     try:
         item = DeletedMedia.query.get(item_id)
         if not item:
@@ -2879,6 +2896,8 @@ def permanently_delete_media(item_id):
 @require_auth
 def get_backups():
     """Get all data backups with optional filtering"""
+    if not BACKUP_ENABLED:
+        return jsonify({'error': 'Backup system not available', 'items': []}), 200
     try:
         table_name = request.args.get('tableName')
         record_id = request.args.get('recordId')
@@ -2927,6 +2946,8 @@ def get_backups():
 @require_auth
 def get_backup_detail(backup_id):
     """Get a specific backup with full data"""
+    if not BACKUP_ENABLED:
+        return jsonify({'error': 'Backup system not available'}), 404
     try:
         item = DataBackup.query.get(backup_id)
         if not item:
@@ -2962,6 +2983,8 @@ def restore_backup(backup_id):
     For 'delete' backups: Re-creates the record
     For 'update' backups: Reverts the record to old state
     """
+    if not BACKUP_ENABLED:
+        return jsonify({'error': 'Backup system not available'}), 400
     try:
         from datetime import datetime
         
@@ -3037,6 +3060,8 @@ def restore_backup(backup_id):
 @require_auth
 def get_record_history(table_name, record_id):
     """Get complete change history for a specific record"""
+    if not BACKUP_ENABLED:
+        return jsonify({'error': 'Backup system not available', 'items': []}), 200
     try:
         items = DataBackup.query.filter_by(
             tableName=table_name,
