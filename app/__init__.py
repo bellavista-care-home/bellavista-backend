@@ -236,6 +236,14 @@ def create_app(config_name=None):
                     ('home', 'careGalleryJson', 'TEXT'),
                     # Other tables
                     ('review', 'source', 'VARCHAR(64)'),
+                    # CareService table columns
+                    ('care_service', 'title', 'VARCHAR(255)'),
+                    ('care_service', 'description', 'TEXT'),
+                    ('care_service', 'images', 'TEXT'),
+                    ('care_service', 'showOnPage', 'BOOLEAN'),
+                    ('care_service', 'order', 'INTEGER'),
+                    ('care_service', 'createdAt', 'TIMESTAMP'),
+                    ('care_service', 'updatedAt', 'TIMESTAMP'),
                 ]
 
                 for table, col, dtype in columns_to_check:

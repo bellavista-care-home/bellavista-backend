@@ -8,7 +8,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from flask import Blueprint, request, jsonify, current_app
 from . import db
-from .models import ScheduledTour, CareEnquiry, NewsItem, Home, FAQ, Vacancy, JobApplication, KioskCheckIn, Review, Event, ManagementMember, User
+from .models import ScheduledTour, CareEnquiry, NewsItem, Home, FAQ, Vacancy, JobApplication, KioskCheckIn, Review, Event, ManagementMember, User, CareService
 from .image_processor import ImageProcessor
 from .auth import login_user, require_auth, require_admin
 from .validators import validate_and_sanitize, validate_news, validate_home, validate_faq, validate_vacancy, validate_review, create_error_response
@@ -1457,6 +1457,99 @@ def delete_news(id):
     
     db.session.delete(item)
     db.session.commit()
+    return jsonify({"ok": True})
+
+# CARE SERVICES ROUTES
+
+def to_dict_care_service(s):
+    images = []
+    if s.images:
+        try:
+            images = json.loads(s.images) if isinstance(s.images, str) else s.images
+        except:
+            images = []
+    return {
+        "id": s.id,
+        "title": s.title,
+        "description": s.description,
+        "images": images,
+        "showOnPage": s.showOnPage,
+        "order": s.order,
+        "createdAt": s.createdAt.isoformat() if s.createdAt else None,
+        "updatedAt": s.updatedAt.isoformat() if s.updatedAt else None
+    }
+
+@api_bp.get('/care-services')
+def list_care_services():
+    items = CareService.query.order_by(CareService.order.asc()).all()
+    return jsonify([to_dict_care_service(i) for i in items])
+
+@api_bp.get('/care-services/<id>')
+def get_care_service(id):
+    item = CareService.query.get(id)
+    if not item:
+        return jsonify({"error": "Not found"}), 404
+    return jsonify(to_dict_care_service(item))
+
+@api_bp.post('/care-services')
+@require_auth
+def create_care_service():
+    data = request.get_json(force=True)
+    sid = str(uuid.uuid4())
+    
+    images = data.get('images', [])
+    if isinstance(images, list):
+        images = json.dumps(images)
+    
+    service = CareService(
+        id=sid,
+        title=data.get('title', 'New Care Service'),
+        description=data.get('description', ''),
+        images=images,
+        showOnPage=data.get('showOnPage', True),
+        order=data.get('order', 0)
+    )
+    db.session.add(service)
+    db.session.commit()
+    
+    log_action('create_care_service', details={'id': sid, 'title': service.title})
+    return jsonify(to_dict_care_service(service)), 201
+
+@api_bp.put('/care-services/<id>')
+@require_auth
+def update_care_service(id):
+    item = CareService.query.get(id)
+    if not item:
+        return jsonify({"error": "Not found"}), 404
+    
+    data = request.get_json(force=True)
+    
+    if 'title' in data:
+        item.title = data['title']
+    if 'description' in data:
+        item.description = data['description']
+    if 'images' in data:
+        images = data['images']
+        item.images = json.dumps(images) if isinstance(images, list) else images
+    if 'showOnPage' in data:
+        item.showOnPage = data['showOnPage']
+    if 'order' in data:
+        item.order = data['order']
+    
+    db.session.commit()
+    log_action('update_care_service', details={'id': id})
+    return jsonify(to_dict_care_service(item))
+
+@api_bp.delete('/care-services/<id>')
+@require_auth
+def delete_care_service(id):
+    item = CareService.query.get(id)
+    if not item:
+        return jsonify({"error": "Not found"}), 404
+    
+    db.session.delete(item)
+    db.session.commit()
+    log_action('delete_care_service', details={'id': id})
     return jsonify({"ok": True})
 
 # VACANCIES ROUTES

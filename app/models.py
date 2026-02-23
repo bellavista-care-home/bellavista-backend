@@ -341,3 +341,15 @@ class DataBackup(db.Model):
         db.Index('idx_backup_home', 'homeId'),
         db.Index('idx_backup_date', 'createdAt'),
     )
+
+
+class CareService(db.Model):
+    """Care services offered by the care home - displayed on care page"""
+    id = db.Column(db.String, primary_key=True)
+    title = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.Text)
+    images = db.Column(db.Text)  # JSON array of image URLs
+    showOnPage = db.Column(db.Boolean, default=True)
+    order = db.Column(db.Integer, default=0)
+    createdAt = db.Column(db.DateTime, default=datetime.utcnow)
+    updatedAt = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
