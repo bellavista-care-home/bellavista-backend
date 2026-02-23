@@ -2112,7 +2112,11 @@ def to_dict_event(e):
 
 @api_bp.get('/events')
 def list_events():
-    events = Event.query.order_by(Event.date.asc()).all()
+    location = request.args.get('location', '').strip()
+    query = Event.query
+    if location:
+        query = query.filter(Event.location.contains(location))
+    events = query.order_by(Event.date.asc()).all()
     return jsonify([to_dict_event(e) for e in events])
 
 @api_bp.post('/events')
