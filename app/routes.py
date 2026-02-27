@@ -1790,6 +1790,7 @@ def to_dict_home(h):
         "servicesIntro": h.servicesIntro,
         "servicesContent": h.servicesContent,
         "servicesList": parse_json(h.servicesListJson),
+        "careSectionsJson": parse_json(h.careSectionsJson),
         "contactTitle": h.contactTitle,
         "contactSubtitle": h.contactSubtitle,
         "contactAddress": h.contactAddress,
@@ -1803,6 +1804,7 @@ def to_dict_home(h):
         "googleReviewUrl": h.googleReviewUrl,
         "carehomeUrl": h.carehomeUrl,
         "contentBlocks": parse_json(h.contentBlocksJson),
+        "careGalleryImages": parse_json(h.careGalleryJson),
         "homeFeatured": h.featured,
         "createdAt": h.createdAt.isoformat() if h.createdAt else None
     }
@@ -1993,6 +1995,21 @@ def update_home(id):
         if 'homeFeatured' in data:
             home.featured = data['homeFeatured']
         
+        # Update care gallery
+        if 'careGalleryImages' in data:
+            old_care = parse_json(home.careGalleryJson) or []
+            track_deleted_media(id, 'care', old_care, data['careGalleryImages'])
+            care_count = len(data['careGalleryImages'])
+            print(f"[UPDATE HOME] Updating {care_count} care gallery images...", flush=True)
+            home.careGalleryJson = json.dumps(data['careGalleryImages'])
+        
+        # Update care sections (Care Gallery items with title/description)
+        if 'careSectionsJson' in data:
+            care_sections = data['careSectionsJson']
+            care_sections_count = len(care_sections) if isinstance(care_sections, list) else 0
+            print(f"[UPDATE HOME] Updating {care_sections_count} care sections...", flush=True)
+            home.careSectionsJson = json.dumps(care_sections) if isinstance(care_sections, list) else care_sections
+        
         print(f"[UPDATE HOME] Committing changes to database...", flush=True)
         sys.stdout.flush()  # Force flush
         db.session.commit()
@@ -2096,7 +2113,11 @@ def to_dict_event(e):
 
 @api_bp.get('/events')
 def list_events():
-    events = Event.query.order_by(Event.date.asc()).all()
+    location = request.args.get('location', '').strip()
+    query = Event.query
+    if location:
+        query = query.filter(Event.location.contains(location))
+    events = query.order_by(Event.date.asc()).all()
     return jsonify([to_dict_event(e) for e in events])
 
 @api_bp.post('/events')
@@ -2836,6 +2857,10 @@ def get_home_full(home_id):
             'activitiesList': parse_json(home.activitiesJson),
             'activitiesGallery': parse_json(home.activityImagesJson),
             'activitiesContent': home.activitiesContent,
+            
+            # Care Gallery
+            'careGalleryImages': parse_json(home.careGalleryJson),
+            'careSectionsJson': parse_json(home.careSectionsJson),
             
             # Team
             'teamTitle': home.teamTitle,
