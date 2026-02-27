@@ -3462,7 +3462,7 @@ def delete_newsletter(newsletter_id):
 # =============================================================================
 
 @api_bp.route('/newsletter-subscribers', methods=['POST'])
-@rate_limit(max_requests=5, window_seconds=60)
+@rate_limit(max_attempts=5, window_seconds=60)
 def subscribe_newsletter():
     """Subscribe an email to the newsletter"""
     try:
