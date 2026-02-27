@@ -4,11 +4,12 @@ import uuid
 import boto3
 import smtplib
 import threading
+from datetime import datetime
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from flask import Blueprint, request, jsonify, current_app
 from . import db
-from .models import ScheduledTour, CareEnquiry, NewsItem, Home, FAQ, Vacancy, JobApplication, KioskCheckIn, Review, Event, ManagementMember, User, CareService
+from .models import ScheduledTour, CareEnquiry, NewsItem, Home, FAQ, Vacancy, JobApplication, KioskCheckIn, Review, Event, ManagementMember, User, CareService, Newsletter, NewsletterSubscriber
 from .image_processor import ImageProcessor
 from .auth import login_user, require_auth, require_admin
 from .validators import validate_and_sanitize, validate_news, validate_home, validate_faq, validate_vacancy, validate_review, create_error_response
@@ -3172,4 +3173,383 @@ def get_record_history(table_name, record_id):
         
     except Exception as e:
         print(f"Error fetching record history: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+# =============================================================================
+# NEWSLETTER ROUTES
+# =============================================================================
+
+@api_bp.route('/newsletters', methods=['GET'])
+def get_newsletters():
+    """Get all newsletters, optionally filtered by homeId, month, year"""
+    try:
+        query = Newsletter.query
+        home_id = request.args.get('homeId')
+        month = request.args.get('month')
+        year = request.args.get('year')
+        
+        if home_id:
+            query = query.filter((Newsletter.homeId == home_id) | (Newsletter.homeId == None))
+        if month:
+            query = query.filter_by(month=int(month))
+        if year:
+            query = query.filter_by(year=int(year))
+        
+        newsletters = query.order_by(Newsletter.year.desc(), Newsletter.month.desc()).all()
+        return jsonify([{
+            'id': n.id,
+            'title': n.title,
+            'description': n.description,
+            'fileUrl': n.fileUrl,
+            'coverImage': n.coverImage,
+            'month': n.month,
+            'year': n.year,
+            'homeId': n.homeId,
+            'publishedAt': n.publishedAt.isoformat() if n.publishedAt else None,
+            'createdAt': n.createdAt.isoformat() if n.createdAt else None,
+        } for n in newsletters])
+    except Exception as e:
+        print(f"Error fetching newsletters: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@api_bp.route('/newsletters/<newsletter_id>', methods=['GET'])
+def get_newsletter(newsletter_id):
+    """Get a single newsletter by ID"""
+    try:
+        n = Newsletter.query.get(newsletter_id)
+        if not n:
+            return jsonify({'error': 'Newsletter not found'}), 404
+        return jsonify({
+            'id': n.id,
+            'title': n.title,
+            'description': n.description,
+            'fileUrl': n.fileUrl,
+            'coverImage': n.coverImage,
+            'month': n.month,
+            'year': n.year,
+            'homeId': n.homeId,
+            'publishedAt': n.publishedAt.isoformat() if n.publishedAt else None,
+            'createdAt': n.createdAt.isoformat() if n.createdAt else None,
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@api_bp.route('/newsletters', methods=['POST'])
+@require_auth
+def create_newsletter():
+    """Create a new newsletter and optionally email all subscribers"""
+    try:
+        newsletter_id = str(uuid.uuid4())
+        
+        # Handle file upload (PDF)
+        file_url = None
+        if 'file' in request.files:
+            file = request.files['file']
+            if file and file.filename:
+                filename = f"newsletters/{newsletter_id}/{file.filename}"
+                file_url = upload_file_helper(file, filename, content_type='application/pdf')
+        
+        # Handle cover image upload
+        cover_image = None
+        if 'coverImage' in request.files:
+            img_file = request.files['coverImage']
+            if img_file and img_file.filename:
+                img_filename = f"newsletters/{newsletter_id}/cover_{img_file.filename}"
+                cover_image = upload_file_helper(img_file, img_filename)
+        
+        # If no file was uploaded, check for URL in form data
+        if not file_url:
+            file_url = request.form.get('fileUrl')
+        if not cover_image:
+            cover_image = request.form.get('coverImage')
+        
+        if not file_url:
+            return jsonify({'error': 'Newsletter PDF file is required'}), 400
+        
+        title = request.form.get('title', '')
+        description = request.form.get('description', '')
+        month = int(request.form.get('month', datetime.utcnow().month))
+        year = int(request.form.get('year', datetime.utcnow().year))
+        home_id = request.form.get('homeId') or None
+        send_emails = request.form.get('sendEmails', 'false').lower() == 'true'
+        
+        newsletter = Newsletter(
+            id=newsletter_id,
+            title=title,
+            description=description,
+            fileUrl=file_url,
+            coverImage=cover_image,
+            month=month,
+            year=year,
+            homeId=home_id,
+        )
+        db.session.add(newsletter)
+        db.session.commit()
+        
+        # Send email to subscribers if requested
+        email_results = {'sent': 0, 'failed': 0, 'recipients': []}
+        if send_emails:
+            subscribers_query = NewsletterSubscriber.query.filter_by(isActive=True)
+            if home_id:
+                subscribers_query = subscribers_query.filter(
+                    (NewsletterSubscriber.homeId == home_id) | (NewsletterSubscriber.homeId == None)
+                )
+            subscribers = subscribers_query.all()
+            
+            month_names = ['', 'January', 'February', 'March', 'April', 'May', 'June',
+                          'July', 'August', 'September', 'October', 'November', 'December']
+            month_name = month_names[month] if 1 <= month <= 12 else str(month)
+            
+            for subscriber in subscribers:
+                try:
+                    email_body = f"""Dear {subscriber.name or 'Subscriber'},
+
+We're excited to share our latest newsletter with you!
+
+{title}
+{month_name} {year}
+
+{description}
+
+You can view the newsletter here: {file_url}
+
+Visit our newsletter archive to browse all past editions:
+https://www.bellavistanursinghomes.com/newsletters
+
+Best regards,
+Bellavista Nursing Homes
+
+---
+To unsubscribe, visit: https://www.bellavistanursinghomes.com/newsletters?unsubscribe={subscriber.id}
+"""
+                    success = send_email_sync(subscriber.email, f"Bellavista Newsletter - {month_name} {year}: {title}", email_body)
+                    if success:
+                        email_results['sent'] += 1
+                        email_results['recipients'].append(subscriber.email)
+                    else:
+                        email_results['failed'] += 1
+                except Exception as email_err:
+                    print(f"Failed to email subscriber {subscriber.email}: {email_err}")
+                    email_results['failed'] += 1
+            
+            # Send confirmation email to admin
+            admin_email = os.environ.get('MAIL_SENDER') or os.environ.get('MAIL_USERNAME')
+            if admin_email:
+                admin_body = f"""Newsletter Distribution Report
+
+Newsletter: {title}
+Period: {month_name} {year}
+
+Emails sent successfully: {email_results['sent']}
+Emails failed: {email_results['failed']}
+
+Recipients:
+{chr(10).join(['- ' + r for r in email_results['recipients']]) if email_results['recipients'] else '- No subscribers found'}
+
+Newsletter URL: {file_url}
+"""
+                send_email(admin_email, f"Newsletter Sent - {title} ({month_name} {year})", admin_body)
+        
+        return jsonify({
+            'id': newsletter_id,
+            'title': title,
+            'fileUrl': file_url,
+            'coverImage': cover_image,
+            'month': month,
+            'year': year,
+            'emailResults': email_results
+        }), 201
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error creating newsletter: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
+@api_bp.route('/newsletters/<newsletter_id>', methods=['PUT'])
+@require_auth
+def update_newsletter(newsletter_id):
+    """Update an existing newsletter"""
+    try:
+        newsletter = Newsletter.query.get(newsletter_id)
+        if not newsletter:
+            return jsonify({'error': 'Newsletter not found'}), 404
+        
+        # Handle file upload (PDF)
+        if 'file' in request.files:
+            file = request.files['file']
+            if file and file.filename:
+                filename = f"newsletters/{newsletter_id}/{file.filename}"
+                newsletter.fileUrl = upload_file_helper(file, filename, content_type='application/pdf')
+        
+        # Handle cover image upload
+        if 'coverImage' in request.files:
+            img_file = request.files['coverImage']
+            if img_file and img_file.filename:
+                img_filename = f"newsletters/{newsletter_id}/cover_{img_file.filename}"
+                newsletter.coverImage = upload_file_helper(img_file, img_filename)
+        
+        if request.form.get('title'):
+            newsletter.title = request.form.get('title')
+        if request.form.get('description'):
+            newsletter.description = request.form.get('description')
+        if request.form.get('month'):
+            newsletter.month = int(request.form.get('month'))
+        if request.form.get('year'):
+            newsletter.year = int(request.form.get('year'))
+        if request.form.get('homeId'):
+            newsletter.homeId = request.form.get('homeId') or None
+        if request.form.get('fileUrl'):
+            newsletter.fileUrl = request.form.get('fileUrl')
+        if request.form.get('coverImage') and 'coverImage' not in request.files:
+            newsletter.coverImage = request.form.get('coverImage')
+        
+        db.session.commit()
+        return jsonify({'message': 'Newsletter updated', 'id': newsletter_id})
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error updating newsletter: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@api_bp.route('/newsletters/<newsletter_id>', methods=['DELETE'])
+@require_auth
+def delete_newsletter(newsletter_id):
+    """Delete a newsletter"""
+    try:
+        newsletter = Newsletter.query.get(newsletter_id)
+        if not newsletter:
+            return jsonify({'error': 'Newsletter not found'}), 404
+        db.session.delete(newsletter)
+        db.session.commit()
+        return jsonify({'message': 'Newsletter deleted'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+# =============================================================================
+# NEWSLETTER SUBSCRIBER ROUTES
+# =============================================================================
+
+@api_bp.route('/newsletter-subscribers', methods=['POST'])
+@rate_limit(max_requests=5, window_seconds=60)
+def subscribe_newsletter():
+    """Subscribe an email to the newsletter"""
+    try:
+        data = request.get_json()
+        if not data or not data.get('email'):
+            return jsonify({'error': 'Email is required'}), 400
+        
+        email = data['email'].strip().lower()
+        name = data.get('name', '').strip()
+        home_id = data.get('homeId') or None
+        
+        # Check if already subscribed
+        existing = NewsletterSubscriber.query.filter_by(email=email).first()
+        if existing:
+            if existing.isActive:
+                return jsonify({'message': 'You are already subscribed!', 'alreadySubscribed': True}), 200
+            else:
+                # Reactivate
+                existing.isActive = True
+                existing.unsubscribedAt = None
+                existing.name = name or existing.name
+                existing.homeId = home_id or existing.homeId
+                db.session.commit()
+                return jsonify({'message': 'Welcome back! Your subscription has been reactivated.'}), 200
+        
+        subscriber = NewsletterSubscriber(
+            id=str(uuid.uuid4()),
+            email=email,
+            name=name,
+            homeId=home_id,
+        )
+        db.session.add(subscriber)
+        db.session.commit()
+        
+        # Send welcome email
+        welcome_body = f"""Dear {name or 'Subscriber'},
+
+Thank you for subscribing to the Bellavista Nursing Homes newsletter!
+
+You'll receive our monthly newsletter directly to your inbox, keeping you updated with the latest news, events, and stories from our homes.
+
+Visit our newsletter archive to browse past editions:
+https://www.bellavistanursinghomes.com/newsletters
+
+Best regards,
+Bellavista Nursing Homes
+
+---
+To unsubscribe, visit: https://www.bellavistanursinghomes.com/newsletters?unsubscribe={subscriber.id}
+"""
+        send_email(email, "Welcome to Bellavista Newsletter!", welcome_body)
+        
+        # Notify admin
+        admin_email = os.environ.get('MAIL_SENDER') or os.environ.get('MAIL_USERNAME')
+        if admin_email:
+            send_email(admin_email, "New Newsletter Subscriber", 
+                      f"New subscriber: {name} ({email})\nSubscribed at: {datetime.utcnow().isoformat()}")
+        
+        return jsonify({'message': 'Successfully subscribed! Check your email for confirmation.'}), 201
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error subscribing: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@api_bp.route('/newsletter-subscribers/unsubscribe/<subscriber_id>', methods=['POST'])
+def unsubscribe_newsletter(subscriber_id):
+    """Unsubscribe from the newsletter"""
+    try:
+        subscriber = NewsletterSubscriber.query.get(subscriber_id)
+        if not subscriber:
+            return jsonify({'error': 'Subscriber not found'}), 404
+        
+        subscriber.isActive = False
+        subscriber.unsubscribedAt = datetime.utcnow()
+        db.session.commit()
+        return jsonify({'message': 'You have been unsubscribed successfully.'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+@api_bp.route('/newsletter-subscribers', methods=['GET'])
+@require_auth
+def get_subscribers():
+    """Get all newsletter subscribers (admin only)"""
+    try:
+        subscribers = NewsletterSubscriber.query.order_by(NewsletterSubscriber.subscribedAt.desc()).all()
+        return jsonify([{
+            'id': s.id,
+            'email': s.email,
+            'name': s.name,
+            'homeId': s.homeId,
+            'subscribedAt': s.subscribedAt.isoformat() if s.subscribedAt else None,
+            'isActive': s.isActive,
+            'unsubscribedAt': s.unsubscribedAt.isoformat() if s.unsubscribedAt else None,
+        } for s in subscribers])
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@api_bp.route('/newsletter-subscribers/<subscriber_id>', methods=['DELETE'])
+@require_auth
+def delete_subscriber(subscriber_id):
+    """Delete a subscriber (admin only)"""
+    try:
+        subscriber = NewsletterSubscriber.query.get(subscriber_id)
+        if not subscriber:
+            return jsonify({'error': 'Subscriber not found'}), 404
+        db.session.delete(subscriber)
+        db.session.commit()
+        return jsonify({'message': 'Subscriber deleted'})
+    except Exception as e:
+        db.session.rollback()
         return jsonify({'error': str(e)}), 500

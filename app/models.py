@@ -343,6 +343,35 @@ class DataBackup(db.Model):
     )
 
 
+class Newsletter(db.Model):
+    """Monthly newsletters uploaded by admin - viewable by users on the newsletter archive page"""
+    id = db.Column(db.String, primary_key=True)
+    title = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.Text)
+    fileUrl = db.Column(db.Text, nullable=False)  # S3 URL to the PDF
+    coverImage = db.Column(db.Text)  # Optional cover image for the newsletter
+    month = db.Column(db.Integer, nullable=False)  # 1-12
+    year = db.Column(db.Integer, nullable=False)
+    homeId = db.Column(db.String, db.ForeignKey('home.id'), nullable=True)  # Optional: specific home, null=global
+    publishedAt = db.Column(db.DateTime, default=datetime.utcnow)
+    createdAt = db.Column(db.DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        db.Index('idx_newsletter_month_year', 'year', 'month'),
+    )
+
+
+class NewsletterSubscriber(db.Model):
+    """Email subscribers who receive newsletters via email when admin uploads a new one"""
+    id = db.Column(db.String, primary_key=True)
+    email = db.Column(db.String(255), nullable=False, unique=True)
+    name = db.Column(db.String(255))
+    homeId = db.Column(db.String, db.ForeignKey('home.id'), nullable=True)  # Optional: subscribe to specific home
+    subscribedAt = db.Column(db.DateTime, default=datetime.utcnow)
+    isActive = db.Column(db.Boolean, default=True)
+    unsubscribedAt = db.Column(db.DateTime)
+
+
 class CareService(db.Model):
     """Care services offered by the care home - displayed on care page"""
     id = db.Column(db.String, primary_key=True)
