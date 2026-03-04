@@ -1114,6 +1114,25 @@ def create_user():
     # Check if username exists
     if User.query.filter_by(username=data.get('username')).first():
         return jsonify({'error': 'Username already exists'}), 400
+    
+    # Handle permissions (for temp_admin role)
+    permissions = data.get('permissions')
+    if isinstance(permissions, list):
+        permissions = json.dumps(permissions)
+    
+    # Handle temp access expiry
+    temp_expires_raw = data.get('temp_access_expires_at')
+    temp_access_expires_at = None
+    if temp_expires_raw:
+        try:
+            dt = datetime.fromisoformat(temp_expires_raw.replace('Z', '+00:00'))
+            # Always store as naive UTC
+            if dt.tzinfo is not None:
+                from datetime import timezone as _tz
+                dt = dt.astimezone(_tz.utc).replace(tzinfo=None)
+            temp_access_expires_at = dt
+        except Exception:
+            pass
         
     # Create user
     new_user = User(
@@ -1121,7 +1140,9 @@ def create_user():
         username=data.get('username'),
         password_hash=generate_password_hash(data.get('password'), method='pbkdf2:sha256'),
         role=data.get('role', 'home_admin'),
-        home_id=data.get('home_id')
+        home_id=data.get('home_id'),
+        permissions=permissions,
+        temp_access_expires_at=temp_access_expires_at
     )
     
     db.session.add(new_user)
@@ -1142,6 +1163,14 @@ def list_users():
             home = Home.query.get(u.home_id)
             if home:
                 home_name = home.name
+        
+        # Parse permissions JSON
+        perms = None
+        if u.permissions:
+            try:
+                perms = json.loads(u.permissions)
+            except Exception:
+                perms = []
                 
         result.append({
             'id': u.id,
@@ -1149,7 +1178,9 @@ def list_users():
             'role': u.role,
             'home_id': u.home_id,
             'home_name': home_name,
-            'createdAt': u.createdAt.isoformat() if u.createdAt else None
+            'createdAt': (u.createdAt.isoformat() + 'Z') if u.createdAt else None,
+            'permissions': perms,
+            'temp_access_expires_at': (u.temp_access_expires_at.isoformat() + 'Z') if u.temp_access_expires_at else None
         })
     return jsonify(result)
 
@@ -1172,6 +1203,25 @@ def update_user(user_id):
         
     if 'home_id' in data:
         user.home_id = data['home_id']
+    
+    if 'permissions' in data:
+        perms = data['permissions']
+        user.permissions = json.dumps(perms) if isinstance(perms, list) else perms
+    
+    if 'temp_access_expires_at' in data:
+        raw = data['temp_access_expires_at']
+        if raw:
+            try:
+                dt = datetime.fromisoformat(raw.replace('Z', '+00:00'))
+                # Always store as naive UTC (strip timezone info)
+                if dt.tzinfo is not None:
+                    from datetime import timezone as _tz
+                    dt = dt.astimezone(_tz.utc).replace(tzinfo=None)
+                user.temp_access_expires_at = dt
+            except Exception:
+                pass
+        else:
+            user.temp_access_expires_at = None
         
     db.session.commit()
     return jsonify({'ok': True, 'message': 'User updated successfully'})

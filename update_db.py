@@ -54,6 +54,22 @@ try:
             print(f"{col_name} column added successfully.")
         else:
             print(f"{col_name} column already exists.")
+
+    # Add temp_admin support columns to user table
+    cursor.execute("PRAGMA table_info(user)")
+    user_columns = [col[1] for col in cursor.fetchall()]
+    if 'permissions' not in user_columns:
+        print("Adding permissions column to user table...")
+        cursor.execute("ALTER TABLE user ADD COLUMN permissions TEXT")
+        print("permissions column added successfully.")
+    else:
+        print("permissions column already exists.")
+    if 'temp_access_expires_at' not in user_columns:
+        print("Adding temp_access_expires_at column to user table...")
+        cursor.execute("ALTER TABLE user ADD COLUMN temp_access_expires_at TIMESTAMP")
+        print("temp_access_expires_at column added successfully.")
+    else:
+        print("temp_access_expires_at column already exists.")
         
     conn.commit()
     conn.close()
