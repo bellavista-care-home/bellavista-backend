@@ -2460,6 +2460,7 @@ def get_management_team():
         return jsonify({'error': str(e)}), 500
 
 @api_bp.route('/management-team', methods=['POST'])
+@require_auth
 @require_admin
 def create_management_member():
     try:
@@ -2485,6 +2486,7 @@ def create_management_member():
         return jsonify({'error': str(e)}), 500
 
 @api_bp.route('/management-team/<id>', methods=['PUT'])
+@require_auth
 @require_admin
 def update_management_member(id):
     try:
@@ -2507,6 +2509,7 @@ def update_management_member(id):
         return jsonify({'error': str(e)}), 500
 
 @api_bp.route('/management-team/<id>', methods=['DELETE'])
+@require_auth
 @require_admin
 def delete_management_member(id):
     try:
@@ -3363,7 +3366,29 @@ def create_newsletter():
         )
         db.session.add(newsletter)
         db.session.commit()
-        
+
+        # Always notify itsupport and super admin when a newsletter is uploaded
+        IT_SUPPORT_EMAIL = 'itsupport@bellavistanursinghome.com'
+        admin_email = os.environ.get('MAIL_SENDER') or os.environ.get('MAIL_USERNAME')
+        month_names = ['', 'January', 'February', 'March', 'April', 'May', 'June',
+                      'July', 'August', 'September', 'October', 'November', 'December']
+        month_name = month_names[month] if 1 <= month <= 12 else str(month)
+        upload_subject = f"New Newsletter Uploaded - {title} ({month_name} {year})"
+        upload_body = f"""A new newsletter has been uploaded.
+
+Title: {title}
+Period: {month_name} {year}
+Home: {home_id or 'All Homes (Global)'}
+{('Description: ' + description) if description else ''}
+
+Newsletter URL: {file_url}
+
+Subscriber emails will be sent: {'Yes' if send_emails else 'No'}
+"""
+        send_email(IT_SUPPORT_EMAIL, upload_subject, upload_body)
+        if admin_email and admin_email != IT_SUPPORT_EMAIL:
+            send_email(admin_email, upload_subject, upload_body)
+
         # Send email to subscribers if requested
         email_results = {'sent': 0, 'failed': 0, 'recipients': []}
         if send_emails:
@@ -3373,10 +3398,6 @@ def create_newsletter():
                     (NewsletterSubscriber.homeId == home_id) | (NewsletterSubscriber.homeId == None)
                 )
             subscribers = subscribers_query.all()
-            
-            month_names = ['', 'January', 'February', 'March', 'April', 'May', 'June',
-                          'July', 'August', 'September', 'October', 'November', 'December']
-            month_name = month_names[month] if 1 <= month <= 12 else str(month)
             
             for subscriber in subscribers:
                 try:
@@ -3410,10 +3431,9 @@ To unsubscribe, visit: https://www.bellavistanursinghomes.com/newsletters?unsubs
                     print(f"Failed to email subscriber {subscriber.email}: {email_err}")
                     email_results['failed'] += 1
             
-            # Send confirmation email to admin
-            admin_email = os.environ.get('MAIL_SENDER') or os.environ.get('MAIL_USERNAME')
-            if admin_email:
-                admin_body = f"""Newsletter Distribution Report
+            # Send distribution report to itsupport and super admin
+            distribution_subject = f"Newsletter Distribution Report - {title} ({month_name} {year})"
+            distribution_body = f"""Newsletter Distribution Report
 
 Newsletter: {title}
 Period: {month_name} {year}
@@ -3426,7 +3446,9 @@ Recipients:
 
 Newsletter URL: {file_url}
 """
-                send_email(admin_email, f"Newsletter Sent - {title} ({month_name} {year})", admin_body)
+            send_email(IT_SUPPORT_EMAIL, distribution_subject, distribution_body)
+            if admin_email and admin_email != IT_SUPPORT_EMAIL:
+                send_email(admin_email, distribution_subject, distribution_body)
         
         return jsonify({
             'id': newsletter_id,
