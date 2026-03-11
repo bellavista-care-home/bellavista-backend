@@ -28,6 +28,10 @@ except ImportError:
 
 api_bp = Blueprint('api', __name__)
 s3_bucket = os.environ.get('S3_BUCKET')
+# When CloudFront is set up in front of S3, set CDN_URL to the CloudFront domain.
+# e.g. CDN_URL=https://d1234abcd.cloudfront.net
+# Images will be served via CDN instead of direct S3, improving load speed globally.
+cdn_url = os.environ.get('CDN_URL', '').rstrip('/')
 
 def send_email_sync(to_emails, subject, body):
     if not isinstance(to_emails, list):
@@ -123,7 +127,7 @@ def upload_file_helper(file_or_path, filename, content_type=None):
                 ExtraArgs={'ContentType': content_type or file_or_path.content_type, 'ACL': 'public-read'}
             )
             
-        return f"https://{s3_bucket}.s3.amazonaws.com/{filename}"
+        return f"https://{s3_bucket}.s3.amazonaws.com/{filename}" if not cdn_url else f"{cdn_url}/{filename}"
     except Exception as e:
         print(f"S3 Upload Error: {e}")
         return None
@@ -1114,6 +1118,25 @@ def create_user():
     # Check if username exists
     if User.query.filter_by(username=data.get('username')).first():
         return jsonify({'error': 'Username already exists'}), 400
+    
+    # Handle permissions (for temp_admin role)
+    permissions = data.get('permissions')
+    if isinstance(permissions, list):
+        permissions = json.dumps(permissions)
+    
+    # Handle temp access expiry
+    temp_expires_raw = data.get('temp_access_expires_at')
+    temp_access_expires_at = None
+    if temp_expires_raw:
+        try:
+            dt = datetime.fromisoformat(temp_expires_raw.replace('Z', '+00:00'))
+            # Always store as naive UTC
+            if dt.tzinfo is not None:
+                from datetime import timezone as _tz
+                dt = dt.astimezone(_tz.utc).replace(tzinfo=None)
+            temp_access_expires_at = dt
+        except Exception:
+            pass
         
     # Create user
     new_user = User(
@@ -1121,7 +1144,9 @@ def create_user():
         username=data.get('username'),
         password_hash=generate_password_hash(data.get('password'), method='pbkdf2:sha256'),
         role=data.get('role', 'home_admin'),
-        home_id=data.get('home_id')
+        home_id=data.get('home_id'),
+        permissions=permissions,
+        temp_access_expires_at=temp_access_expires_at
     )
     
     db.session.add(new_user)
@@ -1142,6 +1167,14 @@ def list_users():
             home = Home.query.get(u.home_id)
             if home:
                 home_name = home.name
+        
+        # Parse permissions JSON
+        perms = None
+        if u.permissions:
+            try:
+                perms = json.loads(u.permissions)
+            except Exception:
+                perms = []
                 
         result.append({
             'id': u.id,
@@ -1149,7 +1182,9 @@ def list_users():
             'role': u.role,
             'home_id': u.home_id,
             'home_name': home_name,
-            'createdAt': u.createdAt.isoformat() if u.createdAt else None
+            'createdAt': (u.createdAt.isoformat() + 'Z') if u.createdAt else None,
+            'permissions': perms,
+            'temp_access_expires_at': (u.temp_access_expires_at.isoformat() + 'Z') if u.temp_access_expires_at else None
         })
     return jsonify(result)
 
@@ -1172,6 +1207,25 @@ def update_user(user_id):
         
     if 'home_id' in data:
         user.home_id = data['home_id']
+    
+    if 'permissions' in data:
+        perms = data['permissions']
+        user.permissions = json.dumps(perms) if isinstance(perms, list) else perms
+    
+    if 'temp_access_expires_at' in data:
+        raw = data['temp_access_expires_at']
+        if raw:
+            try:
+                dt = datetime.fromisoformat(raw.replace('Z', '+00:00'))
+                # Always store as naive UTC (strip timezone info)
+                if dt.tzinfo is not None:
+                    from datetime import timezone as _tz
+                    dt = dt.astimezone(_tz.utc).replace(tzinfo=None)
+                user.temp_access_expires_at = dt
+            except Exception:
+                pass
+        else:
+            user.temp_access_expires_at = None
         
     db.session.commit()
     return jsonify({'ok': True, 'message': 'User updated successfully'})
@@ -2410,6 +2464,7 @@ def get_management_team():
         return jsonify({'error': str(e)}), 500
 
 @api_bp.route('/management-team', methods=['POST'])
+@require_auth
 @require_admin
 def create_management_member():
     try:
@@ -2435,6 +2490,7 @@ def create_management_member():
         return jsonify({'error': str(e)}), 500
 
 @api_bp.route('/management-team/<id>', methods=['PUT'])
+@require_auth
 @require_admin
 def update_management_member(id):
     try:
@@ -2457,6 +2513,7 @@ def update_management_member(id):
         return jsonify({'error': str(e)}), 500
 
 @api_bp.route('/management-team/<id>', methods=['DELETE'])
+@require_auth
 @require_admin
 def delete_management_member(id):
     try:
@@ -3313,7 +3370,29 @@ def create_newsletter():
         )
         db.session.add(newsletter)
         db.session.commit()
-        
+
+        # Always notify itsupport and super admin when a newsletter is uploaded
+        IT_SUPPORT_EMAIL = 'itsupport@bellavistanursinghome.com'
+        admin_email = os.environ.get('MAIL_SENDER') or os.environ.get('MAIL_USERNAME')
+        month_names = ['', 'January', 'February', 'March', 'April', 'May', 'June',
+                      'July', 'August', 'September', 'October', 'November', 'December']
+        month_name = month_names[month] if 1 <= month <= 12 else str(month)
+        upload_subject = f"New Newsletter Uploaded - {title} ({month_name} {year})"
+        upload_body = f"""A new newsletter has been uploaded.
+
+Title: {title}
+Period: {month_name} {year}
+Home: {home_id or 'All Homes (Global)'}
+{('Description: ' + description) if description else ''}
+
+Newsletter URL: {file_url}
+
+Subscriber emails will be sent: {'Yes' if send_emails else 'No'}
+"""
+        send_email(IT_SUPPORT_EMAIL, upload_subject, upload_body)
+        if admin_email and admin_email != IT_SUPPORT_EMAIL:
+            send_email(admin_email, upload_subject, upload_body)
+
         # Send email to subscribers if requested
         email_results = {'sent': 0, 'failed': 0, 'recipients': []}
         if send_emails:
@@ -3323,10 +3402,6 @@ def create_newsletter():
                     (NewsletterSubscriber.homeId == home_id) | (NewsletterSubscriber.homeId == None)
                 )
             subscribers = subscribers_query.all()
-            
-            month_names = ['', 'January', 'February', 'March', 'April', 'May', 'June',
-                          'July', 'August', 'September', 'October', 'November', 'December']
-            month_name = month_names[month] if 1 <= month <= 12 else str(month)
             
             for subscriber in subscribers:
                 try:
@@ -3360,10 +3435,9 @@ To unsubscribe, visit: https://www.bellavistanursinghomes.com/newsletters?unsubs
                     print(f"Failed to email subscriber {subscriber.email}: {email_err}")
                     email_results['failed'] += 1
             
-            # Send confirmation email to admin
-            admin_email = os.environ.get('MAIL_SENDER') or os.environ.get('MAIL_USERNAME')
-            if admin_email:
-                admin_body = f"""Newsletter Distribution Report
+            # Send distribution report to itsupport and super admin
+            distribution_subject = f"Newsletter Distribution Report - {title} ({month_name} {year})"
+            distribution_body = f"""Newsletter Distribution Report
 
 Newsletter: {title}
 Period: {month_name} {year}
@@ -3376,7 +3450,9 @@ Recipients:
 
 Newsletter URL: {file_url}
 """
-                send_email(admin_email, f"Newsletter Sent - {title} ({month_name} {year})", admin_body)
+            send_email(IT_SUPPORT_EMAIL, distribution_subject, distribution_body)
+            if admin_email and admin_email != IT_SUPPORT_EMAIL:
+                send_email(admin_email, distribution_subject, distribution_body)
         
         return jsonify({
             'id': newsletter_id,
@@ -3462,7 +3538,7 @@ def delete_newsletter(newsletter_id):
 # =============================================================================
 
 @api_bp.route('/newsletter-subscribers', methods=['POST'])
-@rate_limit(max_requests=5, window_seconds=60)
+@rate_limit(max_attempts=5, window_seconds=60)
 def subscribe_newsletter():
     """Subscribe an email to the newsletter"""
     try:

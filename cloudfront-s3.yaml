@@ -1,0 +1,174 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  CloudFront distribution in front of the Bellavista S3 media/images bucket.
+  Provides HTTPS, global CDN caching, and Origin Access Control (OAC) so the
+  S3 bucket itself remains private (not publicly accessible).
+
+Parameters:
+  BucketName:
+    Type: String
+    Description: Name of the existing S3 bucket used for Bellavista media & uploads
+    # Change this to your actual bucket name, e.g. bellavista-uploads-production
+
+Resources:
+
+  # -----------------------------------------------------------------------
+  # Origin Access Control — replaces legacy Origin Access Identity (OAI)
+  # -----------------------------------------------------------------------
+  CloudFrontOAC:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: BellavistaS3OAC
+        Description: OAC for Bellavista S3 media bucket
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  # -----------------------------------------------------------------------
+  # CloudFront Distribution
+  # -----------------------------------------------------------------------
+  BellavistaMediaCDN:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Comment: Bellavista S3 media / image CDN
+        HttpVersion: http2and3
+        IPV6Enabled: true
+        PriceClass: PriceClass_100   # EU + North America edge locations (cheapest)
+
+        Origins:
+          - Id: S3MediaOrigin
+            DomainName: !Sub '${BucketName}.s3.eu-west-2.amazonaws.com'
+            OriginAccessControlId: !GetAtt CloudFrontOAC.Id
+            S3OriginConfig:
+              OriginAccessIdentity: ''   # Empty string required when using OAC
+
+        DefaultCacheBehavior:
+          TargetOriginId: S3MediaOrigin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: [GET, HEAD, OPTIONS]
+          CachedMethods:  [GET, HEAD]
+          Compress: true
+
+          # Managed cache policy: CachingOptimized (recommended for S3)
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+
+          # Managed origin request policy: CORS-S3Origin
+          OriginRequestPolicyId: 88a5eaf4-2fd4-4709-b370-b4c650ea3fcf
+
+          ResponseHeadersPolicyId: !Ref MediaResponseHeadersPolicy
+
+        # Cache separate behaviours for different file types
+        CacheBehaviors:
+          # Images — long cache (30 days)
+          - PathPattern: '*.jpg'
+            TargetOriginId: S3MediaOrigin
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods: [GET, HEAD]
+            CachedMethods:  [GET, HEAD]
+            Compress: true
+            CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+          - PathPattern: '*.jpeg'
+            TargetOriginId: S3MediaOrigin
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods: [GET, HEAD]
+            CachedMethods:  [GET, HEAD]
+            Compress: true
+            CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+          - PathPattern: '*.png'
+            TargetOriginId: S3MediaOrigin
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods: [GET, HEAD]
+            CachedMethods:  [GET, HEAD]
+            Compress: true
+            CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+          - PathPattern: '*.webp'
+            TargetOriginId: S3MediaOrigin
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods: [GET, HEAD]
+            CachedMethods:  [GET, HEAD]
+            Compress: true
+            CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+
+        CustomErrorResponses:
+          - ErrorCode: 403
+            ResponseCode: 404
+            ResponsePagePath: /404.html
+            ErrorCachingMinTTL: 10
+          - ErrorCode: 404
+            ResponseCode: 404
+            ResponsePagePath: /404.html
+            ErrorCachingMinTTL: 10
+
+  # -----------------------------------------------------------------------
+  # Response Headers Policy — security + CORS for media files
+  # -----------------------------------------------------------------------
+  MediaResponseHeadersPolicy:
+    Type: AWS::CloudFront::ResponseHeadersPolicy
+    Properties:
+      ResponseHeadersPolicyConfig:
+        Name: BellavistaMediaHeaders
+        Comment: Security and caching headers for Bellavista media CDN
+        CorsConfig:
+          AccessControlAllowCredentials: false
+          AccessControlAllowHeaders:
+            Items: ['*']
+          AccessControlAllowMethods:
+            Items: [GET, HEAD]
+          AccessControlAllowOrigins:
+            Items:
+              - 'https://www.bellavistanursinghomes.com'
+              - 'https://bellavistanursinghomes.com'
+          OriginOverride: false
+        SecurityHeadersConfig:
+          ContentTypeOptions:
+            Override: true
+          FrameOptions:
+            FrameOption: SAMEORIGIN
+            Override: true
+          ReferrerPolicy:
+            ReferrerPolicy: strict-origin-when-cross-origin
+            Override: true
+          StrictTransportSecurity:
+            AccessControlMaxAgeSec: 31536000
+            IncludeSubdomains: true
+            Override: true
+        CustomHeadersConfig:
+          Items:
+            - Header: Cache-Control
+              Value: 'public, max-age=2592000, stale-while-revalidate=86400'
+              Override: false
+
+  # -----------------------------------------------------------------------
+  # S3 Bucket Policy — grant CloudFront OAC read access, block all else
+  # -----------------------------------------------------------------------
+  S3BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref BucketName
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowCloudFrontOACReadOnly
+            Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub 'arn:aws:s3:::${BucketName}/*'
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub 'arn:aws:cloudfront::${AWS::AccountId}:distribution/${BellavistaMediaCDN}'
+
+Outputs:
+  CDNDomainName:
+    Description: >
+      CloudFront distribution domain name. Use this as the base URL for all
+      media/image links in the app instead of direct S3 URLs.
+      Example: https://<CDNDomainName>/uploads/processed/image.jpg
+    Value: !GetAtt BellavistaMediaCDN.DomainName
+
+  DistributionId:
+    Description: CloudFront Distribution ID (needed for cache invalidation)
+    Value: !Ref BellavistaMediaCDN
