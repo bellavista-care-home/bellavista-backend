@@ -6,7 +6,7 @@ Handles JWT token generation, verification, and role-based access control.
 import os
 import jwt
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from functools import wraps
 from flask import request, jsonify, current_app
 from dotenv import load_dotenv
@@ -34,15 +34,17 @@ if os.environ.get('FLASK_CONFIG') == 'production':
         print("!! Set ADMIN_USERNAME and ADMIN_PASSWORD environment variables immediately !!")
         print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 
-def generate_token(user_id, username, role='admin', home_id=None, expires_in_hours=JWT_EXPIRATION_HOURS):
+def generate_token(user_id, username, role='admin', home_id=None, permissions=None, temp_access_expires_at=None, expires_in_hours=JWT_EXPIRATION_HOURS):
     """
     Generate a JWT token for authenticated user.
     
     Args:
         user_id: Unique user identifier
         username: Username for logging
-        role: User role ('superadmin' or 'home_admin')
+        role: User role ('superadmin', 'home_admin', or 'temp_admin')
         home_id: ID of the home (if role is home_admin)
+        permissions: List of allowed view keys (for temp_admin)
+        temp_access_expires_at: ISO expiry string for temp_admin (embedded in token)
         expires_in_hours: Token expiration time in hours
     
     Returns:
@@ -54,6 +56,8 @@ def generate_token(user_id, username, role='admin', home_id=None, expires_in_hou
             'username': username,
             'role': role,
             'home_id': home_id,
+            'permissions': permissions or [],
+            'temp_access_expires_at': temp_access_expires_at,
             'iat': datetime.utcnow(),
             'exp': datetime.utcnow() + timedelta(hours=expires_in_hours)
         }
@@ -208,6 +212,37 @@ def login_user(username, password):
             'attempts_remaining': remaining
         }
     
+    # Check temporary access expiry
+    if user.role == 'temp_admin' and user.temp_access_expires_at:
+        try:
+            expiry = user.temp_access_expires_at
+            # Ensure expiry is timezone-aware (UTC)
+            if expiry.tzinfo is None:
+                expiry = expiry.replace(tzinfo=timezone.utc)
+            now_utc = datetime.now(timezone.utc)
+            print(f"[AUTH] temp_admin expiry check: now={now_utc.isoformat()} expiry={expiry.isoformat()} expired={now_utc > expiry}")
+            if now_utc > expiry:
+                log_login_attempt(False, 'temp_access_expired')
+                return {
+                    'status': 'error',
+                    'message': 'Temporary access has expired. Please contact an administrator.'
+                }
+        except Exception as expiry_err:
+            print(f"[AUTH] Expiry check error: {expiry_err} — blocking login as safety measure")
+            return {
+                'status': 'error',
+                'message': 'Temporary access has expired. Please contact an administrator.'
+            }
+    
+    # Parse permissions for temp_admin
+    import json
+    permissions = []
+    if user.permissions:
+        try:
+            permissions = json.loads(user.permissions)
+        except Exception:
+            permissions = []
+    
     # Successful login - clear failed attempts
     AccountLockout.record_successful_attempt(username)
     
@@ -216,7 +251,9 @@ def login_user(username, password):
         user_id=user.id, 
         username=user.username, 
         role=user.role, 
-        home_id=user.home_id
+        home_id=user.home_id,
+        permissions=permissions,
+        temp_access_expires_at=user.temp_access_expires_at.isoformat() + 'Z' if user.temp_access_expires_at else None
     )
     
     if not token:
@@ -236,7 +273,9 @@ def login_user(username, password):
         'user': {
             'username': user.username,
             'role': user.role,
-            'homeId': user.home_id
+            'homeId': user.home_id,
+            'permissions': permissions,
+            'temp_access_expires_at': (user.temp_access_expires_at.isoformat() + 'Z') if user.temp_access_expires_at else None
         }
     }
 

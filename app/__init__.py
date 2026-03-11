@@ -234,6 +234,10 @@ def create_app(config_name=None):
                     ('home', 'careServicesJson', 'TEXT'),
                     ('home', 'careSectionsJson', 'TEXT'),
                     ('home', 'careGalleryJson', 'TEXT'),
+                    # User table columns (temp_admin feature)
+                    ('user', 'permissions', 'TEXT'),
+                    ('user', 'temp_access_expires_at', 'TIMESTAMP'),
+                    ('user', 'createdAt', 'TIMESTAMP'),
                     # Other tables
                     ('review', 'source', 'VARCHAR(64)'),
                     # CareService table columns

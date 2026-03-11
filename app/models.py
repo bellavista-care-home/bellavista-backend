@@ -251,8 +251,10 @@ class User(db.Model):
     id = db.Column(db.String, primary_key=True)
     username = db.Column(db.String(64), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
-    role = db.Column(db.String(64), default='home_admin') # 'superadmin' or 'home_admin'
+    role = db.Column(db.String(64), default='home_admin') # 'superadmin', 'home_admin', or 'temp_admin'
     home_id = db.Column(db.String, db.ForeignKey('home.id'), nullable=True) # Null for superadmin
+    permissions = db.Column(db.Text, nullable=True)  # JSON list of allowed view keys (used for temp_admin)
+    temp_access_expires_at = db.Column(db.DateTime, nullable=True)  # Expiry for temporary access
     createdAt = db.Column(db.DateTime, default=datetime.utcnow)
 
 
