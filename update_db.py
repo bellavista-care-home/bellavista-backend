@@ -70,7 +70,7 @@ try:
         print("temp_access_expires_at column added successfully.")
     else:
         print("temp_access_expires_at column already exists.")
-        
+
     conn.commit()
     conn.close()
     print("Database schema updated successfully.")

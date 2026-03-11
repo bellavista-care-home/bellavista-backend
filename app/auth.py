@@ -44,7 +44,6 @@ def generate_token(user_id, username, role='admin', home_id=None, permissions=No
         role: User role ('superadmin', 'home_admin', or 'temp_admin')
         home_id: ID of the home (if role is home_admin)
         permissions: List of allowed view keys (for temp_admin)
-        temp_access_expires_at: ISO expiry string for temp_admin (embedded in token)
         expires_in_hours: Token expiration time in hours
     
     Returns:
@@ -216,7 +215,6 @@ def login_user(username, password):
     if user.role == 'temp_admin' and user.temp_access_expires_at:
         try:
             expiry = user.temp_access_expires_at
-            # Ensure expiry is timezone-aware (UTC)
             if expiry.tzinfo is None:
                 expiry = expiry.replace(tzinfo=timezone.utc)
             now_utc = datetime.now(timezone.utc)
