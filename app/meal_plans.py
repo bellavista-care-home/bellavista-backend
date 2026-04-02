@@ -18,6 +18,7 @@ meal_plans_bp = Blueprint('meal_plans', __name__)
 def home_admin_or_superadmin(f):
     """
     Decorator to check if user is super admin or admin for that specific home
+    Also allows temp_admin with 'manage-meal-plans' permission
     """
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -29,6 +30,7 @@ def home_admin_or_superadmin(f):
             payload = request.auth_payload
             user_role = payload.get('role')
             home_id = payload.get('home_id')
+            permissions = payload.get('permissions', [])
             
             # Get homeId from request (could be from params, body, or URL)
             request_home_id = None
@@ -53,6 +55,11 @@ def home_admin_or_superadmin(f):
                 request.target_home_id = request_home_id
                 return f(*args, **kwargs)
             
+            # TempAdmin can access meal plans if they have 'manage-meal-plans' permission
+            if user_role == 'temp_admin' and 'manage-meal-plans' in permissions:
+                request.target_home_id = request_home_id
+                return f(*args, **kwargs)
+            
             return jsonify({'error': 'Unauthorized - insufficient permissions'}), 403
         
         except Exception as e:
@@ -62,6 +69,8 @@ def home_admin_or_superadmin(f):
     return decorated_function
 
 @meal_plans_bp.route('/<home_id>', methods=['GET'])
+@require_auth
+@home_admin_or_superadmin
 def get_meal_plans(home_id):
     """
     Get all meal plans for a specific home
