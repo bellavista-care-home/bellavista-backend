@@ -32,6 +32,9 @@ def home_admin_or_superadmin(f):
             home_id = payload.get('home_id')
             permissions = payload.get('permissions', [])
             
+            # DEBUG: Log what we received
+            print(f"[MEAL_PLANS] role={user_role}, home_id={home_id}, permissions={permissions}", flush=True)
+            
             # Get homeId from request (could be from params, body, or URL)
             request_home_id = None
             if request.view_args:
