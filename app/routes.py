@@ -1844,6 +1844,7 @@ def to_dict_home(h):
         "servicesIntro": h.servicesIntro,
         "servicesContent": h.servicesContent,
         "servicesList": parse_json(h.servicesListJson),
+        "careGalleryImages": parse_json(h.careGalleryJson),
         "careSectionsJson": parse_json(h.careSectionsJson),
         "contactTitle": h.contactTitle,
         "contactSubtitle": h.contactSubtitle,
@@ -1895,6 +1896,12 @@ def create_home():
         facilitiesListJson=json.dumps(data.get('facilitiesList', [])),
         detailedFacilitiesJson=json.dumps(data.get('detailedFacilities', [])),
         facilitiesGalleryJson=json.dumps(data.get('facilitiesGalleryImages', [])),
+        servicesTitle=data.get('servicesTitle', ''),
+        servicesSubtitle=data.get('servicesSubtitle', ''),
+        servicesIntro=data.get('servicesIntro', ''),
+        servicesContent=data.get('servicesContent', ''),
+        servicesListJson=json.dumps(data.get('servicesList', [])),
+        careGalleryJson=json.dumps(data.get('careGalleryImages', [])),
         featured=data.get('homeFeatured', False)
     )
     
@@ -2046,6 +2053,16 @@ def update_home(id):
             home.facilitiesGalleryJson = json.dumps(data['facilitiesGalleryImages'])
             print(f"[UPDATE HOME] Successfully serialized facilities gallery", flush=True)
             
+        # Update services
+        home.servicesTitle = data.get('servicesTitle', home.servicesTitle)
+        home.servicesSubtitle = data.get('servicesSubtitle', home.servicesSubtitle)
+        home.servicesIntro = data.get('servicesIntro', home.servicesIntro)
+        home.servicesContent = data.get('servicesContent', home.servicesContent)
+        if 'servicesList' in data:
+            services_count = len(data['servicesList'])
+            print(f"[UPDATE HOME] Updating {services_count} services list items...", flush=True)
+            home.servicesListJson = json.dumps(data['servicesList'])
+
         if 'homeFeatured' in data:
             home.featured = data['homeFeatured']
         
@@ -2734,6 +2751,7 @@ def update_section_content(home_id, section_key):
                 'servicesCta': 'servicesCta',
                 'servicesCtaLink': 'servicesCtaLink',
                 'servicesContent': 'servicesContent',
+                'careGalleryImages': 'careGalleryJson',
             },
             'facilities': {
                 'facilitiesTitle': 'facilitiesTitle',
