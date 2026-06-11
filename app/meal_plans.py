@@ -7,6 +7,7 @@ Includes role-based access control (SuperAdmin and HomeAdmin)
 import json
 import uuid
 from datetime import datetime
+# pyrefly: ignore [missing-import]
 from flask import Blueprint, request, jsonify
 from functools import wraps
 from .models import MealPlan, Home, User
@@ -70,6 +71,76 @@ def home_admin_or_superadmin(f):
             return jsonify({'error': f'Authorization check failed: {str(e)}'}), 401
     
     return decorated_function
+
+@meal_plans_bp.route('/public/<home_id>', methods=['GET'])
+def get_meal_plans_public(home_id):
+    """
+    Public endpoint — no authentication required.
+    Returns meal plans for a specific home so the public-facing
+    Dining & Nutrition page can display them.
+    Supports the same query params as the admin endpoint:
+    - dayOfWeek, mealType, date, groupByDay
+    """
+    try:
+        # Verify home exists
+        home = Home.query.get(home_id)
+        if not home:
+            return jsonify({'error': 'Home not found'}), 404
+
+        # Build query
+        query = MealPlan.query.filter_by(homeId=home_id, isActive=True)
+
+        # Filter by day of week if provided
+        day_of_week = request.args.get('dayOfWeek')
+        if day_of_week:
+            query = query.filter_by(dayOfWeek=day_of_week)
+
+        # Filter by meal type if provided
+        meal_type = request.args.get('mealType')
+        if meal_type:
+            query = query.filter_by(mealType=meal_type)
+
+        # Get all meal plans
+        meal_plans = query.order_by(MealPlan.dayOfWeek, MealPlan.order).all()
+
+        # Format response
+        result = []
+        for meal in meal_plans:
+            result.append({
+                'id': meal.id,
+                'homeId': meal.homeId,
+                'dayOfWeek': meal.dayOfWeek,
+                'mealType': meal.mealType,
+                'mealName': meal.mealName,
+                'description': meal.description,
+                'ingredients': json.loads(meal.ingredients) if meal.ingredients else [],
+                'allergyInfo': json.loads(meal.allergyInfo) if meal.allergyInfo else [],
+                'imageUrl': meal.imageUrl,
+                'nutritionalInfo': json.loads(meal.nutritionalInfo) if meal.nutritionalInfo else {},
+                'tags': json.loads(meal.tags) if meal.tags else [],
+                'isSpecialMenu': meal.isSpecialMenu,
+                'effectiveDate': meal.effectiveDate,
+                'createdAt': meal.createdAt.isoformat() if meal.createdAt else None,
+                'updatedAt': meal.updatedAt.isoformat() if meal.updatedAt else None
+            })
+
+        # Group by day if requested
+        group_by_day = request.args.get('groupByDay', 'false').lower() == 'true'
+        if group_by_day:
+            grouped = {}
+            for meal in result:
+                day = meal['dayOfWeek']
+                if day not in grouped:
+                    grouped[day] = []
+                grouped[day].append(meal)
+            return jsonify({'success': True, 'data': grouped}), 200
+
+        return jsonify({'success': True, 'data': result}), 200
+
+    except Exception as e:
+        print(f"[ERROR] Failed to get public meal plans: {str(e)}", flush=True)
+        return jsonify({'error': f'Failed to fetch meal plans: {str(e)}'}), 500
+
 
 @meal_plans_bp.route('/<home_id>', methods=['GET'])
 @require_auth
